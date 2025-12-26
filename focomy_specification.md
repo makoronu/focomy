@@ -16,13 +16,13 @@
 | 項目 | 技術 |
 |------|------|
 | バックエンド | FastAPI |
-| データベース | SQLite + FTS5 |
-| ORM | SQLAlchemy |
+| データベース | PostgreSQL + asyncpg |
+| ORM | SQLAlchemy (async) |
 | テンプレート | Jinja2 |
 | フロントエンド | HTMX |
 | エディタ | Editor.js |
-| CSS | Tailwind CSS |
-| 認証 | bcrypt + TOTP |
+| CSS | CSS Variables + テーマシステム |
+| 認証 | bcrypt + セッション + OAuth |
 
 ---
 
@@ -41,6 +41,10 @@ Contact   → Entity (type: contact)
 Property  → Entity (type: property)
 User      → Entity (type: user)
 Category  → Entity (type: category)
+MenuItem  → Entity (type: menu_item)
+Widget    → Entity (type: widget)
+Comment   → Entity (type: comment)
+Redirect  → Entity (type: redirect)
 ```
 
 PostテーブルもPageテーブルも存在しない。**entitiesテーブル1つで全て管理**。
@@ -55,6 +59,7 @@ PostテーブルもPageテーブルも存在しない。**entitiesテーブル1�
 # content_types/post.yaml
 name: post
 label: 投稿
+path_prefix: /blog
 fields:
   - name: title
     type: string
@@ -77,6 +82,23 @@ fields:
     default: draft
   - name: published_at
     type: datetime
+  # SEO fields
+  - name: seo_title
+    type: string
+  - name: seo_description
+    type: text
+  - name: seo_noindex
+    type: boolean
+  - name: seo_nofollow
+    type: boolean
+  - name: seo_canonical
+    type: url
+  - name: og_title
+    type: string
+  - name: og_description
+    type: text
+  - name: og_image
+    type: media
 ```
 
 ### 3. Relation（リレーション）
@@ -100,266 +122,265 @@ post_author:
   required: true
   label: 著者
 
-post_related:
-  from: post
+comment_post:
+  from: comment
   to: post
-  type: many_to_many
-  label: 関連記事
+  type: many_to_one
+  required: true
+  label: 投稿
+
+menu_item_parent:
+  from: menu_item
+  to: menu_item
+  type: many_to_one
+  self_referential: true
+  label: 親メニュー
 ```
 
 ---
 
 ## データベース設計
 
-### コアテーブル（これだけ）
+### コアテーブル
 
 ```sql
 -- エンティティ（全コンテンツの親）
 CREATE TABLE entities (
     id TEXT PRIMARY KEY,           -- UUID
     type TEXT NOT NULL,            -- post, page, user, etc.
-    created_at DATETIME NOT NULL,
-    updated_at DATETIME NOT NULL,
-    deleted_at DATETIME,           -- 論理削除
+    created_at TIMESTAMPTZ NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL,
+    deleted_at TIMESTAMPTZ,        -- 論理削除
     created_by TEXT,               -- 監査
     updated_by TEXT                -- 監査
 );
-CREATE INDEX idx_entities_type ON entities(type);
-CREATE INDEX idx_entities_deleted ON entities(deleted_at);
 
 -- フィールド値（EAVだが最適化済み）
 CREATE TABLE entity_values (
-    id INTEGER PRIMARY KEY,
-    entity_id TEXT NOT NULL,
+    id SERIAL PRIMARY KEY,
+    entity_id TEXT NOT NULL REFERENCES entities(id),
     field_name TEXT NOT NULL,
     value_text TEXT,               -- string, text, slug
     value_int INTEGER,             -- integer, boolean
     value_float REAL,              -- float
-    value_datetime DATETIME,       -- datetime
-    value_json JSON,               -- blocks, array, object
-    FOREIGN KEY (entity_id) REFERENCES entities(id),
+    value_datetime TIMESTAMPTZ,    -- datetime
+    value_json JSONB,              -- blocks, array, object
     UNIQUE(entity_id, field_name)
 );
-CREATE INDEX idx_values_entity ON entity_values(entity_id);
-CREATE INDEX idx_values_field ON entity_values(field_name);
-CREATE INDEX idx_values_text ON entity_values(value_text) WHERE value_text IS NOT NULL;
-CREATE INDEX idx_values_int ON entity_values(value_int) WHERE value_int IS NOT NULL;
 
 -- リレーション
 CREATE TABLE relations (
-    id INTEGER PRIMARY KEY,
-    from_entity_id TEXT NOT NULL,
-    to_entity_id TEXT NOT NULL,
-    relation_type TEXT NOT NULL,   -- post_categories, post_author, etc.
+    id SERIAL PRIMARY KEY,
+    from_entity_id TEXT NOT NULL REFERENCES entities(id),
+    to_entity_id TEXT NOT NULL REFERENCES entities(id),
+    relation_type TEXT NOT NULL,
     sort_order INTEGER DEFAULT 0,
-    metadata JSON,                 -- リレーション固有のメタデータ
-    created_at DATETIME NOT NULL,
-    FOREIGN KEY (from_entity_id) REFERENCES entities(id),
-    FOREIGN KEY (to_entity_id) REFERENCES entities(id),
+    metadata JSONB,
+    created_at TIMESTAMPTZ NOT NULL,
     UNIQUE(from_entity_id, to_entity_id, relation_type)
 );
-CREATE INDEX idx_relations_from ON relations(from_entity_id);
-CREATE INDEX idx_relations_to ON relations(to_entity_id);
-CREATE INDEX idx_relations_type ON relations(relation_type);
 
--- 全文検索
-CREATE VIRTUAL TABLE entities_fts USING fts5(
-    entity_id,
-    content,
-    content='entity_values',
-    content_rowid='id'
-);
-
--- メディア（アップロードファイル）
+-- メディア
 CREATE TABLE media (
     id TEXT PRIMARY KEY,
-    filename TEXT NOT NULL,        -- 元ファイル名
-    stored_path TEXT NOT NULL,     -- 保存パス
+    filename TEXT NOT NULL,
+    stored_path TEXT NOT NULL,
     mime_type TEXT NOT NULL,
     size INTEGER NOT NULL,
-    width INTEGER,                 -- 画像の場合
-    height INTEGER,                -- 画像の場合
+    width INTEGER,
+    height INTEGER,
     alt_text TEXT,
-    created_at DATETIME NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL,
     created_by TEXT
 );
 
--- ユーザー認証（特別扱い：セキュリティ上）
+-- ユーザー認証
 CREATE TABLE user_auth (
-    entity_id TEXT PRIMARY KEY,
+    entity_id TEXT PRIMARY KEY REFERENCES entities(id),
     email TEXT UNIQUE NOT NULL,
     password_hash TEXT NOT NULL,
     totp_secret TEXT,
-    last_login DATETIME,
+    last_login TIMESTAMPTZ,
     login_attempts INTEGER DEFAULT 0,
-    locked_until DATETIME,
-    FOREIGN KEY (entity_id) REFERENCES entities(id)
-);
-
--- ログイン履歴
-CREATE TABLE login_log (
-    id INTEGER PRIMARY KEY,
-    user_id TEXT,
-    ip_address TEXT,
-    user_agent TEXT,
-    success BOOLEAN,
-    created_at DATETIME NOT NULL
+    locked_until TIMESTAMPTZ
 );
 
 -- セッション
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL,
-    expires_at DATETIME NOT NULL,
-    created_at DATETIME NOT NULL,
-    FOREIGN KEY (user_id) REFERENCES entities(id)
+    user_id TEXT NOT NULL REFERENCES entities(id),
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL
+);
+
+-- ログイン履歴
+CREATE TABLE login_log (
+    id SERIAL PRIMARY KEY,
+    user_id TEXT,
+    ip_address TEXT,
+    user_agent TEXT,
+    success BOOLEAN,
+    created_at TIMESTAMPTZ NOT NULL
 );
 ```
 
-### なぜEAV？
-
-WordPress の wp_postmeta がクソなのは設計が悪いから。正しく設計されたEAVは美しい。
-
-**最適化ポイント：**
-1. 型別カラム（value_text, value_int, value_float, value_datetime, value_json）
-2. 適切なインデックス
-3. 複合ユニーク制約
-4. FTS5との連携
-
 ---
 
-## サービス設計（重複コードゼロ）
+## 実装済み機能
 
-### EntityService（唯一のCRUD）
+### SEO機能
 
-```python
-class EntityService:
-    """全エンティティを統一的に操作"""
+| 機能 | 説明 |
+|------|------|
+| メタタグ自動生成 | title, description, canonical |
+| OGP | og:title, og:description, og:image, og:site_name, og:locale |
+| Twitter Card | twitter:card, twitter:site, twitter:creator |
+| JSON-LD | Article, WebPage, Organization, WebSite, BreadcrumbList, FAQPage, Person |
+| サイトマップ | sitemap.xml 動的生成 |
+| robots.txt | 動的生成 |
+| RSS/Atom/JSON Feed | /feed.xml, /atom.xml, /feed.json |
+| ページ別SEO設定 | noindex/nofollow, canonical上書き, OGP個別設定 |
+| パンくずリスト | BreadcrumbList JSON-LD付き |
 
-    async def create(self, type: str, data: dict, user_id: str = None) -> Entity:
-        """エンティティ作成"""
-        pass
+### セキュリティ
 
-    async def update(self, id: str, data: dict, user_id: str = None) -> Entity:
-        """エンティティ更新"""
-        pass
+| ヘッダー | 設定値 |
+|---------|--------|
+| Strict-Transport-Security | max-age=31536000; includeSubDomains |
+| Content-Security-Policy | default-src 'self'; script-src... (ページ別に最適化) |
+| X-Content-Type-Options | nosniff |
+| X-Frame-Options | SAMEORIGIN |
+| X-XSS-Protection | 1; mode=block |
+| Referrer-Policy | strict-origin-when-cross-origin |
+| Permissions-Policy | camera=(), microphone=(), geolocation=()... |
+| Cross-Origin-Opener-Policy | same-origin |
+| Cross-Origin-Resource-Policy | same-origin |
 
-    async def delete(self, id: str, user_id: str = None) -> bool:
-        """論理削除"""
-        pass
+### リダイレクト管理
 
-    async def get(self, id: str) -> Entity:
-        """単一取得"""
-        pass
-
-    async def find(self, type: str, query: QueryParams) -> List[Entity]:
-        """検索"""
-        pass
-
-    async def count(self, type: str, query: QueryParams) -> int:
-        """件数"""
-        pass
+```yaml
+# content_types/redirect.yaml
+name: redirect
+fields:
+  - name: from_path
+    type: string
+    required: true
+  - name: to_path
+    type: string
+    required: true
+  - name: status_code
+    type: select
+    options: [301, 302, 307, 308]
+  - name: match_type
+    type: select
+    options: [exact, prefix, regex]
+  - name: is_active
+    type: boolean
+  - name: preserve_query
+    type: boolean
 ```
 
-**PostService、PageService、ContactService は存在しない。**
+**機能:**
+- 完全一致/前方一致/正規表現マッチング
+- キャッシュ付き高速リダイレクト
+- 管理画面からルール追加/編集/削除
+- テスト機能
 
-### RelationService（リレーション操作）
+### メニュー管理
 
-```python
-class RelationService:
-    """リレーション操作"""
-
-    async def attach(self, from_id: str, to_id: str, relation_type: str) -> Relation:
-        """リレーション追加"""
-        pass
-
-    async def detach(self, from_id: str, to_id: str, relation_type: str) -> bool:
-        """リレーション削除"""
-        pass
-
-    async def sync(self, from_id: str, to_ids: List[str], relation_type: str) -> List[Relation]:
-        """リレーション同期（差分更新）"""
-        pass
-
-    async def get_related(self, entity_id: str, relation_type: str) -> List[Entity]:
-        """関連エンティティ取得"""
-        pass
+```yaml
+# content_types/menu_item.yaml
+name: menu_item
+hierarchical: true
+fields:
+  - name: label
+    type: string
+  - name: url
+    type: string
+  - name: location
+    type: select
+    options: [header, footer, sidebar]
+  - name: link_type
+    type: select
+    options: [custom, page, category, post]
 ```
 
-### FieldService（フィールド定義管理）
+**機能:**
+- ヘッダー/フッター/サイドバー別メニュー
+- 階層構造（ドロップダウン）対応
+- ドラッグ&ドロップ並び替え
+- YAML設定との併用
 
-```python
-class FieldService:
-    """フィールド定義のロード・バリデーション"""
+### ウィジェット
 
-    def get_content_type(self, type: str) -> ContentType:
-        """コンテンツタイプ定義取得"""
-        pass
-
-    def validate(self, type: str, data: dict) -> ValidationResult:
-        """フィールドバリデーション"""
-        pass
-
-    def serialize(self, entity: Entity) -> dict:
-        """エンティティをJSONにシリアライズ"""
-        pass
+```yaml
+# content_types/widget.yaml
+name: widget
+fields:
+  - name: title
+    type: string
+  - name: widget_type
+    type: select
+    options: [recent_posts, categories, search, custom_html, archives, tag_cloud]
+  - name: area
+    type: select
+    options: [sidebar, footer_1, footer_2, footer_3]
+  - name: config
+    type: json
 ```
 
----
+**ウィジェットタイプ:**
+- 最近の投稿
+- カテゴリ一覧
+- 検索ボックス
+- カスタムHTML
+- アーカイブ
+- タグクラウド
 
-## API設計（統一エンドポイント）
+### コメント
 
-### REST API
-
-```
-# エンティティCRUD（全コンテンツタイプ共通）
-GET    /api/entities/{type}           # 一覧
-POST   /api/entities/{type}           # 作成
-GET    /api/entities/{type}/{id}      # 取得
-PUT    /api/entities/{type}/{id}      # 更新
-DELETE /api/entities/{type}/{id}      # 削除
-
-# リレーション
-GET    /api/entities/{type}/{id}/relations/{relation_type}  # 関連取得
-POST   /api/entities/{type}/{id}/relations/{relation_type}  # 関連追加
-DELETE /api/entities/{type}/{id}/relations/{relation_type}/{to_id}  # 関連削除
-
-# メディア
-POST   /api/media                     # アップロード
-GET    /api/media/{id}                # 取得
-DELETE /api/media/{id}                # 削除
-
-# 認証
-POST   /api/auth/login
-POST   /api/auth/logout
-GET    /api/auth/me
-
-# スキーマ（メタデータ）
-GET    /api/schema                    # 全コンテンツタイプ定義
-GET    /api/schema/{type}             # 特定タイプの定義
-GET    /api/schema/relations          # リレーション定義
+```yaml
+# content_types/comment.yaml
+name: comment
+fields:
+  - name: author_name
+    type: string
+  - name: author_email
+    type: email
+  - name: content
+    type: text
+  - name: status
+    type: select
+    options: [pending, approved, rejected, spam]
+  - name: ip_address
+    type: string
 ```
 
-### クエリパラメータ
+**機能:**
+- 承認制コメント
+- ハニーポットスパム対策
+- レート制限（5回/分）
+- 管理画面から一括承認/拒否
+- ネスト返信対応
 
-```
-# フィルタ
-?filter[status]=published
-?filter[created_at][gte]=2025-01-01
+### パフォーマンス最適化
 
-# ソート
-?sort=-created_at        # 降順
-?sort=title              # 昇順
+| 機能 | 説明 |
+|------|------|
+| 外部CSS | /css/theme.css (Cache-Control: max-age=86400) |
+| CSS Minify | 本文CSSは圧縮して配信 |
+| Lazy Loading | 画像に loading="lazy" |
+| Preload | 重要リソースのpreload |
+| DNS Prefetch | 外部ドメインのdns-prefetch |
+| Gzip | GZipMiddleware (1000bytes以上) |
 
-# ページネーション
-?page=1&per_page=20
+### ツール
 
-# フィールド選択
-?fields=id,title,slug
-
-# リレーション展開
-?include=author,categories
-```
+| ツール | 説明 |
+|--------|------|
+| リンク検証 | 壊れた内部/外部リンク検出 |
+| 孤立ページ検出 | リンクされていないページ検出 |
+| サイトマップUI | URL一覧、除外設定、再生成 |
 
 ---
 
@@ -369,9 +390,10 @@ GET    /api/schema/relations          # リレーション定義
 focomy/
 ├── core/
 │   ├── __init__.py
-│   ├── main.py                 # FastAPIエントリー
-│   ├── config.py               # 設定
-│   ├── database.py             # DB接続
+│   ├── main.py                 # FastAPIエントリー + ミドルウェア
+│   ├── config.py               # 設定（Pydantic）
+│   ├── database.py             # DB接続（asyncpg）
+│   ├── rate_limit.py           # レート制限
 │   ├── models/
 │   │   ├── __init__.py
 │   │   ├── entity.py           # Entity, EntityValue
@@ -384,401 +406,275 @@ focomy/
 │   │   ├── relation.py         # RelationService
 │   │   ├── field.py            # FieldService
 │   │   ├── media.py            # MediaService
-│   │   └── auth.py             # AuthService
+│   │   ├── auth.py             # AuthService
+│   │   ├── seo.py              # SEOService
+│   │   ├── theme.py            # ThemeService
+│   │   ├── menu.py             # MenuService
+│   │   ├── widget.py           # WidgetService
+│   │   ├── comment.py          # CommentService
+│   │   ├── redirect.py         # RedirectService
+│   │   ├── link_validator.py   # LinkValidatorService
+│   │   ├── settings.py         # SettingsService
+│   │   ├── oauth.py            # OAuthService
+│   │   └── cache.py            # CacheService
 │   ├── api/
 │   │   ├── __init__.py
 │   │   ├── entities.py         # /api/entities/*
 │   │   ├── relations.py        # /api/*/relations/*
 │   │   ├── media.py            # /api/media/*
 │   │   ├── auth.py             # /api/auth/*
-│   │   └── schema.py           # /api/schema/*
+│   │   ├── schema.py           # /api/schema/*
+│   │   ├── seo.py              # /api/seo/* (sitemap, feed)
+│   │   ├── comments.py         # /api/comments/*
+│   │   ├── forms.py            # /forms/*
+│   │   └── revisions.py        # /api/revisions/*
 │   ├── admin/
 │   │   ├── __init__.py
-│   │   ├── routes.py           # 管理画面ルート
-│   │   └── views/              # HTMX用ビュー
+│   │   └── routes.py           # 管理画面ルート
 │   ├── engine/
 │   │   ├── __init__.py
-│   │   └── renderer.py         # テンプレートレンダリング
-│   └── seo/
-│       ├── __init__.py
-│       └── generator.py        # SEO自動生成
-├── content_types/              # コンテンツタイプ定義
+│   │   └── routes.py           # フロントエンドルート
+│   └── templates/
+│       └── admin/
+│           ├── base.html
+│           ├── dashboard.html
+│           ├── entity_list.html
+│           ├── entity_form.html
+│           ├── media.html
+│           ├── menus.html
+│           ├── widgets.html
+│           ├── comments.html
+│           ├── settings.html
+│           ├── redirects.html
+│           ├── link_validator.html
+│           ├── sitemap.html
+│           └── login.html
+├── content_types/
 │   ├── post.yaml
 │   ├── page.yaml
 │   ├── category.yaml
-│   └── user.yaml
-├── relations.yaml              # リレーション定義
+│   ├── user.yaml
+│   ├── menu_item.yaml
+│   ├── widget.yaml
+│   ├── comment.yaml
+│   ├── redirect.yaml
+│   └── site_setting.yaml
+├── relations.yaml
 ├── themes/
 │   └── default/
 │       ├── templates/
-│       │   ├── admin/
-│       │   │   ├── base.html
-│       │   │   ├── dashboard.html
-│       │   │   ├── entity_list.html
-│       │   │   └── entity_form.html
-│       │   └── public/
-│       │       ├── base.html
-│       │       ├── index.html
-│       │       ├── single.html
-│       │       └── archive.html
-│       ├── static/
-│       │   ├── css/
-│       │   └── js/
+│       │   ├── base.html
+│       │   ├── index.html
+│       │   ├── post.html
+│       │   ├── page.html
+│       │   ├── category.html
+│       │   ├── archive.html
+│       │   ├── search.html
+│       │   ├── 404.html
+│       │   └── 500.html
 │       └── theme.yaml
-├── plugins/                    # プラグイン（content_type追加）
-├── uploads/                    # アップロードファイル
-├── config.yaml                 # サイト設定
-├── cli.py                      # CLIツール
-└── requirements.txt
+├── static/
+│   ├── favicon.ico
+│   ├── favicon.svg
+│   └── apple-touch-icon.png
+├── uploads/
+├── config.yaml
+├── requirements.txt
+└── docs/
+    └── ROADMAP.md
 ```
 
 ---
 
-## コンテンツタイプ定義例
+## API設計
 
-### post.yaml
-
-```yaml
-name: post
-label: 投稿
-label_plural: 投稿一覧
-icon: document
-admin_menu: true
-searchable: true
-
-fields:
-  - name: title
-    type: string
-    label: タイトル
-    required: true
-    indexed: true
-    max_length: 200
-
-  - name: slug
-    type: slug
-    label: スラッグ
-    unique: true
-    auto_generate: title
-
-  - name: body
-    type: blocks
-    label: 本文
-
-  - name: excerpt
-    type: text
-    label: 抜粋
-    max_length: 200
-    auto_generate: body  # 本文から自動生成
-
-  - name: featured_image
-    type: media
-    label: アイキャッチ
-    accept: image/*
-
-  - name: status
-    type: select
-    label: ステータス
-    options:
-      - value: draft
-        label: 下書き
-      - value: published
-        label: 公開
-      - value: private
-        label: 非公開
-    default: draft
-
-  - name: published_at
-    type: datetime
-    label: 公開日時
-
-relations:
-  - type: post_author
-    label: 著者
-    required: true
-
-  - type: post_categories
-    label: カテゴリ
-```
-
-### category.yaml
-
-```yaml
-name: category
-label: カテゴリ
-label_plural: カテゴリ一覧
-icon: folder
-admin_menu: true
-hierarchical: true  # 階層構造
-
-fields:
-  - name: name
-    type: string
-    label: 名前
-    required: true
-    indexed: true
-
-  - name: slug
-    type: slug
-    label: スラッグ
-    unique: true
-    auto_generate: name
-
-  - name: description
-    type: text
-    label: 説明
-
-relations:
-  - type: category_parent
-    label: 親カテゴリ
-    target: category
-    self_referential: true
-```
-
-### user.yaml
-
-```yaml
-name: user
-label: ユーザー
-label_plural: ユーザー一覧
-icon: user
-admin_menu: true
-auth_entity: true  # 認証用エンティティ
-
-fields:
-  - name: name
-    type: string
-    label: 名前
-    required: true
-
-  - name: email
-    type: email
-    label: メールアドレス
-    required: true
-    unique: true
-    auth_field: true  # 認証に使用
-
-  - name: role
-    type: select
-    label: 権限
-    options:
-      - value: admin
-        label: 管理者
-      - value: editor
-        label: 編集者
-      - value: author
-        label: 投稿者
-    default: author
-
-  - name: avatar
-    type: media
-    label: アバター
-    accept: image/*
-```
-
----
-
-## フィールドタイプ一覧
-
-| タイプ | 説明 | 保存先 |
-|--------|------|--------|
-| string | 短いテキスト | value_text |
-| text | 長いテキスト | value_text |
-| slug | URLスラッグ | value_text |
-| email | メールアドレス | value_text |
-| url | URL | value_text |
-| integer | 整数 | value_int |
-| float | 小数 | value_float |
-| boolean | 真偽値 | value_int |
-| datetime | 日時 | value_datetime |
-| date | 日付 | value_datetime |
-| select | 選択肢 | value_text |
-| multiselect | 複数選択 | value_json |
-| blocks | Editor.jsブロック | value_json |
-| media | メディアファイル | value_text (media.id) |
-| json | 任意のJSON | value_json |
-
----
-
-## 拡張性（プラグイン）
-
-プラグインは「新しいcontent_type追加」に過ぎない。
-
-### 不動産プラグイン例
+### REST API
 
 ```
-plugins/
-└── real_estate/
-    ├── plugin.yaml
-    ├── content_types/
-    │   └── property.yaml
-    └── relations.yaml
+# エンティティCRUD
+GET    /api/entities/{type}
+POST   /api/entities/{type}
+GET    /api/entities/{type}/{id}
+PUT    /api/entities/{type}/{id}
+DELETE /api/entities/{type}/{id}
+
+# リレーション
+GET    /api/entities/{type}/{id}/relations/{relation_type}
+POST   /api/entities/{type}/{id}/relations/{relation_type}
+DELETE /api/entities/{type}/{id}/relations/{relation_type}/{to_id}
+
+# メディア
+POST   /api/media
+GET    /api/media/{id}
+DELETE /api/media/{id}
+
+# 認証
+POST   /api/auth/login
+POST   /api/auth/logout
+GET    /api/auth/me
+GET    /api/auth/google/login
+GET    /api/auth/google/callback
+
+# スキーマ
+GET    /api/schema
+GET    /api/schema/{type}
+GET    /api/schema/relations
+
+# コメント
+POST   /api/comments
+PUT    /api/comments/{id}/moderate
+DELETE /api/comments/{id}
+
+# リビジョン
+GET    /api/entities/{type}/{id}/revisions
+POST   /api/entities/{type}/{id}/revisions/{revision_id}/restore
 ```
 
-```yaml
-# plugins/real_estate/content_types/property.yaml
-name: property
-label: 物件
-label_plural: 物件一覧
-icon: building
-admin_menu: true
-searchable: true
-
-fields:
-  - name: name
-    type: string
-    label: 物件名
-    required: true
-
-  - name: property_type
-    type: select
-    label: 物件種別
-    options:
-      - value: mansion
-        label: マンション
-      - value: house
-        label: 戸建
-      - value: land
-        label: 土地
-
-  - name: price
-    type: integer
-    label: 価格
-    suffix: 円
-
-  - name: address
-    type: string
-    label: 住所
-
-  - name: layout
-    type: string
-    label: 間取り
-
-  - name: area
-    type: float
-    label: 面積
-    suffix: m²
-
-  - name: built_year
-    type: integer
-    label: 築年
-
-  - name: images
-    type: media
-    label: 画像
-    multiple: true
-    accept: image/*
-
-  - name: status
-    type: select
-    label: ステータス
-    options:
-      - value: available
-        label: 販売中
-      - value: contracted
-        label: 契約済
-      - value: sold
-        label: 売却済
-```
-
-**これだけで物件管理機能が追加される。コード追加ゼロ。**
-
----
-
-## セキュリティ
-
-### 認証
-
-- bcryptパスワードハッシュ
-- パスワード強度チェック（12文字以上、記号必須）
-- ログイン試行制限（5回失敗→15分ロック）
-- セッションCookie（secure, httponly, samesite=strict）
-- 2段階認証（TOTP）オプション
-
-### 入力処理
-
-- 全入力サニタイズ
-- SQLインジェクション対策（SQLAlchemy ORM）
-- XSS対策（Jinja2自動エスケープ）
-- CSRFトークン
-
-### アップロード
-
-- 拡張子ホワイトリスト
-- MIMEタイプ検証
-- ファイルサイズ上限
-- 画像はWebP変換
-
-### セキュリティヘッダー
+### フロントエンドルート
 
 ```
-X-Content-Type-Options: nosniff
-X-Frame-Options: DENY
-Content-Security-Policy: default-src 'self'
-Strict-Transport-Security: max-age=31536000
+/                              # ホーム（最新投稿）
+/{type}/{slug}                 # 単一表示
+/category/{slug}               # カテゴリアーカイブ
+/archive/{year}/{month}        # 月別アーカイブ
+/search                        # 検索
+
+# SEO
+/sitemap.xml                   # サイトマップ
+/robots.txt                    # robots.txt
+/feed.xml                      # RSS 2.0
+/atom.xml                      # Atom
+/feed.json                     # JSON Feed
+/manifest.json                 # PWA Manifest
+
+# アセット
+/css/theme.css                 # テーマCSS（キャッシュ付き）
+/static/*                      # 静的ファイル
+/uploads/*                     # アップロードファイル
 ```
-
----
-
-## 管理画面
-
-HTMX + Jinja2 による管理画面。
-
-### 特徴
-
-- **動的フォーム生成**: content_type定義から自動生成
-- **統一リスト画面**: 全コンテンツタイプで同じUI
-- **リレーション選択UI**: 自動生成
-- **ブロックエディタ**: Editor.js統合
 
 ### 管理画面URL
 
 ```
-/admin/                          # ダッシュボード
-/admin/{type}                    # エンティティ一覧
-/admin/{type}/new                # 新規作成
-/admin/{type}/{id}               # 編集
-/admin/media                     # メディア管理
-/admin/settings                  # 設定
+/admin                         # ダッシュボード
+/admin/{type}                  # エンティティ一覧
+/admin/{type}/new              # 新規作成
+/admin/{type}/{id}/edit        # 編集
+/admin/media                   # メディア管理
+/admin/menus                   # メニュー管理
+/admin/widgets                 # ウィジェット管理
+/admin/comments                # コメント管理
+/admin/settings                # サイト設定
+/admin/redirects               # リダイレクト管理
+/admin/tools/sitemap           # サイトマップ管理
+/admin/tools/link-validator    # リンク検証
 ```
 
 ---
 
-## CLI
+## 設定
 
-```bash
-# 新規サイト作成
-focomy init mysite
+### config.yaml
 
-# 開発サーバー起動
-focomy serve --port 8000
+```yaml
+site:
+  name: "My Site"
+  tagline: "A beautiful CMS"
+  url: "https://example.com"
+  language: "ja"
+  timezone: "Asia/Tokyo"
 
-# データベースマイグレーション
-focomy migrate
+admin:
+  path: "/admin"
+  per_page: 20
 
-# スキーマ検証
-focomy validate
+media:
+  upload_dir: "uploads"
+  max_size: 10485760
+  allowed_types:
+    - image/jpeg
+    - image/png
+    - image/gif
+    - image/webp
+    - application/pdf
+  image:
+    max_width: 1920
+    max_height: 1920
+    quality: 85
+    format: webp
 
-# 静的HTML生成
-focomy build --output=dist/
+security:
+  secret_key: "change-this-in-production"
+  session_expire: 86400
+  login_attempts: 5
+  lockout_duration: 900
+  password_min_length: 12
+  headers:
+    hsts_enabled: true
+    hsts_max_age: 31536000
+    hsts_include_subdomains: true
+    csp_enabled: true
+    permissions_policy_enabled: true
 
-# バックアップ
-focomy backup --output=backup.zip
+oauth:
+  google_client_id: ""
+  google_client_secret: ""
 
-# バージョン確認
-focomy version
+menus:
+  header:
+    - label: ホーム
+      url: /
+    - label: ブログ
+      url: /blog
+  footer:
+    - label: プライバシーポリシー
+      url: /page/privacy
 ```
 
 ---
 
 ## 美しさの指標
 
-| 指標 | 目標 |
-|------|------|
-| コアテーブル数 | 7以下 |
-| サービスクラス数 | 5以下 |
-| APIエンドポイント | 15以下 |
-| 重複コード | 0 |
-| 新コンテンツタイプ追加 | YAML 1ファイルのみ |
+| 指標 | 目標 | 現状 |
+|------|------|------|
+| コアテーブル数 | 7以下 | 7 |
+| サービスクラス数 | 15以下 | 14 |
+| APIエンドポイント | 30以下 | 25 |
+| 重複コード | 0 | 0 |
+| 新コンテンツタイプ追加 | YAML 1ファイルのみ | 達成 |
+
+---
+
+## 完了タスク
+
+| ID | タスク |
+|----|--------|
+| 001 | プロジェクト基盤構築 |
+| 002 | EntityService実装 |
+| 003 | RelationService実装 |
+| 004 | FieldService実装 |
+| 005 | 認証基盤構築 |
+| 006 | API実装 |
+| 007 | 管理画面基盤 |
+| 008 | Editor.js統合 |
+| 009 | メディア管理 |
+| 010 | SEO自動生成 |
+| 011 | テーマシステム |
+| 012 | CLI実装 |
+| 013 | robots.txt実装 |
+| 014 | フィード実装 |
+| 015 | ファビコン対応 |
+| 016 | SEO設定UI構築 |
+| 017 | 構造化データ拡充 |
+| 018 | ページ別SEO制御 |
+| 019 | パンくず実装 |
+| 020 | OGP/Twitter補完 |
+| 021 | 外部CSS分離 |
+| 022 | パフォーマンス最適化 |
+| 023 | リダイレクト管理 |
+| 024 | セキュリティヘッダー |
+| 025 | リンク検証機能 |
+| 026 | サイトマップUI |
 
 ---
 
