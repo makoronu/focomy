@@ -40,6 +40,40 @@ Sitemap: {site_url}/sitemap.xml
     return Response(content=content, media_type="text/plain")
 
 
+@router.get("/manifest.json", response_class=Response)
+async def manifest_json(request: Request):
+    """Generate web app manifest."""
+    import json
+
+    site_url = str(request.base_url).rstrip("/")
+
+    manifest = {
+        "name": "Focomy",
+        "short_name": "Focomy",
+        "start_url": "/",
+        "display": "standalone",
+        "background_color": "#ffffff",
+        "theme_color": "#2563eb",
+        "icons": [
+            {
+                "src": f"{site_url}/static/favicon-192.png",
+                "sizes": "192x192",
+                "type": "image/png"
+            },
+            {
+                "src": f"{site_url}/static/favicon-512.png",
+                "sizes": "512x512",
+                "type": "image/png"
+            }
+        ]
+    }
+
+    return Response(
+        content=json.dumps(manifest, ensure_ascii=False, indent=2),
+        media_type="application/manifest+json"
+    )
+
+
 @router.get("/sitemap.xml", response_class=Response)
 async def sitemap_xml(
     request: Request,

@@ -154,6 +154,15 @@ app.mount(
     name="uploads",
 )
 
+# Static assets (favicon, css, js)
+static_dir = settings.base_dir / "static"
+static_dir.mkdir(exist_ok=True)
+app.mount(
+    "/static",
+    StaticFiles(directory=str(static_dir)),
+    name="static",
+)
+
 
 @app.get("/health")
 async def health():
