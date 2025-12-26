@@ -415,9 +415,16 @@ async def settings_page(
             {"key": "timezone", "label": "タイムゾーン", "type": "text"},
         ],
         "seo": [
-            {"key": "title_separator", "label": "タイトル区切り", "type": "text"},
+            {"key": "title_separator", "label": "タイトル区切り", "type": "text", "placeholder": " | "},
             {"key": "default_description", "label": "デフォルト説明文", "type": "textarea"},
-            {"key": "default_og_image", "label": "デフォルトOG画像", "type": "text"},
+            {"key": "default_og_image", "label": "デフォルトOG画像URL", "type": "url"},
+            {"key": "og_site_name", "label": "OGサイト名", "type": "text"},
+            {"key": "og_locale", "label": "OGロケール", "type": "text", "placeholder": "ja_JP"},
+            {"key": "twitter_site", "label": "Twitter @ユーザー名", "type": "text", "placeholder": "@example"},
+            {"key": "ga4_id", "label": "Google Analytics 4 ID", "type": "text", "placeholder": "G-XXXXXXXXXX"},
+            {"key": "gtm_id", "label": "Google Tag Manager ID", "type": "text", "placeholder": "GTM-XXXXXXX"},
+            {"key": "search_console_id", "label": "Search Console 認証メタ", "type": "text"},
+            {"key": "bing_webmaster_id", "label": "Bing Webmaster 認証メタ", "type": "text"},
         ],
         "media": [
             {"key": "max_size", "label": "最大アップロードサイズ (bytes)", "type": "number"},

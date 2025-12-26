@@ -4,6 +4,30 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#2563eb">
+
+    {% if seo_settings %}
+    <!-- Search Console / Bing Webmaster verification -->
+    {% if seo_settings.search_console_id %}
+    <meta name="google-site-verification" content="{{ seo_settings.search_console_id }}">
+    {% endif %}
+    {% if seo_settings.bing_webmaster_id %}
+    <meta name="msvalidate.01" content="{{ seo_settings.bing_webmaster_id }}">
+    {% endif %}
+
+    <!-- OGP defaults -->
+    <meta property="og:site_name" content="{{ seo_settings.og_site_name or site_name }}">
+    <meta property="og:locale" content="{{ seo_settings.og_locale or 'ja_JP' }}">
+    {% if seo_settings.default_og_image and not og_image %}
+    <meta property="og:image" content="{{ seo_settings.default_og_image }}">
+    {% endif %}
+
+    <!-- Twitter Card defaults -->
+    {% if seo_settings.twitter_site %}
+    <meta name="twitter:site" content="{{ seo_settings.twitter_site }}">
+    <meta name="twitter:card" content="summary_large_image">
+    {% endif %}
+    {% endif %}
+
     {% block meta %}{% endblock %}
     <title>{% block title %}{{ site_name }}{% endblock %}</title>
 
@@ -146,5 +170,27 @@
     </footer>
 
     {% block scripts %}{% endblock %}
+
+    {% if seo_settings %}
+    <!-- Google Tag Manager -->
+    {% if seo_settings.gtm_id %}
+    <script>(function(w,d,s,l,i){w[l]=w[l]||[];w[l].push({'gtm.start':
+    new Date().getTime(),event:'gtm.js'});var f=d.getElementsByTagName(s)[0],
+    j=d.createElement(s),dl=l!='dataLayer'?'&l='+l:'';j.async=true;j.src=
+    'https://www.googletagmanager.com/gtm.js?id='+i+dl;f.parentNode.insertBefore(j,f);
+    })(window,document,'script','dataLayer','{{ seo_settings.gtm_id }}');</script>
+    {% endif %}
+
+    <!-- Google Analytics 4 -->
+    {% if seo_settings.ga4_id and not seo_settings.gtm_id %}
+    <script async src="https://www.googletagmanager.com/gtag/js?id={{ seo_settings.ga4_id }}"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{{ seo_settings.ga4_id }}');
+    </script>
+    {% endif %}
+    {% endif %}
 </body>
 </html>

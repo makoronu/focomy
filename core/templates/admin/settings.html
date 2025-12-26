@@ -58,6 +58,7 @@
                 name="{{ field.key }}"
                 class="form-input"
                 value="{{ settings.get(field.key, '') }}"
+                {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
             >
             {% endif %}
         </div>
