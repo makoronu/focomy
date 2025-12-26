@@ -69,13 +69,18 @@ async def get_seo_settings(db: AsyncSession, site_url: str = "") -> dict:
 
     site_name = site_settings.get("name", "Focomy")
 
-    # Generate site-wide JSON-LD
-    entity_svc = EntityService(db)
-    seo_svc = SEOService(entity_svc, site_url, {
+    # Settings for SEOService
+    seo_service_settings = {
         "name": site_name,
         "description": seo_settings.get("default_description", ""),
         "logo": seo_settings.get("default_og_image", ""),
-    })
+        "locale": seo_settings.get("og_locale", "ja_JP"),
+        "twitter_site": seo_settings.get("twitter_site", ""),
+    }
+
+    # Generate site-wide JSON-LD
+    entity_svc = EntityService(db)
+    seo_svc = SEOService(entity_svc, site_url, seo_service_settings)
     site_json_ld = seo_svc.render_site_json_ld()
 
     return {
@@ -91,6 +96,7 @@ async def get_seo_settings(db: AsyncSession, site_url: str = "") -> dict:
             "default_description": seo_settings.get("default_description", ""),
         },
         "site_json_ld": site_json_ld,
+        "_seo_service_settings": seo_service_settings,  # For use in routes
     }
 
 
@@ -270,15 +276,15 @@ async def view_post(
         if pub_date > datetime.utcnow():
             raise HTTPException(status_code=404, detail="Post not found")
 
-    # Generate SEO meta
+    # Get menus and SEO settings first
     site_url = str(request.base_url).rstrip("/")
-    seo_svc = SEOService(entity_svc, site_url)
-    meta = seo_svc.generate_meta(post)
-    seo_meta = seo_svc.render_meta_tags(meta)
-
-    # Get menus and SEO settings
     menus_ctx = await get_menus_context(db)
     seo_ctx = await get_seo_settings(db, site_url)
+
+    # Generate SEO meta with site settings
+    seo_svc = SEOService(entity_svc, site_url, seo_ctx.get("_seo_service_settings", {}))
+    meta = seo_svc.generate_meta(post)
+    seo_meta = seo_svc.render_meta_tags(meta)
 
     # Generate breadcrumbs
     breadcrumb_ctx = generate_breadcrumbs([
@@ -318,15 +324,15 @@ async def view_page(
     page = pages[0]
     page_data = entity_svc.serialize(page)
 
-    # Generate SEO meta
+    # Get menus and SEO settings first
     site_url = str(request.base_url).rstrip("/")
-    seo_svc = SEOService(entity_svc, site_url)
-    meta = seo_svc.generate_meta(page)
-    seo_meta = seo_svc.render_meta_tags(meta)
-
-    # Get menus and SEO settings
     menus_ctx = await get_menus_context(db)
     seo_ctx = await get_seo_settings(db, site_url)
+
+    # Generate SEO meta with site settings
+    seo_svc = SEOService(entity_svc, site_url, seo_ctx.get("_seo_service_settings", {}))
+    meta = seo_svc.generate_meta(page)
+    seo_meta = seo_svc.render_meta_tags(meta)
 
     # Generate breadcrumbs
     breadcrumb_ctx = generate_breadcrumbs([

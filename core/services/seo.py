@@ -54,7 +54,7 @@ class SEOService:
             "description": description,
             "canonical": canonical_url,
             "robots": ", ".join(robots) if robots else None,
-            "ogp": self._generate_ogp(og_title, og_description, canonical_url, og_image, entity.type),
+            "ogp": self._generate_ogp(og_title, og_description, canonical_url, og_image, entity.type, data),
             "json_ld": self._generate_json_ld(entity, data, title, description, canonical_url, image),
         }
 
@@ -104,9 +104,11 @@ class SEOService:
         url: str,
         image: Optional[str],
         entity_type: str,
+        entity_data: dict = None,
     ) -> dict[str, str]:
         """Generate Open Graph Protocol meta tags."""
         og_type = "article" if entity_type in ("post", "page") else "website"
+        data = entity_data or {}
 
         ogp = {
             "og:type": og_type,
@@ -115,8 +117,23 @@ class SEOService:
             "og:url": url,
         }
 
+        # Add site name and locale from settings
+        if self.site_settings.get("name"):
+            ogp["og:site_name"] = self.site_settings["name"]
+        ogp["og:locale"] = self.site_settings.get("locale", "ja_JP")
+
         if image:
             ogp["og:image"] = image
+
+        # Article-specific tags
+        if og_type == "article":
+            if data.get("created_at"):
+                ogp["article:published_time"] = data["created_at"]
+            if data.get("updated_at"):
+                ogp["article:modified_time"] = data["updated_at"]
+            # Author info if available
+            if data.get("author_name"):
+                ogp["article:author"] = data["author_name"]
 
         # Twitter Card
         ogp["twitter:card"] = "summary_large_image" if image else "summary"
@@ -124,6 +141,12 @@ class SEOService:
         ogp["twitter:description"] = description
         if image:
             ogp["twitter:image"] = image
+        # Twitter site from settings
+        if self.site_settings.get("twitter_site"):
+            ogp["twitter:site"] = self.site_settings["twitter_site"]
+        # Twitter creator (author's twitter handle if available)
+        if data.get("twitter_creator"):
+            ogp["twitter:creator"] = data["twitter_creator"]
 
         return ogp
 
