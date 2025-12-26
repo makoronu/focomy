@@ -31,6 +31,11 @@
     {% block meta %}{% endblock %}
     <title>{% block title %}{{ site_name }}{% endblock %}</title>
 
+    <!-- Site-wide JSON-LD (Organization, WebSite) -->
+    {% if site_json_ld %}
+    {{ site_json_ld | safe }}
+    {% endif %}
+
     <!-- Favicon -->
     <link rel="icon" href="/static/favicon.ico" sizes="32x32">
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">

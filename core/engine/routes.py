@@ -21,23 +21,36 @@ from ..services.settings import SettingsService
 router = APIRouter(tags=["public"])
 
 
-async def get_seo_settings(db: AsyncSession) -> dict:
+async def get_seo_settings(db: AsyncSession, site_url: str = "") -> dict:
     """Get SEO settings for templates."""
     settings_svc = SettingsService(db)
     seo_settings = await settings_svc.get_by_category("seo")
     site_settings = await settings_svc.get_by_category("site")
+
+    site_name = site_settings.get("name", "Focomy")
+
+    # Generate site-wide JSON-LD
+    entity_svc = EntityService(db)
+    seo_svc = SEOService(entity_svc, site_url, {
+        "name": site_name,
+        "description": seo_settings.get("default_description", ""),
+        "logo": seo_settings.get("default_og_image", ""),
+    })
+    site_json_ld = seo_svc.render_site_json_ld()
+
     return {
         "seo_settings": {
             "ga4_id": seo_settings.get("ga4_id", ""),
             "gtm_id": seo_settings.get("gtm_id", ""),
             "search_console_id": seo_settings.get("search_console_id", ""),
             "bing_webmaster_id": seo_settings.get("bing_webmaster_id", ""),
-            "og_site_name": seo_settings.get("og_site_name", site_settings.get("name", "Focomy")),
+            "og_site_name": seo_settings.get("og_site_name", site_name),
             "og_locale": seo_settings.get("og_locale", "ja_JP"),
             "twitter_site": seo_settings.get("twitter_site", ""),
             "default_og_image": seo_settings.get("default_og_image", ""),
             "default_description": seo_settings.get("default_description", ""),
-        }
+        },
+        "site_json_ld": site_json_ld,
     }
 
 
@@ -164,9 +177,10 @@ async def home(
             posts_data.append(data)
 
     # Get menus, widgets, and SEO settings
+    site_url = str(request.base_url).rstrip("/")
     menus_ctx = await get_menus_context(db)
     widgets_ctx = await get_widgets_context(db)
-    seo_ctx = await get_seo_settings(db)
+    seo_ctx = await get_seo_settings(db, site_url)
 
     html = theme_service.render("index.html", {
         "posts": posts_data,
@@ -224,7 +238,7 @@ async def view_post(
 
     # Get menus and SEO settings
     menus_ctx = await get_menus_context(db)
-    seo_ctx = await get_seo_settings(db)
+    seo_ctx = await get_seo_settings(db, site_url)
 
     html = theme_service.render("post.html", {
         "post": post_data,
@@ -266,7 +280,7 @@ async def view_page(
 
     # Get menus and SEO settings
     menus_ctx = await get_menus_context(db)
-    seo_ctx = await get_seo_settings(db)
+    seo_ctx = await get_seo_settings(db, site_url)
 
     html = theme_service.render("post.html", {
         "post": page_data,

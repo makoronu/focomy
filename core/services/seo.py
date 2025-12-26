@@ -21,9 +21,10 @@ class SEOService:
     - sitemap.xml
     """
 
-    def __init__(self, entity_svc: EntityService, site_url: str = ""):
+    def __init__(self, entity_svc: EntityService, site_url: str = "", site_settings: dict = None):
         self.entity_svc = entity_svc
         self.site_url = site_url.rstrip("/")
+        self.site_settings = site_settings or {}
 
     def generate_meta(self, entity: Entity) -> dict[str, Any]:
         """Generate SEO meta tags for an entity."""
@@ -278,6 +279,110 @@ class SEOService:
 
         return "\n".join(xml_parts)
 
+    def generate_site_json_ld(self) -> list[dict[str, Any]]:
+        """Generate site-wide JSON-LD (Organization, WebSite)."""
+        schemas = []
+
+        site_name = self.site_settings.get("name", "Focomy")
+        site_description = self.site_settings.get("description", "")
+
+        # Organization schema
+        org = {
+            "@context": "https://schema.org",
+            "@type": "Organization",
+            "name": site_name,
+            "url": self.site_url,
+        }
+        if self.site_settings.get("logo"):
+            org["logo"] = self.site_settings["logo"]
+        if self.site_settings.get("email"):
+            org["email"] = self.site_settings["email"]
+        if self.site_settings.get("social_links"):
+            org["sameAs"] = self.site_settings["social_links"]
+        schemas.append(org)
+
+        # WebSite schema with SearchAction
+        website = {
+            "@context": "https://schema.org",
+            "@type": "WebSite",
+            "name": site_name,
+            "url": self.site_url,
+            "potentialAction": {
+                "@type": "SearchAction",
+                "target": {
+                    "@type": "EntryPoint",
+                    "urlTemplate": f"{self.site_url}/search?q={{search_term_string}}"
+                },
+                "query-input": "required name=search_term_string"
+            }
+        }
+        if site_description:
+            website["description"] = site_description
+        schemas.append(website)
+
+        return schemas
+
+    def generate_person_json_ld(self, author_data: dict) -> dict[str, Any]:
+        """Generate Person JSON-LD for author."""
+        person = {
+            "@context": "https://schema.org",
+            "@type": "Person",
+            "name": author_data.get("name", "Author"),
+        }
+        if author_data.get("email"):
+            person["email"] = author_data["email"]
+        if author_data.get("url"):
+            person["url"] = author_data["url"]
+        if author_data.get("image"):
+            person["image"] = author_data["image"]
+        if author_data.get("description"):
+            person["description"] = author_data["description"]
+        if author_data.get("social_links"):
+            person["sameAs"] = author_data["social_links"]
+        return person
+
+    def generate_faq_json_ld(self, faq_items: list[dict]) -> dict[str, Any]:
+        """Generate FAQPage JSON-LD.
+
+        Args:
+            faq_items: List of {"question": str, "answer": str}
+        """
+        return {
+            "@context": "https://schema.org",
+            "@type": "FAQPage",
+            "mainEntity": [
+                {
+                    "@type": "Question",
+                    "name": item["question"],
+                    "acceptedAnswer": {
+                        "@type": "Answer",
+                        "text": item["answer"]
+                    }
+                }
+                for item in faq_items
+            ]
+        }
+
+    def generate_breadcrumb_json_ld(self, items: list[dict]) -> dict[str, Any]:
+        """Generate BreadcrumbList JSON-LD.
+
+        Args:
+            items: List of {"name": str, "url": str}
+        """
+        return {
+            "@context": "https://schema.org",
+            "@type": "BreadcrumbList",
+            "itemListElement": [
+                {
+                    "@type": "ListItem",
+                    "position": i + 1,
+                    "name": item["name"],
+                    "item": item["url"]
+                }
+                for i, item in enumerate(items)
+            ]
+        }
+
     def render_meta_tags(self, meta: dict) -> str:
         """Render meta tags as HTML."""
         lines = []
@@ -302,4 +407,13 @@ class SEOService:
             json_ld = json.dumps(meta["json_ld"], ensure_ascii=False)
             lines.append(f'<script type="application/ld+json">{json_ld}</script>')
 
+        return "\n".join(lines)
+
+    def render_site_json_ld(self) -> str:
+        """Render site-wide JSON-LD as HTML script tags."""
+        schemas = self.generate_site_json_ld()
+        lines = []
+        for schema in schemas:
+            json_ld = json.dumps(schema, ensure_ascii=False)
+            lines.append(f'<script type="application/ld+json">{json_ld}</script>')
         return "\n".join(lines)
