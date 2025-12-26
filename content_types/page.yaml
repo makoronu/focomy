@@ -52,6 +52,54 @@ fields:
     label: 表示順
     default: 0
 
+  # SEO fields
+  - name: seo_title
+    type: string
+    label: SEOタイトル
+    description: 検索結果に表示されるタイトル（空の場合はページタイトル）
+    max_length: 60
+
+  - name: seo_description
+    type: text
+    label: SEO説明文
+    description: 検索結果に表示される説明文
+    max_length: 160
+
+  - name: seo_noindex
+    type: boolean
+    label: noindex
+    description: 検索エンジンにインデックスさせない
+    default: false
+
+  - name: seo_nofollow
+    type: boolean
+    label: nofollow
+    description: リンクを追跡させない
+    default: false
+
+  - name: seo_canonical
+    type: url
+    label: canonical URL
+    description: 正規URLを上書き
+
+  - name: og_title
+    type: string
+    label: OGタイトル
+    description: SNSシェア時のタイトル
+    max_length: 60
+
+  - name: og_description
+    type: text
+    label: OG説明文
+    description: SNSシェア時の説明文
+    max_length: 160
+
+  - name: og_image
+    type: media
+    label: OG画像
+    description: SNSシェア時の画像
+    accept: image/*
+
 relations:
   - type: page_author
     label: 著者

@@ -31,17 +31,31 @@ class SEOService:
         data = self.entity_svc.serialize(entity)
         ct = field_service.get_content_type(entity.type)
 
-        title = self._get_title(data, ct)
-        description = self._get_description(data, ct)
-        url = self._get_url(entity, data)
+        # Use page-specific SEO settings if available
+        title = data.get("seo_title") or self._get_title(data, ct)
+        description = data.get("seo_description") or self._get_description(data, ct)
+        canonical_url = data.get("seo_canonical") or self._get_url(entity, data)
         image = self._get_image(data)
+
+        # OGP specific overrides
+        og_title = data.get("og_title") or title
+        og_description = data.get("og_description") or description
+        og_image = data.get("og_image") or image
+
+        # noindex/nofollow
+        robots = []
+        if data.get("seo_noindex"):
+            robots.append("noindex")
+        if data.get("seo_nofollow"):
+            robots.append("nofollow")
 
         return {
             "title": title,
             "description": description,
-            "canonical": url,
-            "ogp": self._generate_ogp(title, description, url, image, entity.type),
-            "json_ld": self._generate_json_ld(entity, data, title, description, url, image),
+            "canonical": canonical_url,
+            "robots": ", ".join(robots) if robots else None,
+            "ogp": self._generate_ogp(og_title, og_description, canonical_url, og_image, entity.type),
+            "json_ld": self._generate_json_ld(entity, data, title, description, canonical_url, image),
         }
 
     def _get_title(self, data: dict, ct) -> str:
@@ -394,6 +408,8 @@ class SEOService:
             lines.append(f'<meta name="description" content="{meta["description"]}">')
         if meta.get("canonical"):
             lines.append(f'<link rel="canonical" href="{meta["canonical"]}">')
+        if meta.get("robots"):
+            lines.append(f'<meta name="robots" content="{meta["robots"]}">')
 
         # OGP
         for key, value in meta.get("ogp", {}).items():
