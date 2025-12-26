@@ -42,6 +42,16 @@
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
     <link rel="manifest" href="/manifest.json">
 
+    <!-- Preload critical resources -->
+    <link rel="preload" href="/css/theme.css" as="style">
+    {% if seo_settings and seo_settings.default_og_image %}
+    <link rel="preload" href="{{ seo_settings.default_og_image }}" as="image">
+    {% endif %}
+
+    <!-- DNS prefetch for external resources -->
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    <link rel="dns-prefetch" href="//www.googletagmanager.com">
+
     <!-- Theme CSS (external, cached) -->
     <link rel="stylesheet" href="/css/theme.css">
 

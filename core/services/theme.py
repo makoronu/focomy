@@ -231,7 +231,20 @@ class ThemeService:
             self._current_theme = name
             self._env = None  # Reset environment
 
-    def get_css_variables(self, theme_name: str = None) -> str:
+    def _minify_css(self, css: str) -> str:
+        """Minify CSS by removing unnecessary whitespace and comments."""
+        import re
+        # Remove comments
+        css = re.sub(r'/\*[\s\S]*?\*/', '', css)
+        # Remove newlines and extra spaces
+        css = re.sub(r'\s+', ' ', css)
+        # Remove spaces around special characters
+        css = re.sub(r'\s*([{};:,>+~])\s*', r'\1', css)
+        # Remove trailing semicolons before closing braces
+        css = re.sub(r';\s*}', '}', css)
+        return css.strip()
+
+    def get_css_variables(self, theme_name: str = None, minify: bool = True) -> str:
         """Generate CSS variables from theme config."""
         theme = self.get_theme(theme_name)
         if not theme:
@@ -464,7 +477,8 @@ body {
         if theme.custom_css:
             lines.append(theme.custom_css)
 
-        return "\n".join(lines)
+        css = "\n".join(lines)
+        return self._minify_css(css) if minify else css
 
     def get_template_env(self, theme_name: str = None) -> Environment:
         """Get Jinja2 environment for theme."""
@@ -596,7 +610,7 @@ body {
                 url = self._sanitize_url(file_data.get("url", ""))
                 caption = escape(block_data.get("caption", ""))
                 if url:
-                    html_parts.append(f'<figure><img src="{url}" alt="{caption}"><figcaption>{caption}</figcaption></figure>')
+                    html_parts.append(f'<figure><img src="{url}" alt="{caption}" loading="lazy"><figcaption>{caption}</figcaption></figure>')
 
             elif block_type == "quote":
                 text = block_data.get("text", "")
