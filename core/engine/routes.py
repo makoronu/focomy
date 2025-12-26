@@ -20,6 +20,41 @@ from ..services.widget import WidgetService
 router = APIRouter(tags=["public"])
 
 
+# === SEO Routes (must be before dynamic routes) ===
+
+@router.get("/robots.txt", response_class=Response)
+async def robots_txt(request: Request):
+    """Generate robots.txt dynamically."""
+    site_url = str(request.base_url).rstrip("/")
+
+    content = f"""User-agent: *
+Allow: /
+
+# Disallow admin and API
+Disallow: /admin/
+Disallow: /api/
+
+# Sitemap
+Sitemap: {site_url}/sitemap.xml
+"""
+    return Response(content=content, media_type="text/plain")
+
+
+@router.get("/sitemap.xml", response_class=Response)
+async def sitemap_xml(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Generate sitemap.xml dynamically."""
+    entity_svc = EntityService(db)
+    site_url = str(request.base_url).rstrip("/")
+    seo_svc = SEOService(entity_svc, site_url)
+
+    xml_content = await seo_svc.generate_sitemap()
+
+    return Response(content=xml_content, media_type="application/xml")
+
+
 async def get_menus_context(db: AsyncSession) -> dict:
     """Get menus context for templates."""
     menu_svc = MenuService(db)
