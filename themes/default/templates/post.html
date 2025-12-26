@@ -1,0 +1,295 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} - {{ site_name }}{% endblock %}
+
+{% block meta %}
+{{ seo_meta | safe }}
+{% endblock %}
+
+{% block styles %}
+<style>
+/* Comment styles */
+.comments-section {
+    margin-top: 3rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border, #e2e8f0);
+}
+.comments-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin-bottom: 1.5rem;
+}
+.comment-form {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: var(--color-surface, #f8fafc);
+    border-radius: 0.5rem;
+}
+.comment-form h3 {
+    margin: 0 0 1rem;
+    font-size: 1.125rem;
+}
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+.form-group label {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+.form-group input,
+.form-group textarea {
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 0.375rem;
+    font-size: 1rem;
+}
+.form-group textarea {
+    min-height: 100px;
+    resize: vertical;
+}
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: var(--color-primary, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+.comment-submit {
+    padding: 0.75rem 1.5rem;
+    background: var(--color-primary, #2563eb);
+    color: white;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+.comment-submit:hover {
+    background: var(--color-primary-dark, #1d4ed8);
+}
+.comment-submit:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Comments list */
+.comments-list {
+    margin-top: 2rem;
+}
+.comment {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--color-border, #e2e8f0);
+}
+.comment:last-child {
+    border-bottom: none;
+}
+.comment-header {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+.comment-author {
+    font-weight: 600;
+    color: var(--color-text, #1e293b);
+}
+.comment-date {
+    font-size: 0.875rem;
+    color: var(--color-text-muted, #64748b);
+}
+.comment-content {
+    line-height: 1.6;
+    color: var(--color-text, #1e293b);
+}
+.comment-actions {
+    margin-top: 0.5rem;
+}
+.reply-btn {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    background: none;
+    border: 1px solid var(--color-border, #e2e8f0);
+    border-radius: 0.25rem;
+    color: var(--color-text-muted, #64748b);
+    cursor: pointer;
+}
+.reply-btn:hover {
+    background: var(--color-surface, #f8fafc);
+}
+
+/* Nested comments */
+.comment-level-1 { margin-left: 2rem; }
+.comment-level-2 { margin-left: 4rem; }
+.comment-level-3 { margin-left: 6rem; }
+.comment-replies {
+    margin-top: 0.5rem;
+}
+
+/* Response messages */
+.comment-response {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+}
+.comment-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+.comment-error {
+    background: #fee2e2;
+    color: #991b1b;
+}
+.no-comments {
+    color: var(--color-text-muted, #64748b);
+    font-style: italic;
+}
+
+/* Reply form (hidden by default) */
+.reply-form {
+    display: none;
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--color-surface, #f8fafc);
+    border-radius: 0.375rem;
+}
+.reply-form.active {
+    display: block;
+}
+
+@media (max-width: 640px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    .comment-level-1,
+    .comment-level-2,
+    .comment-level-3 {
+        margin-left: 1rem;
+    }
+}
+</style>
+{% endblock %}
+
+{% block content %}
+<article class="post">
+    <header class="post-header">
+        <h1>{{ post.title }}</h1>
+        <div class="post-meta">
+            <time datetime="{{ post.created_at }}">{{ post.created_at[:10] }}</time>
+        </div>
+    </header>
+
+    <div class="post-content">
+        {{ post.body | render_blocks | safe }}
+    </div>
+</article>
+
+<!-- Comments Section -->
+<section class="comments-section">
+    <h2 class="comments-title">Comments</h2>
+
+    <!-- Comment Form -->
+    <div class="comment-form">
+        <h3>Leave a Comment</h3>
+        <form id="comment-form" hx-post="/api/comments/form" hx-target="#comment-response" hx-swap="innerHTML">
+            <input type="hidden" name="post_id" value="{{ post.id }}">
+            <input type="hidden" name="parent_id" id="parent_id" value="">
+            <!-- Honeypot field (hidden from users) -->
+            <div style="position: absolute; left: -9999px;">
+                <input type="text" name="website" tabindex="-1" autocomplete="off">
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="author_name">Name *</label>
+                    <input type="text" id="author_name" name="author_name" required maxlength="100">
+                </div>
+                <div class="form-group">
+                    <label for="author_email">Email *</label>
+                    <input type="email" id="author_email" name="author_email" required maxlength="255">
+                </div>
+            </div>
+            <div class="form-group full-width">
+                <label for="content">Comment *</label>
+                <textarea id="content" name="content" required maxlength="2000" placeholder="Write your comment..."></textarea>
+            </div>
+            <div id="comment-response"></div>
+            <button type="submit" class="comment-submit">Submit Comment</button>
+        </form>
+    </div>
+
+    <!-- Comments List -->
+    <div class="comments-list" id="comments-list"
+         hx-get="/api/comments/{{ post.id }}/html"
+         hx-trigger="load"
+         hx-swap="innerHTML">
+        <p class="no-comments">Loading comments...</p>
+    </div>
+</section>
+
+{% endblock %}
+
+{% block scripts %}
+<script src="https://unpkg.com/htmx.org@1.9.10"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Handle reply buttons
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('reply-btn')) {
+            const parentId = e.target.dataset.parentId;
+            const parentIdInput = document.getElementById('parent_id');
+            const form = document.getElementById('comment-form');
+
+            // Set parent ID and scroll to form
+            parentIdInput.value = parentId;
+            form.scrollIntoView({ behavior: 'smooth' });
+
+            // Update form title to indicate reply
+            const formTitle = form.querySelector('h3');
+            formTitle.textContent = 'Reply to Comment';
+
+            // Add cancel reply button if not exists
+            if (!document.getElementById('cancel-reply')) {
+                const cancelBtn = document.createElement('button');
+                cancelBtn.type = 'button';
+                cancelBtn.id = 'cancel-reply';
+                cancelBtn.textContent = 'Cancel Reply';
+                cancelBtn.style.marginLeft = '1rem';
+                cancelBtn.onclick = function() {
+                    parentIdInput.value = '';
+                    formTitle.textContent = 'Leave a Comment';
+                    this.remove();
+                };
+                form.querySelector('.comment-submit').after(cancelBtn);
+            }
+        }
+    });
+
+    // Clear form after successful submission
+    document.body.addEventListener('htmx:afterSwap', function(e) {
+        if (e.detail.target.id === 'comment-response') {
+            if (e.detail.target.querySelector('.comment-success')) {
+                document.getElementById('comment-form').reset();
+                document.getElementById('parent_id').value = '';
+                const cancelBtn = document.getElementById('cancel-reply');
+                if (cancelBtn) cancelBtn.remove();
+                const formTitle = document.querySelector('.comment-form h3');
+                formTitle.textContent = 'Leave a Comment';
+
+                // Reload comments
+                htmx.trigger('#comments-list', 'load');
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

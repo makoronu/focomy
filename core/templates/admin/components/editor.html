@@ -1,0 +1,1033 @@
+{# Editor.js Component - 最高のブロックエディタ #}
+
+<style>
+/* === エディタコンテナ === */
+.editor-container {
+    background: white;
+    border: 2px solid var(--border);
+    border-radius: 0.5rem;
+    min-height: 400px;
+    cursor: text;
+}
+
+.editor-container:focus-within {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.codex-editor {
+    padding: 1.5rem;
+}
+
+.codex-editor__redactor {
+    padding-bottom: 150px !important;
+}
+
+.ce-block__content,
+.ce-toolbar__content {
+    max-width: 100%;
+}
+
+/* === 基本スタイル === */
+.ce-paragraph {
+    line-height: 1.8;
+    font-size: 1rem;
+}
+
+.ce-header {
+    padding: 0.5em 0;
+}
+
+/* === Alertブロック === */
+.cdx-alert {
+    padding: 1rem 1.25rem;
+    border-radius: 0.5rem;
+    margin: 1rem 0;
+    border-left: 4px solid;
+}
+
+.cdx-alert--info {
+    background: #eff6ff;
+    border-color: #3b82f6;
+    color: #1e40af;
+}
+
+.cdx-alert--warning {
+    background: #fffbeb;
+    border-color: #f59e0b;
+    color: #92400e;
+}
+
+.cdx-alert--success {
+    background: #f0fdf4;
+    border-color: #22c55e;
+    color: #166534;
+}
+
+.cdx-alert--error {
+    background: #fef2f2;
+    border-color: #ef4444;
+    color: #991b1b;
+}
+
+.cdx-alert__message {
+    outline: none;
+    min-height: 1.5em;
+}
+
+.cdx-alert__type-selector {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.cdx-alert__type-btn {
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    background: white;
+    cursor: pointer;
+    font-size: 0.75rem;
+}
+
+.cdx-alert__type-btn.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+
+/* === Buttonブロック === */
+.cdx-button {
+    padding: 1rem;
+    text-align: center;
+}
+
+.cdx-button__link {
+    display: inline-block;
+    padding: 0.75rem 2rem;
+    border-radius: 0.5rem;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.cdx-button__link--primary {
+    background: var(--primary);
+    color: white;
+}
+
+.cdx-button__link--secondary {
+    background: var(--surface);
+    color: var(--text);
+    border: 1px solid var(--border);
+}
+
+.cdx-button__link--outline {
+    background: transparent;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+}
+
+.cdx-button__settings {
+    margin-top: 0.5rem;
+    display: flex;
+    gap: 0.5rem;
+    justify-content: center;
+}
+
+.cdx-button__input {
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+/* === LinkCardブロック === */
+.cdx-linkcard {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin: 1rem 0;
+}
+
+.cdx-linkcard__input {
+    width: 100%;
+    padding: 0.75rem;
+    border: none;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.875rem;
+}
+
+.cdx-linkcard__preview {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+}
+
+.cdx-linkcard__image {
+    width: 120px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 0.25rem;
+    background: var(--surface);
+}
+
+.cdx-linkcard__content {
+    flex: 1;
+}
+
+.cdx-linkcard__title {
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+    color: var(--text);
+}
+
+.cdx-linkcard__description {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.cdx-linkcard__domain {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+/* === Columnsブロック === */
+.cdx-columns {
+    display: flex;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+
+.cdx-columns__col {
+    flex: 1;
+    min-height: 100px;
+    padding: 1rem;
+    border: 1px dashed var(--border);
+    border-radius: 0.25rem;
+}
+
+.cdx-columns__col:focus {
+    border-color: var(--primary);
+    outline: none;
+}
+
+/* === Checklistスタイル === */
+.cdx-checklist__item {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.25rem 0;
+}
+
+.cdx-checklist__item-checkbox {
+    width: 1.25rem;
+    height: 1.25rem;
+    margin-top: 0.125rem;
+}
+
+/* === コードブロック === */
+.ce-code__textarea {
+    font-family: var(--font-mono);
+    font-size: 0.875rem;
+    background: #1e293b;
+    color: #e2e8f0;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    min-height: 100px;
+}
+
+/* === 引用 === */
+.cdx-quote__text {
+    font-style: italic;
+    border-left: 4px solid var(--primary);
+    padding-left: 1rem;
+    min-height: 2em;
+}
+
+.cdx-quote__caption {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+/* === テーブル === */
+.tc-table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+.tc-table td {
+    border: 1px solid var(--border);
+    padding: 0.5rem;
+    min-width: 100px;
+}
+
+/* === インラインツール === */
+.cdx-marker {
+    background: #fef08a;
+    padding: 0.1em 0.2em;
+}
+
+.inline-code {
+    background: var(--surface);
+    padding: 0.1em 0.4em;
+    border-radius: 0.25rem;
+    font-family: var(--font-mono);
+    font-size: 0.9em;
+}
+
+.cdx-underline {
+    text-decoration: underline;
+}
+
+/* === Mapブロック === */
+.cdx-map {
+    margin: 1rem 0;
+}
+
+.cdx-map__input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+    font-family: var(--font-mono);
+    resize: vertical;
+}
+
+.cdx-map__preview {
+    margin-top: 0.5rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+}
+
+.cdx-map__caption {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+/* === Videoブロック === */
+.cdx-video {
+    margin: 1rem 0;
+}
+
+.cdx-video__input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.cdx-video__preview {
+    margin-top: 0.5rem;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #000;
+}
+
+.cdx-video__preview iframe,
+.cdx-video__preview video {
+    display: block;
+}
+
+.cdx-video__caption {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+</style>
+
+<!-- Editor.js Core & Plugins -->
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/editorjs@2.28.2"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/header@2.8.1"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/list@1.9.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/checklist@1.6.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/image@2.9.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/quote@2.6.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/code@2.9.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/delimiter@1.4.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/table@2.3.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/embed@2.7.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/raw@2.5.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/marker@1.4.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/inline-code@1.5.0"></script>
+<script src="https://cdn.jsdelivr.net/npm/@editorjs/underline@1.1.0"></script>
+
+<script>
+/* === カスタムブロック: Alert === */
+class AlertBlock {
+    static get toolbox() {
+        return {
+            title: 'アラート',
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>'
+        };
+    }
+
+    constructor({data, api}) {
+        this.api = api;
+        this.data = {
+            type: data.type || 'info',
+            message: data.message || ''
+        };
+    }
+
+    render() {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('cdx-alert', `cdx-alert--${this.data.type}`);
+
+        const typeSelector = document.createElement('div');
+        typeSelector.classList.add('cdx-alert__type-selector');
+
+        ['info', 'warning', 'success', 'error'].forEach(type => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = {info: '情報', warning: '注意', success: '成功', error: 'エラー'}[type];
+            btn.classList.add('cdx-alert__type-btn');
+            if (type === this.data.type) btn.classList.add('active');
+            btn.addEventListener('click', () => {
+                this.data.type = type;
+                wrapper.className = `cdx-alert cdx-alert--${type}`;
+                typeSelector.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+            });
+            typeSelector.appendChild(btn);
+        });
+
+        const message = document.createElement('div');
+        message.classList.add('cdx-alert__message');
+        message.contentEditable = true;
+        message.innerHTML = this.data.message;
+        message.dataset.placeholder = 'アラートメッセージを入力...';
+
+        wrapper.appendChild(typeSelector);
+        wrapper.appendChild(message);
+        this.messageEl = message;
+
+        return wrapper;
+    }
+
+    save() {
+        return {
+            type: this.data.type,
+            message: this.messageEl.innerHTML
+        };
+    }
+
+    static get sanitize() {
+        return { message: { br: true, b: true, i: true, a: true } };
+    }
+}
+
+/* === カスタムブロック: Button === */
+class ButtonBlock {
+    static get toolbox() {
+        return {
+            title: 'ボタン',
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="8" width="18" height="8" rx="2"/></svg>'
+        };
+    }
+
+    constructor({data}) {
+        this.data = {
+            text: data.text || 'ボタン',
+            url: data.url || '#',
+            style: data.style || 'primary'
+        };
+    }
+
+    render() {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('cdx-button');
+
+        const link = document.createElement('span');
+        link.classList.add('cdx-button__link', `cdx-button__link--${this.data.style}`);
+        link.contentEditable = true;
+        link.textContent = this.data.text;
+        this.linkEl = link;
+
+        const settings = document.createElement('div');
+        settings.classList.add('cdx-button__settings');
+
+        const urlInput = document.createElement('input');
+        urlInput.type = 'url';
+        urlInput.placeholder = 'リンクURL';
+        urlInput.value = this.data.url;
+        urlInput.classList.add('cdx-button__input');
+        this.urlInput = urlInput;
+
+        const styleSelect = document.createElement('select');
+        styleSelect.classList.add('cdx-button__input');
+        [['primary', 'プライマリ'], ['secondary', 'セカンダリ'], ['outline', 'アウトライン']].forEach(([val, label]) => {
+            const opt = document.createElement('option');
+            opt.value = val;
+            opt.textContent = label;
+            if (val === this.data.style) opt.selected = true;
+            styleSelect.appendChild(opt);
+        });
+        styleSelect.addEventListener('change', () => {
+            link.className = `cdx-button__link cdx-button__link--${styleSelect.value}`;
+            this.data.style = styleSelect.value;
+        });
+        this.styleSelect = styleSelect;
+
+        settings.appendChild(urlInput);
+        settings.appendChild(styleSelect);
+        wrapper.appendChild(link);
+        wrapper.appendChild(settings);
+
+        return wrapper;
+    }
+
+    save() {
+        return {
+            text: this.linkEl.textContent,
+            url: this.urlInput.value,
+            style: this.styleSelect.value
+        };
+    }
+}
+
+/* === カスタムブロック: LinkCard === */
+class LinkCardBlock {
+    static get toolbox() {
+        return {
+            title: 'リンクカード',
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/></svg>'
+        };
+    }
+
+    constructor({data}) {
+        this.data = {
+            url: data.url || '',
+            title: data.title || '',
+            description: data.description || '',
+            image: data.image || ''
+        };
+    }
+
+    render() {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('cdx-linkcard');
+
+        const input = document.createElement('input');
+        input.type = 'url';
+        input.placeholder = 'URLを入力してEnter...';
+        input.value = this.data.url;
+        input.classList.add('cdx-linkcard__input');
+        this.input = input;
+
+        const preview = document.createElement('div');
+        preview.classList.add('cdx-linkcard__preview');
+        preview.style.display = this.data.title ? 'flex' : 'none';
+        this.preview = preview;
+
+        if (this.data.title) {
+            this._renderPreview();
+        }
+
+        input.addEventListener('keydown', async (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                await this._fetchOGP(input.value);
+            }
+        });
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(preview);
+
+        return wrapper;
+    }
+
+    async _fetchOGP(url) {
+        // 簡易的なプレビュー（実際はサーバーサイドでOGP取得が必要）
+        try {
+            const domain = new URL(url).hostname;
+            this.data.url = url;
+            this.data.title = domain;
+            this.data.description = url;
+            this._renderPreview();
+        } catch (e) {
+            console.error('Invalid URL');
+        }
+    }
+
+    _renderPreview() {
+        this.preview.innerHTML = `
+            <div class="cdx-linkcard__content">
+                <div class="cdx-linkcard__title" contenteditable="true">${this.data.title}</div>
+                <div class="cdx-linkcard__description" contenteditable="true">${this.data.description}</div>
+                <div class="cdx-linkcard__domain">${this.data.url}</div>
+            </div>
+        `;
+        this.preview.style.display = 'flex';
+
+        this.preview.querySelector('.cdx-linkcard__title').addEventListener('input', (e) => {
+            this.data.title = e.target.textContent;
+        });
+        this.preview.querySelector('.cdx-linkcard__description').addEventListener('input', (e) => {
+            this.data.description = e.target.textContent;
+        });
+    }
+
+    save() {
+        return this.data;
+    }
+}
+
+/* === カスタムブロック: Map (Google Maps) === */
+class MapBlock {
+    static get toolbox() {
+        return {
+            title: '地図',
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>'
+        };
+    }
+
+    constructor({data}) {
+        this.data = {
+            embedCode: data.embedCode || '',
+            caption: data.caption || ''
+        };
+    }
+
+    render() {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('cdx-map');
+
+        const input = document.createElement('textarea');
+        input.classList.add('cdx-map__input');
+        input.placeholder = 'Google Mapsの埋め込みコード（<iframe>タグ）を貼り付け...';
+        input.value = this.data.embedCode;
+        input.rows = 3;
+        this.input = input;
+
+        const preview = document.createElement('div');
+        preview.classList.add('cdx-map__preview');
+        this.preview = preview;
+
+        const caption = document.createElement('input');
+        caption.type = 'text';
+        caption.classList.add('cdx-map__caption');
+        caption.placeholder = 'キャプション（任意）';
+        caption.value = this.data.caption;
+        this.captionInput = caption;
+
+        if (this.data.embedCode) {
+            this._renderPreview();
+        }
+
+        input.addEventListener('input', () => {
+            this.data.embedCode = input.value;
+            this._renderPreview();
+        });
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(preview);
+        wrapper.appendChild(caption);
+
+        return wrapper;
+    }
+
+    _renderPreview() {
+        // iframeタグを抽出して表示
+        const iframeMatch = this.data.embedCode.match(/<iframe[^>]*src=["']([^"']+)["'][^>]*>/i);
+        if (iframeMatch) {
+            this.preview.innerHTML = `<iframe src="${iframeMatch[1]}" width="100%" height="300" style="border:0" allowfullscreen loading="lazy"></iframe>`;
+            this.preview.style.display = 'block';
+        } else {
+            this.preview.style.display = 'none';
+        }
+    }
+
+    save() {
+        // iframeのsrc属性を抽出して保存
+        const iframeMatch = this.data.embedCode.match(/<iframe[^>]*src=["']([^"']+)["'][^>]*>/i);
+        return {
+            src: iframeMatch ? iframeMatch[1] : '',
+            caption: this.captionInput.value
+        };
+    }
+}
+
+/* === カスタムブロック: Video (直接アップロード/URL) === */
+class VideoBlock {
+    static get toolbox() {
+        return {
+            title: '動画',
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>'
+        };
+    }
+
+    constructor({data}) {
+        this.data = {
+            url: data.url || '',
+            caption: data.caption || ''
+        };
+    }
+
+    render() {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('cdx-video');
+
+        const input = document.createElement('input');
+        input.type = 'url';
+        input.classList.add('cdx-video__input');
+        input.placeholder = '動画URL（YouTube, Vimeo, MP4など）';
+        input.value = this.data.url;
+        this.input = input;
+
+        const preview = document.createElement('div');
+        preview.classList.add('cdx-video__preview');
+        this.preview = preview;
+
+        const caption = document.createElement('input');
+        caption.type = 'text';
+        caption.classList.add('cdx-video__caption');
+        caption.placeholder = 'キャプション（任意）';
+        caption.value = this.data.caption;
+        this.captionInput = caption;
+
+        if (this.data.url) {
+            this._renderPreview();
+        }
+
+        input.addEventListener('change', () => {
+            this.data.url = input.value;
+            this._renderPreview();
+        });
+
+        wrapper.appendChild(input);
+        wrapper.appendChild(preview);
+        wrapper.appendChild(caption);
+
+        return wrapper;
+    }
+
+    _renderPreview() {
+        const url = this.data.url;
+        let embedHtml = '';
+
+        // YouTube
+        const ytMatch = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/)([a-zA-Z0-9_-]+)/);
+        if (ytMatch) {
+            embedHtml = `<iframe src="https://www.youtube.com/embed/${ytMatch[1]}" width="100%" height="315" frameborder="0" allowfullscreen></iframe>`;
+        }
+
+        // Vimeo
+        const vimeoMatch = url.match(/vimeo\.com\/(\d+)/);
+        if (vimeoMatch) {
+            embedHtml = `<iframe src="https://player.vimeo.com/video/${vimeoMatch[1]}" width="100%" height="315" frameborder="0" allowfullscreen></iframe>`;
+        }
+
+        // Direct video URL (mp4, webm, ogg)
+        if (url.match(/\.(mp4|webm|ogg)(\?.*)?$/i)) {
+            embedHtml = `<video src="${url}" controls width="100%" style="max-height: 400px;"></video>`;
+        }
+
+        if (embedHtml) {
+            this.preview.innerHTML = embedHtml;
+            this.preview.style.display = 'block';
+        } else {
+            this.preview.innerHTML = '<p style="color: var(--text-muted); padding: 1rem;">プレビュー不可（保存後に表示されます）</p>';
+            this.preview.style.display = 'block';
+        }
+    }
+
+    save() {
+        return {
+            url: this.input.value,
+            caption: this.captionInput.value
+        };
+    }
+}
+
+/* === カスタムブロック: Columns === */
+class ColumnsBlock {
+    static get toolbox() {
+        return {
+            title: 'カラム',
+            icon: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="18"/><rect x="14" y="3" width="7" height="18"/></svg>'
+        };
+    }
+
+    constructor({data}) {
+        this.data = {
+            cols: data.cols || 2,
+            content: data.content || ['', '']
+        };
+    }
+
+    render() {
+        const wrapper = document.createElement('div');
+        wrapper.classList.add('cdx-columns');
+        this.cols = [];
+
+        for (let i = 0; i < this.data.cols; i++) {
+            const col = document.createElement('div');
+            col.classList.add('cdx-columns__col');
+            col.contentEditable = true;
+            col.innerHTML = this.data.content[i] || '';
+            col.dataset.placeholder = `カラム ${i + 1}`;
+            this.cols.push(col);
+            wrapper.appendChild(col);
+        }
+
+        return wrapper;
+    }
+
+    save() {
+        return {
+            cols: this.data.cols,
+            content: this.cols.map(col => col.innerHTML)
+        };
+    }
+
+    static get sanitize() {
+        return { content: { br: true, b: true, i: true, a: true } };
+    }
+}
+
+/* === エディタ初期化 === */
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('[data-editor]').forEach(function(container) {
+        const inputId = container.dataset.editor;
+        const input = document.getElementById(inputId);
+        let initialData = null;
+
+        if (input && input.value) {
+            try {
+                initialData = JSON.parse(input.value);
+            } catch (e) {
+                console.warn('Failed to parse editor data:', e);
+            }
+        }
+
+        const editor = new EditorJS({
+            holder: container.id,
+            placeholder: 'ここをクリックして入力を開始...',
+            data: initialData,
+
+            tools: {
+                // Tier 1: 基本ブロック
+                header: {
+                    class: Header,
+                    inlineToolbar: true,
+                    config: {
+                        placeholder: '見出しを入力...',
+                        levels: [2, 3, 4],
+                        defaultLevel: 2
+                    }
+                },
+                list: {
+                    class: List,
+                    inlineToolbar: true,
+                    config: {
+                        defaultStyle: 'unordered'
+                    }
+                },
+                checklist: {
+                    class: Checklist,
+                    inlineToolbar: true
+                },
+
+                // Tier 2: メディアブロック
+                image: {
+                    class: ImageTool,
+                    config: {
+                        uploader: {
+                            uploadByFile: async (file) => {
+                                const formData = new FormData();
+                                formData.append('file', file);
+                                const response = await fetch('/api/media', {
+                                    method: 'POST',
+                                    body: formData
+                                });
+                                if (!response.ok) throw new Error('Upload failed');
+                                const data = await response.json();
+                                return { success: 1, file: { url: data.url } };
+                            }
+                        },
+                        captionPlaceholder: 'キャプションを入力...'
+                    }
+                },
+                embed: {
+                    class: Embed,
+                    config: {
+                        services: {
+                            youtube: true,
+                            vimeo: true,
+                            twitter: true,
+                            instagram: true,
+                            codepen: true,
+                            twitch: true,
+                            gfycat: true,
+                            imgur: true,
+                            // Google Maps カスタムサービス
+                            googleMaps: {
+                                regex: /https?:\/\/(?:www\.)?google\.[a-z.]+\/maps\/(?:place\/[^\/]+\/)?@?([0-9.-]+),([0-9.-]+)(?:,([0-9.]+)z)?|https?:\/\/maps\.google\.[a-z.]+\/\?(?:.*&)?ll=([0-9.-]+),([0-9.-]+)|https?:\/\/goo\.gl\/maps\/[a-zA-Z0-9]+|https?:\/\/www\.google\.[a-z.]+\/maps\/embed\?pb=.+/,
+                                embedUrl: '<iframe src="<%= remote_id %>" width="100%" height="400" style="border:0" allowfullscreen="" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>',
+                                html: '<iframe src="<%= remote_id %>" width="100%" height="400" style="border:0" allowfullscreen="" loading="lazy"></iframe>',
+                                height: 400,
+                                width: '100%',
+                                id: (groups) => {
+                                    // Google Maps埋め込みURLをそのまま使用
+                                    return groups[0];
+                                }
+                            },
+                            // Spotify
+                            spotify: {
+                                regex: /https?:\/\/open\.spotify\.com\/(track|album|playlist|episode|show)\/([a-zA-Z0-9]+)/,
+                                embedUrl: 'https://open.spotify.com/embed/<%= remote_id %>',
+                                html: '<iframe src="<%= remote_id %>" width="100%" height="352" frameBorder="0" allowfullscreen="" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>',
+                                height: 352,
+                                width: '100%',
+                                id: (groups) => groups[1] + '/' + groups[2]
+                            },
+                            // SoundCloud
+                            soundcloud: {
+                                regex: /https?:\/\/soundcloud\.com\/([a-zA-Z0-9_-]+\/[a-zA-Z0-9_-]+)/,
+                                embedUrl: 'https://w.soundcloud.com/player/?url=https://soundcloud.com/<%= remote_id %>&color=%23ff5500&auto_play=false&hide_related=false&show_comments=true&show_user=true&show_reposts=false&show_teaser=true',
+                                html: '<iframe width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay" src="<%= remote_id %>"></iframe>',
+                                height: 166,
+                                width: '100%',
+                                id: (groups) => groups[1]
+                            }
+                        }
+                    }
+                },
+
+                // Tier 3: 書式ブロック
+                quote: {
+                    class: Quote,
+                    inlineToolbar: true,
+                    config: {
+                        quotePlaceholder: '引用を入力...',
+                        captionPlaceholder: '引用元'
+                    }
+                },
+                code: {
+                    class: CodeTool,
+                    config: {
+                        placeholder: 'コードを入力...'
+                    }
+                },
+                delimiter: Delimiter,
+                table: {
+                    class: Table,
+                    inlineToolbar: true,
+                    config: {
+                        rows: 2,
+                        cols: 3
+                    }
+                },
+                raw: {
+                    class: RawTool,
+                    config: {
+                        placeholder: 'HTMLを入力...'
+                    }
+                },
+
+                // Tier 4: カスタムブロック
+                alert: AlertBlock,
+                button: ButtonBlock,
+                map: MapBlock,
+                video: VideoBlock,
+                linkCard: LinkCardBlock,
+                columns: ColumnsBlock
+            },
+
+            // インラインツール
+            inlineToolbar: ['bold', 'italic', 'link', 'marker', 'inlineCode', 'underline'],
+
+            // インラインツール設定
+            marker: {
+                class: Marker
+            },
+            inlineCode: {
+                class: InlineCode
+            },
+            underline: {
+                class: Underline
+            },
+
+            onChange: async function() {
+                try {
+                    const data = await editor.save();
+                    if (input) {
+                        input.value = JSON.stringify(data);
+                    }
+                } catch (e) {
+                    console.error('Failed to save:', e);
+                }
+            },
+
+            onReady: function() {
+                console.log('Editor.js is ready with 20 blocks!');
+            },
+
+            i18n: {
+                messages: {
+                    ui: {
+                        "blockTunes": {
+                            "toggler": {
+                                "Click to tune": "クリックして設定"
+                            }
+                        },
+                        "toolbar": {
+                            "toolbox": {
+                                "Add": "追加"
+                            }
+                        }
+                    },
+                    toolNames: {
+                        "Text": "テキスト",
+                        "Heading": "見出し",
+                        "List": "リスト",
+                        "Checklist": "チェックリスト",
+                        "Quote": "引用",
+                        "Code": "コード",
+                        "Delimiter": "区切り線",
+                        "Raw HTML": "HTML",
+                        "Table": "テーブル",
+                        "Image": "画像",
+                        "Embed": "埋め込み",
+                        "Bold": "太字",
+                        "Italic": "斜体",
+                        "Link": "リンク",
+                        "Marker": "マーカー",
+                        "InlineCode": "インラインコード",
+                        "Map": "地図",
+                        "Video": "動画",
+                        "Alert": "アラート",
+                        "Button": "ボタン",
+                        "LinkCard": "リンクカード",
+                        "Columns": "カラム"
+                    },
+                    blockTunes: {
+                        "delete": {
+                            "Delete": "削除"
+                        },
+                        "moveUp": {
+                            "Move up": "上へ移動"
+                        },
+                        "moveDown": {
+                            "Move down": "下へ移動"
+                        }
+                    }
+                }
+            }
+        });
+    });
+});
+</script>

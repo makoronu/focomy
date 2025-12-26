@@ -1,0 +1,233 @@
+{% extends "admin/base.html" %}
+
+{% block title %}コメント - Focomy 管理画面{% endblock %}
+{% block header_title %}コメント{% endblock %}
+
+{% block content %}
+{% if message %}
+<div class="alert alert-success" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: #dcfce7; color: #166534; border-radius: 0.375rem;">
+    {{ message }}
+</div>
+{% endif %}
+
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">コメント管理</div>
+        <div style="display: flex; gap: 1rem; align-items: center;">
+            <!-- Status Filter -->
+            <select id="status-filter" class="form-select" style="width: auto;" onchange="window.location.href='/admin/comments?status=' + this.value">
+                {% for opt in status_options %}
+                <option value="{{ opt.value }}" {% if current_status == opt.value %}selected{% endif %}>
+                    {{ opt.label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    {% if comments %}
+    <!-- Bulk Actions -->
+    <div style="margin-bottom: 1rem; display: flex; gap: 0.5rem; align-items: center;">
+        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+        <label for="select-all" style="font-size: 0.875rem;">すべて選択</label>
+        <form id="bulk-form" method="POST" action="/admin/comments/bulk" style="display: flex; gap: 0.5rem; margin-left: 1rem;">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="ids" id="bulk-ids" value="">
+            <select name="action" class="form-select" style="width: auto;">
+                <option value="">一括操作</option>
+                <option value="approve">承認</option>
+                <option value="reject">拒否</option>
+                <option value="spam">スパム</option>
+                <option value="delete">削除</option>
+            </select>
+            <button type="submit" class="btn btn-secondary" onclick="return confirmBulk()">実行</button>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th style="width: 30px;"></th>
+                    <th>投稿者</th>
+                    <th>コメント</th>
+                    <th>投稿</th>
+                    <th>ステータス</th>
+                    <th>日付</th>
+                    <th style="width: 200px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for comment in comments %}
+                <tr id="comment-{{ comment.id }}">
+                    <td>
+                        <input type="checkbox" class="comment-checkbox" value="{{ comment.id }}" onchange="updateBulkIds()">
+                    </td>
+                    <td>
+                        <div style="font-weight: 500;">{{ comment.author_name }}</div>
+                        <div style="font-size: 0.75rem; color: var(--text-muted);">{{ comment.author_email }}</div>
+                    </td>
+                    <td style="max-width: 300px;">
+                        <div style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                            {{ comment.content[:100] }}{% if comment.content|length > 100 %}...{% endif %}
+                        </div>
+                    </td>
+                    <td>
+                        {% if comment.post_title %}
+                        <a href="/{{ comment.post_slug }}" target="_blank" style="color: var(--primary);">
+                            {{ comment.post_title[:30] }}{% if comment.post_title|length > 30 %}...{% endif %}
+                        </a>
+                        {% else %}
+                        <span style="color: var(--text-muted);">-</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <span class="badge badge-{% if comment.status == 'approved' %}success{% elif comment.status == 'pending' %}warning{% elif comment.status == 'spam' %}error{% else %}info{% endif %}">
+                            {% if comment.status == 'approved' %}承認済み{% elif comment.status == 'pending' %}承認待ち{% elif comment.status == 'spam' %}スパム{% elif comment.status == 'rejected' %}拒否{% else %}{{ comment.status }}{% endif %}
+                        </span>
+                    </td>
+                    <td style="font-size: 0.875rem; color: var(--text-muted);">
+                        {{ comment.created_at[:10] }}
+                    </td>
+                    <td>
+                        <div style="display: flex; gap: 0.25rem; flex-wrap: wrap;">
+                            {% if comment.status != 'approved' %}
+                            <form method="POST" action="/admin/comments/{{ comment.id }}/moderate" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="action" value="approve">
+                                <button type="submit" class="btn btn-sm" style="background: #22c55e; color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    承認
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if comment.status != 'rejected' %}
+                            <form method="POST" action="/admin/comments/{{ comment.id }}/moderate" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="action" value="reject">
+                                <button type="submit" class="btn btn-sm" style="background: #f59e0b; color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    拒否
+                                </button>
+                            </form>
+                            {% endif %}
+                            {% if comment.status != 'spam' %}
+                            <form method="POST" action="/admin/comments/{{ comment.id }}/moderate" style="display: inline;">
+                                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                                <input type="hidden" name="action" value="spam">
+                                <button type="submit" class="btn btn-sm" style="background: #64748b; color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;">
+                                    スパム
+                                </button>
+                            </form>
+                            {% endif %}
+                            <button type="button"
+                                    class="btn btn-sm"
+                                    style="background: #ef4444; color: white; padding: 0.25rem 0.5rem; font-size: 0.75rem;"
+                                    hx-delete="/admin/comments/{{ comment.id }}"
+                                    hx-target="#comment-{{ comment.id }}"
+                                    hx-swap="outerHTML"
+                                    hx-confirm="このコメントを削除しますか？">
+                                削除
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div style="padding: 3rem; text-align: center; color: var(--text-muted);">
+        <p>コメントがありません。</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Comment Detail Modal -->
+<div id="comment-modal" class="modal" style="display: none;">
+    <div class="modal-content" style="max-width: 600px;">
+        <div class="modal-header">
+            <h3>Comment Details</h3>
+            <button type="button" class="modal-close" onclick="closeModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modal-body">
+            <!-- Content loaded dynamically -->
+        </div>
+    </div>
+</div>
+
+<style>
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+.modal-content {
+    background: var(--card);
+    border-radius: 0.5rem;
+    width: 90%;
+    max-height: 80vh;
+    overflow: auto;
+}
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+.modal-header h3 { margin: 0; }
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+.modal-body {
+    padding: 1.5rem;
+}
+</style>
+
+<script>
+function toggleSelectAll(checkbox) {
+    const checkboxes = document.querySelectorAll('.comment-checkbox');
+    checkboxes.forEach(cb => cb.checked = checkbox.checked);
+    updateBulkIds();
+}
+
+function updateBulkIds() {
+    const checked = document.querySelectorAll('.comment-checkbox:checked');
+    const ids = Array.from(checked).map(cb => cb.value);
+    document.getElementById('bulk-ids').value = ids.join(',');
+}
+
+function confirmBulk() {
+    const ids = document.getElementById('bulk-ids').value;
+    const action = document.querySelector('#bulk-form select[name="action"]').value;
+
+    if (!ids) {
+        alert('コメントを選択してください。');
+        return false;
+    }
+    if (!action) {
+        alert('操作を選択してください。');
+        return false;
+    }
+
+    if (action === 'delete') {
+        return confirm('選択したコメントを削除しますか？');
+    }
+    return true;
+}
+
+function closeModal() {
+    document.getElementById('comment-modal').style.display = 'none';
+}
+</script>
+{% endblock %}

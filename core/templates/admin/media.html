@@ -1,0 +1,409 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Media - Focomy{% endblock %}
+{% block header_title %}Media{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">Media Library</h3>
+        <div class="flex gap-2">
+            <button type="button" class="btn btn-danger" id="bulk-delete-btn" style="display: none;" onclick="bulkDelete()">
+                Delete Selected
+            </button>
+            <button type="button" class="btn btn-primary" onclick="document.getElementById('upload-input').click()">
+                Upload
+            </button>
+        </div>
+    </div>
+
+    <!-- Search & Filter -->
+    <div class="flex gap-2 mb-2" style="padding: 0 1rem;">
+        <input type="text" id="search-input" class="form-input" placeholder="Search files..."
+               value="{{ search_query or '' }}" style="flex: 1; max-width: 300px;">
+        <select id="type-filter" class="form-select" style="width: auto;">
+            <option value="">All Types</option>
+            <option value="image" {% if type_filter == 'image' %}selected{% endif %}>Images</option>
+            <option value="video" {% if type_filter == 'video' %}selected{% endif %}>Videos</option>
+            <option value="application" {% if type_filter == 'application' %}selected{% endif %}>Documents</option>
+        </select>
+        <button class="btn btn-secondary" onclick="applyFilters()">Filter</button>
+    </div>
+
+    <form id="upload-form" style="display: none;">
+        <input type="file" id="upload-input" multiple accept="image/*,video/*,application/pdf" onchange="uploadFiles(this.files)">
+    </form>
+
+    {% if message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    <!-- Drag & Drop Zone -->
+    <div id="drop-zone" class="drop-zone">
+        <div class="drop-zone-content">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="17 8 12 3 7 8"/>
+                <line x1="12" y1="3" x2="12" y2="15"/>
+            </svg>
+            <p>Drag & drop files here or click Upload</p>
+        </div>
+    </div>
+
+    <div id="upload-status"></div>
+
+    <div class="grid grid-4" style="gap: 1rem; margin-top: 1rem;" id="media-grid">
+        {% for item in items %}
+        <div class="media-item" data-id="{{ item.id }}">
+            <div class="media-checkbox">
+                <input type="checkbox" class="item-checkbox" value="{{ item.id }}" onchange="updateBulkButton()">
+            </div>
+            {% if item.mime_type.startswith('image/') %}
+            <div class="media-preview" style="background-image: url('{{ item.url }}')"></div>
+            {% elif item.mime_type.startswith('video/') %}
+            <div class="media-preview media-file">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <polygon points="5 3 19 12 5 21 5 3"/>
+                </svg>
+            </div>
+            {% else %}
+            <div class="media-preview media-file">
+                <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
+            </div>
+            {% endif %}
+            <div class="media-info">
+                <span class="media-name" title="{{ item.filename }}">{{ item.filename | truncate(20) }}</span>
+                <span class="media-size">{{ (item.size / 1024) | round(1) }}KB</span>
+            </div>
+            <div class="media-actions">
+                <button class="btn btn-secondary btn-sm" onclick="copyUrl('{{ item.url }}')">Copy</button>
+                <button class="btn btn-danger btn-sm" onclick="deleteMedia('{{ item.id }}')">Delete</button>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state" style="grid-column: span 4;">
+            No media files yet. Drag & drop or click "Upload" to add files.
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="flex justify-between items-center mt-2" style="padding: 1rem;">
+        <span class="text-muted">Page {{ page }} of {{ total_pages }} ({{ total }} files)</span>
+        <div class="flex gap-2">
+            {% if page > 1 %}
+            <a href="/admin/media?page={{ page - 1 }}{% if search_query %}&q={{ search_query }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-secondary">Previous</a>
+            {% endif %}
+            {% if page < total_pages %}
+            <a href="/admin/media?page={{ page + 1 }}{% if search_query %}&q={{ search_query }}{% endif %}{% if type_filter %}&type={{ type_filter }}{% endif %}" class="btn btn-secondary">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.media-item {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    position: relative;
+    transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.media-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.media-checkbox {
+    position: absolute;
+    top: 0.5rem;
+    left: 0.5rem;
+    z-index: 10;
+}
+
+.media-checkbox input {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+}
+
+.media-preview {
+    aspect-ratio: 4/3;
+    background-size: cover;
+    background-position: center;
+    background-color: var(--bg);
+}
+
+.media-preview.media-file {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-muted);
+    font-size: 0.875rem;
+}
+
+.media-info {
+    padding: 0.5rem;
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+}
+
+.media-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.media-size {
+    color: var(--text-muted);
+}
+
+.media-actions {
+    padding: 0 0.5rem 0.5rem;
+    display: flex;
+    gap: 0.25rem;
+}
+
+.btn-sm {
+    font-size: 0.75rem;
+    padding: 0.25rem 0.5rem;
+}
+
+/* Drop Zone */
+.drop-zone {
+    margin: 1rem;
+    padding: 2rem;
+    border: 2px dashed var(--border);
+    border-radius: 0.5rem;
+    text-align: center;
+    transition: all 0.2s;
+    display: none;
+}
+
+.drop-zone.active {
+    display: block;
+}
+
+.drop-zone.dragover {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.05);
+}
+
+.drop-zone-content {
+    color: var(--text-muted);
+}
+
+.drop-zone-content svg {
+    margin-bottom: 0.5rem;
+    opacity: 0.5;
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 3rem;
+}
+
+/* Upload Progress */
+.upload-progress {
+    margin: 1rem;
+    padding: 1rem;
+    background: var(--bg);
+    border-radius: 0.5rem;
+}
+
+.progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.progress-bar-fill {
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.3s;
+}
+</style>
+
+<script>
+// Drag & Drop
+const dropZone = document.getElementById('drop-zone');
+const mediaGrid = document.getElementById('media-grid');
+
+// Show drop zone when dragging files over page
+document.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('active');
+});
+
+document.addEventListener('dragleave', (e) => {
+    if (e.relatedTarget === null) {
+        dropZone.classList.remove('active');
+    }
+});
+
+document.addEventListener('dragover', (e) => {
+    e.preventDefault();
+});
+
+dropZone.addEventListener('dragenter', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('active', 'dragover');
+    const files = e.dataTransfer.files;
+    if (files.length > 0) {
+        uploadFiles(files);
+    }
+});
+
+document.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('active', 'dragover');
+});
+
+// Upload with progress
+async function uploadFiles(files) {
+    const status = document.getElementById('upload-status');
+    const total = files.length;
+    let completed = 0;
+
+    status.innerHTML = `
+        <div class="upload-progress">
+            <div>Uploading ${total} file(s)...</div>
+            <div class="progress-bar">
+                <div class="progress-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+    `;
+
+    const progressBar = status.querySelector('.progress-bar-fill');
+
+    for (const file of files) {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const response = await fetch('/api/media', {
+                method: 'POST',
+                body: formData,
+            });
+
+            if (!response.ok) {
+                throw new Error('Upload failed');
+            }
+
+            completed++;
+            progressBar.style.width = (completed / total * 100) + '%';
+        } catch (error) {
+            status.innerHTML = '<div class="alert alert-error">Upload failed: ' + error.message + '</div>';
+            return;
+        }
+    }
+
+    // Reload page to show new files
+    window.location.reload();
+}
+
+function copyUrl(url) {
+    navigator.clipboard.writeText(window.location.origin + url);
+    showToast('URL copied to clipboard', 'success');
+}
+
+async function deleteMedia(id) {
+    if (!confirm('Are you sure you want to delete this file?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch('/api/media/' + id, {
+            method: 'DELETE',
+        });
+
+        if (response.ok) {
+            document.querySelector('[data-id="' + id + '"]').remove();
+            showToast('File deleted', 'success');
+        } else {
+            showToast('Delete failed', 'error');
+        }
+    } catch (error) {
+        showToast('Delete failed: ' + error.message, 'error');
+    }
+}
+
+// Bulk operations
+function updateBulkButton() {
+    const checked = document.querySelectorAll('.item-checkbox:checked');
+    const btn = document.getElementById('bulk-delete-btn');
+    btn.style.display = checked.length > 0 ? 'block' : 'none';
+    btn.textContent = `Delete Selected (${checked.length})`;
+}
+
+async function bulkDelete() {
+    const checked = document.querySelectorAll('.item-checkbox:checked');
+    if (checked.length === 0) return;
+
+    if (!confirm(`Are you sure you want to delete ${checked.length} file(s)?`)) {
+        return;
+    }
+
+    let deleted = 0;
+    for (const checkbox of checked) {
+        try {
+            const response = await fetch('/api/media/' + checkbox.value, {
+                method: 'DELETE',
+            });
+            if (response.ok) {
+                document.querySelector('[data-id="' + checkbox.value + '"]').remove();
+                deleted++;
+            }
+        } catch (error) {
+            console.error('Delete failed:', error);
+        }
+    }
+
+    showToast(`Deleted ${deleted} file(s)`, 'success');
+    updateBulkButton();
+}
+
+// Search & Filter
+function applyFilters() {
+    const search = document.getElementById('search-input').value;
+    const type = document.getElementById('type-filter').value;
+
+    let url = '/admin/media?';
+    if (search) url += 'q=' + encodeURIComponent(search) + '&';
+    if (type) url += 'type=' + type + '&';
+
+    window.location.href = url.slice(0, -1);
+}
+
+// Enter key for search
+document.getElementById('search-input').addEventListener('keypress', (e) => {
+    if (e.key === 'Enter') {
+        applyFilters();
+    }
+});
+</script>
+{% endblock %}

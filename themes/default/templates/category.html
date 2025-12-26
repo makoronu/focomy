@@ -1,0 +1,138 @@
+{% extends "base.html" %}
+
+{% block title %}{{ category.name }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="category-page">
+    <header class="category-header">
+        <h1>{{ category.name }}</h1>
+        {% if category.description %}
+        <p class="category-description">{{ category.description }}</p>
+        {% endif %}
+    </header>
+
+    <div class="posts-grid">
+        {% for post in posts %}
+        <article class="post-card">
+            {% if post.featured_image %}
+            <a href="/post/{{ post.slug }}" class="post-image">
+                <img src="{{ post.featured_image }}" alt="{{ post.title }}">
+            </a>
+            {% endif %}
+            <div class="post-content">
+                <h2><a href="/post/{{ post.slug }}">{{ post.title }}</a></h2>
+                <p class="post-excerpt">{{ post.excerpt }}</p>
+                <time class="post-date">{{ post.created_at[:10] }}</time>
+            </div>
+        </article>
+        {% else %}
+        <p class="no-posts">このカテゴリにはまだ記事がありません。</p>
+        {% endfor %}
+    </div>
+
+    {% if total_pages > 1 %}
+    <nav class="pagination">
+        {% if page > 1 %}
+        <a href="/category/{{ category.slug }}?page={{ page - 1 }}" class="prev">前へ</a>
+        {% endif %}
+        <span class="current">{{ page }} / {{ total_pages }}</span>
+        {% if page < total_pages %}
+        <a href="/category/{{ category.slug }}?page={{ page + 1 }}" class="next">次へ</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+.category-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.category-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.category-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.category-description {
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+}
+
+.posts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 2rem;
+}
+
+.post-card {
+    background: var(--color-surface);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.post-image img {
+    width: 100%;
+    height: 200px;
+    object-fit: cover;
+}
+
+.post-content {
+    padding: 1.5rem;
+}
+
+.post-content h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.post-content h2 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.post-content h2 a:hover {
+    color: var(--color-primary);
+}
+
+.post-excerpt {
+    color: var(--color-text-muted);
+    margin-bottom: 1rem;
+    line-height: 1.6;
+}
+
+.post-date {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 3rem;
+}
+
+.pagination a {
+    padding: 0.5rem 1rem;
+    background: var(--color-primary);
+    color: white;
+    text-decoration: none;
+    border-radius: 0.25rem;
+}
+
+.no-posts {
+    grid-column: 1 / -1;
+    text-align: center;
+    color: var(--color-text-muted);
+}
+</style>
+{% endblock %}

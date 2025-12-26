@@ -1,0 +1,178 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{{ content_type.label }} - Focomy{% endblock %}
+{% block header_title %}{{ content_type.label }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h3 class="card-title">All {{ content_type.label }}</h3>
+        <a href="/admin/{{ type_name }}/new" class="btn btn-primary">
+            New {{ content_type.label }}
+        </a>
+    </div>
+
+    {% if message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    <!-- Search and Filter -->
+    <div class="filter-bar">
+        <form method="GET" action="/admin/{{ type_name }}" class="filter-form">
+            <div class="search-box">
+                <input
+                    type="text"
+                    name="q"
+                    placeholder="Search..."
+                    value="{{ search_query or '' }}"
+                    class="input"
+                >
+                <button type="submit" class="btn btn-secondary">Search</button>
+            </div>
+            <div class="filter-group">
+                <select name="status" class="input" onchange="this.form.submit()">
+                    <option value="">All Status</option>
+                    <option value="draft" {% if status_filter == 'draft' %}selected{% endif %}>Draft</option>
+                    <option value="published" {% if status_filter == 'published' %}selected{% endif %}>Published</option>
+                    <option value="archived" {% if status_filter == 'archived' %}selected{% endif %}>Archived</option>
+                </select>
+            </div>
+            {% if search_query or status_filter %}
+            <a href="/admin/{{ type_name }}" class="btn btn-ghost">Clear</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Bulk Actions -->
+    <div id="bulk-actions" class="bulk-actions" style="display: none;">
+        <span class="bulk-count">0 selected</span>
+        <form method="POST" action="/admin/{{ type_name }}/bulk" class="bulk-form">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="ids" id="bulk-ids" value="">
+            <select name="action" class="input" required>
+                <option value="">Choose action...</option>
+                <option value="publish">Publish</option>
+                <option value="draft">Set as Draft</option>
+                <option value="archive">Archive</option>
+                <option value="delete">Delete</option>
+            </select>
+            <button type="submit" class="btn btn-secondary" onclick="return confirmBulkAction(this.form)">Apply</button>
+        </form>
+    </div>
+
+    <div class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th class="checkbox-col">
+                        <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)">
+                    </th>
+                    {% for field in list_fields %}
+                    <th>{{ field.label or field.name }}</th>
+                    {% endfor %}
+                    <th>Created</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for entity in entities %}
+                <tr>
+                    <td class="checkbox-col">
+                        <input type="checkbox" class="row-checkbox" value="{{ entity.id }}" onchange="updateBulkActions()">
+                    </td>
+                    {% for field in list_fields %}
+                    <td>
+                        {% if field.name == 'status' %}
+                            <span class="badge {% if entity.get(field.name) == 'published' %}badge-success{% elif entity.get(field.name) == 'draft' %}badge-warning{% else %}badge-info{% endif %}">
+                                {{ entity.get(field.name, '-') }}
+                            </span>
+                        {% else %}
+                            {{ entity.get(field.name, '-') | truncate(50) }}
+                        {% endif %}
+                    </td>
+                    {% endfor %}
+                    <td class="text-muted">{{ entity.created_at[:10] if entity.created_at else '-' }}</td>
+                    <td>
+                        <div class="flex gap-2">
+                            <a href="/admin/{{ type_name }}/{{ entity.id }}/edit" class="btn btn-secondary">
+                                Edit
+                            </a>
+                            <button
+                                class="btn btn-danger"
+                                hx-delete="/admin/{{ type_name }}/{{ entity.id }}"
+                                hx-confirm="Are you sure you want to delete this?"
+                                hx-target="closest tr"
+                                hx-swap="outerHTML"
+                            >
+                                Delete
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="{{ list_fields|length + 3 }}" class="text-muted text-center">
+                        No {{ content_type.label }} found.
+                        <a href="/admin/{{ type_name }}/new">Create one</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+    function toggleSelectAll(checkbox) {
+        const checkboxes = document.querySelectorAll('.row-checkbox');
+        checkboxes.forEach(cb => cb.checked = checkbox.checked);
+        updateBulkActions();
+    }
+
+    function updateBulkActions() {
+        const checkboxes = document.querySelectorAll('.row-checkbox:checked');
+        const bulkActions = document.getElementById('bulk-actions');
+        const bulkCount = bulkActions.querySelector('.bulk-count');
+        const bulkIds = document.getElementById('bulk-ids');
+
+        if (checkboxes.length > 0) {
+            bulkActions.style.display = 'flex';
+            bulkCount.textContent = checkboxes.length + ' selected';
+            bulkIds.value = Array.from(checkboxes).map(cb => cb.value).join(',');
+        } else {
+            bulkActions.style.display = 'none';
+        }
+    }
+
+    function confirmBulkAction(form) {
+        const action = form.querySelector('select[name="action"]').value;
+        if (!action) {
+            alert('Please select an action');
+            return false;
+        }
+        const count = document.querySelectorAll('.row-checkbox:checked').length;
+        if (action === 'delete') {
+            return confirm('Are you sure you want to delete ' + count + ' items?');
+        }
+        return confirm('Apply "' + action + '" to ' + count + ' items?');
+    }
+    </script>
+
+    {% if total_pages > 1 %}
+    <div class="flex justify-between items-center mt-2">
+        <span class="text-muted">Page {{ page }} of {{ total_pages }}</span>
+        <div class="flex gap-2">
+            {% set query_params = [] %}
+            {% if search_query %}{% set _ = query_params.append('q=' + search_query) %}{% endif %}
+            {% if status_filter %}{% set _ = query_params.append('status=' + status_filter) %}{% endif %}
+            {% set base_query = '&'.join(query_params) %}
+            {% if page > 1 %}
+            <a href="/admin/{{ type_name }}?page={{ page - 1 }}{% if base_query %}&{{ base_query }}{% endif %}" class="btn btn-secondary">Previous</a>
+            {% endif %}
+            {% if page < total_pages %}
+            <a href="/admin/{{ type_name }}?page={{ page + 1 }}{% if base_query %}&{{ base_query }}{% endif %}" class="btn btn-secondary">Next</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

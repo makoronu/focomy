@@ -1,0 +1,77 @@
+name: menu_item
+label: メニュー項目
+label_plural: メニュー項目
+icon: menu
+admin_menu: false
+hierarchical: true
+searchable: false
+
+fields:
+  - name: label
+    type: string
+    label: ラベル
+    required: true
+    max_length: 100
+
+  - name: url
+    type: string
+    label: URL
+    max_length: 500
+    hint: カスタムURLまたは自動生成（ページ/カテゴリ選択時）
+
+  - name: target
+    type: select
+    label: 開き方
+    options:
+      - value: _self
+        label: 同じウィンドウ
+      - value: _blank
+        label: 新しいウィンドウ
+    default: _self
+
+  - name: location
+    type: select
+    label: 配置場所
+    required: true
+    options:
+      - value: header
+        label: ヘッダー
+      - value: footer
+        label: フッター
+      - value: sidebar
+        label: サイドバー
+
+  - name: link_type
+    type: select
+    label: リンクタイプ
+    options:
+      - value: custom
+        label: カスタムURL
+      - value: page
+        label: ページ
+      - value: category
+        label: カテゴリ
+      - value: post
+        label: 投稿
+    default: custom
+
+  - name: linked_entity_id
+    type: string
+    label: リンク先エンティティ
+    hint: ページ・カテゴリ・投稿を選択した場合のID
+
+  - name: icon
+    type: string
+    label: アイコン
+    max_length: 50
+    hint: アイコンクラス名（オプション）
+
+  - name: sort_order
+    type: integer
+    label: 表示順
+    default: 0
+
+  - name: is_active
+    type: boolean
+    label: 有効
+    default: true

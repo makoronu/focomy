@@ -1,0 +1,67 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Dashboard - Focomy{% endblock %}
+{% block header_title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="grid grid-4 mb-2">
+    {% for ct_name, ct in content_types.items() %}
+    <div class="stat-card">
+        <div class="stat-label">{{ ct.label }}</div>
+        <div class="stat-value">{{ stats.get(ct_name, 0) }}</div>
+    </div>
+    {% endfor %}
+</div>
+
+<div class="grid grid-2 mt-4">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Recent Posts</h3>
+            <a href="/admin/post" class="btn btn-secondary">View All</a>
+        </div>
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Title</th>
+                        <th>Status</th>
+                        <th>Created</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for post in recent_posts %}
+                    <tr>
+                        <td>
+                            <a href="/admin/post/{{ post.id }}/edit">{{ post.title or 'Untitled' }}</a>
+                        </td>
+                        <td>
+                            <span class="badge {% if post.status == 'published' %}badge-success{% else %}badge-warning{% endif %}">
+                                {{ post.status or 'draft' }}
+                            </span>
+                        </td>
+                        <td class="text-muted">{{ post.created_at[:10] if post.created_at else '-' }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="3" class="text-muted text-center">No posts yet</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Quick Actions</h3>
+        </div>
+        <div class="flex gap-2" style="flex-wrap: wrap;">
+            {% for ct_name, ct in content_types.items() %}
+            <a href="/admin/{{ ct_name }}/new" class="btn btn-secondary">
+                New {{ ct.label }}
+            </a>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endblock %}

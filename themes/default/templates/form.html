@@ -1,0 +1,349 @@
+{% extends "base.html" %}
+
+{% block title %}{{ form.title }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <header class="form-header">
+        <h1>{{ form.title }}</h1>
+        {% if form.description %}
+        <p class="form-description">{{ form.description }}</p>
+        {% endif %}
+    </header>
+
+    <form id="dynamic-form" method="POST" action="/forms/{{ form.slug }}" class="dynamic-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        {% if steps and steps|length > 1 %}
+        <!-- ウィザード形式 -->
+        <div class="wizard">
+            <div class="wizard-progress">
+                {% for step in steps %}
+                <div class="wizard-step {% if loop.first %}active{% endif %}" data-step="{{ loop.index }}">
+                    <span class="step-number">{{ loop.index }}</span>
+                    <span class="step-title">{{ step.title }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% for step in steps %}
+            <div class="wizard-panel {% if loop.first %}active{% endif %}" data-step="{{ loop.index }}">
+                <h2 class="step-heading">{{ step.title }}</h2>
+                {% for field in fields %}
+                    {% if field.name in step.fields %}
+                    {{ render_field(field) }}
+                    {% endif %}
+                {% endfor %}
+
+                <div class="wizard-nav">
+                    {% if not loop.first %}
+                    <button type="button" class="btn btn-secondary prev-step">戻る</button>
+                    {% endif %}
+                    {% if loop.last %}
+                    <button type="submit" class="btn btn-primary">{{ form.submit_label or '送信する' }}</button>
+                    {% else %}
+                    <button type="button" class="btn btn-primary next-step">次へ</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- 通常フォーム -->
+        <div class="form-fields">
+            {% for field in fields %}
+            {{ render_field(field) }}
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ form.submit_label or '送信する' }}</button>
+        </div>
+        {% endif %}
+    </form>
+</div>
+
+{% macro render_field(field) %}
+<div class="form-group">
+    <label for="{{ field.name }}">
+        {{ field.label or field.name }}
+        {% if field.required %}<span class="required">*</span>{% endif %}
+    </label>
+
+    {% if field.type == 'textarea' %}
+    <textarea
+        id="{{ field.name }}"
+        name="{{ field.name }}"
+        {% if field.required %}required{% endif %}
+        {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+    >{{ field.default or '' }}</textarea>
+
+    {% elif field.type == 'select' %}
+    <select
+        id="{{ field.name }}"
+        name="{{ field.name }}"
+        {% if field.required %}required{% endif %}
+    >
+        <option value="">選択してください</option>
+        {% for opt in field.options %}
+        <option value="{{ opt.value or opt }}">{{ opt.label or opt }}</option>
+        {% endfor %}
+    </select>
+
+    {% elif field.type == 'checkbox' %}
+    <div class="checkbox-group">
+        <input
+            type="checkbox"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            value="true"
+            {% if field.required %}required{% endif %}
+        >
+        <label for="{{ field.name }}">{{ field.checkbox_label or field.label }}</label>
+    </div>
+
+    {% elif field.type == 'radio' %}
+    <div class="radio-group">
+        {% for opt in field.options %}
+        <label class="radio-option">
+            <input
+                type="radio"
+                name="{{ field.name }}"
+                value="{{ opt.value or opt }}"
+                {% if field.required %}required{% endif %}
+            >
+            {{ opt.label or opt }}
+        </label>
+        {% endfor %}
+    </div>
+
+    {% else %}
+    <input
+        type="{{ field.type or 'text' }}"
+        id="{{ field.name }}"
+        name="{{ field.name }}"
+        {% if field.required %}required{% endif %}
+        {% if field.placeholder %}placeholder="{{ field.placeholder }}"{% endif %}
+        {% if field.default %}value="{{ field.default }}"{% endif %}
+    >
+    {% endif %}
+
+    {% if field.hint %}
+    <p class="field-hint">{{ field.hint }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
+<style>
+.form-page {
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.form-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.form-description {
+    color: var(--color-text-muted);
+    margin-top: 0.5rem;
+}
+
+.dynamic-form {
+    background: var(--color-surface);
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+}
+
+.required {
+    color: var(--color-error);
+}
+
+.form-group input:not([type="checkbox"]):not([type="radio"]),
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 0.375rem;
+    font-size: 1rem;
+}
+
+.form-group textarea {
+    min-height: 120px;
+    resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+}
+
+.field-hint {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+    margin-top: 0.25rem;
+}
+
+.checkbox-group,
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.radio-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.form-actions {
+    margin-top: 2rem;
+}
+
+.btn {
+    padding: 0.75rem 2rem;
+    border: none;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+
+.btn-primary {
+    background: var(--color-primary);
+    color: white;
+}
+
+.btn-primary:hover {
+    opacity: 0.9;
+}
+
+.btn-secondary {
+    background: transparent;
+    border: 1px solid var(--color-border);
+}
+
+/* Wizard styles */
+.wizard-progress {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.wizard-step {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    opacity: 0.5;
+}
+
+.wizard-step.active,
+.wizard-step.completed {
+    opacity: 1;
+}
+
+.step-number {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 50%;
+    background: var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+}
+
+.wizard-step.active .step-number {
+    background: var(--color-primary);
+    color: white;
+}
+
+.wizard-step.completed .step-number {
+    background: var(--color-success);
+    color: white;
+}
+
+.wizard-panel {
+    display: none;
+}
+
+.wizard-panel.active {
+    display: block;
+}
+
+.step-heading {
+    margin-bottom: 1.5rem;
+}
+
+.wizard-nav {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 2rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const wizard = document.querySelector('.wizard');
+    if (!wizard) return;
+
+    const panels = wizard.querySelectorAll('.wizard-panel');
+    const steps = wizard.querySelectorAll('.wizard-step');
+    let currentStep = 1;
+
+    function showStep(step) {
+        panels.forEach((panel, i) => {
+            panel.classList.toggle('active', i + 1 === step);
+        });
+        steps.forEach((s, i) => {
+            s.classList.toggle('active', i + 1 === step);
+            s.classList.toggle('completed', i + 1 < step);
+        });
+        currentStep = step;
+    }
+
+    wizard.querySelectorAll('.next-step').forEach(btn => {
+        btn.addEventListener('click', () => {
+            // Validate current panel
+            const panel = panels[currentStep - 1];
+            const inputs = panel.querySelectorAll('input, textarea, select');
+            let valid = true;
+            inputs.forEach(input => {
+                if (!input.checkValidity()) {
+                    input.reportValidity();
+                    valid = false;
+                }
+            });
+            if (valid) {
+                showStep(currentStep + 1);
+            }
+        });
+    });
+
+    wizard.querySelectorAll('.prev-step').forEach(btn => {
+        btn.addEventListener('click', () => {
+            showStep(currentStep - 1);
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,63 @@
+# Relation definitions
+# All relationships between entities are defined here
+
+post_author:
+  from: post
+  to: user
+  type: many_to_one
+  required: true
+  label: 著者
+
+post_categories:
+  from: post
+  to: category
+  type: many_to_many
+  label: カテゴリ
+
+post_related:
+  from: post
+  to: post
+  type: many_to_many
+  label: 関連記事
+
+page_author:
+  from: page
+  to: user
+  type: many_to_one
+  required: true
+  label: 著者
+
+page_parent:
+  from: page
+  to: page
+  type: many_to_one
+  label: 親ページ
+  self_referential: true
+
+category_parent:
+  from: category
+  to: category
+  type: many_to_one
+  label: 親カテゴリ
+  self_referential: true
+
+menu_item_parent:
+  from: menu_item
+  to: menu_item
+  type: many_to_one
+  label: 親メニュー
+  self_referential: true
+
+comment_post:
+  from: comment
+  to: post
+  type: many_to_one
+  required: true
+  label: 投稿
+
+comment_parent:
+  from: comment
+  to: comment
+  type: many_to_one
+  label: 返信先
+  self_referential: true

@@ -1,0 +1,63 @@
+name: page
+label: 固定ページ
+label_plural: 固定ページ一覧
+icon: file
+admin_menu: true
+searchable: true
+
+fields:
+  - name: title
+    type: string
+    label: タイトル
+    required: true
+    indexed: true
+    max_length: 200
+
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: title
+
+  - name: body
+    type: blocks
+    label: 本文
+
+  - name: status
+    type: select
+    label: ステータス
+    options:
+      - value: draft
+        label: 下書き
+      - value: published
+        label: 公開
+      - value: private
+        label: 非公開
+    default: draft
+
+  - name: template
+    type: select
+    label: テンプレート
+    options:
+      - value: default
+        label: デフォルト
+      - value: full-width
+        label: 全幅
+      - value: sidebar
+        label: サイドバー付き
+    default: default
+
+  - name: sort_order
+    type: integer
+    label: 表示順
+    default: 0
+
+relations:
+  - type: page_author
+    label: 著者
+    required: true
+
+  - type: page_parent
+    label: 親ページ
+    target: page
+    self_referential: true

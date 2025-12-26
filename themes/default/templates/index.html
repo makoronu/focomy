@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="posts-list">
+    {% for post in posts %}
+    <article class="post-card">
+        <h2><a href="/{{ post.type }}/{{ post.slug }}">{{ post.title }}</a></h2>
+        <p>{{ post.excerpt or (post.body | excerpt) }}</p>
+        <time datetime="{{ post.created_at }}">{{ post.created_at[:10] }}</time>
+    </article>
+    {% else %}
+    <p>No posts yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}

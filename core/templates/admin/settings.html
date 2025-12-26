@@ -1,0 +1,88 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Settings - Focomy{% endblock %}
+
+{% block header_title %}Settings{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="flex items-center gap-2">
+            <h2 class="card-title">Site Settings</h2>
+            <div class="category-tabs">
+                {% for cat in categories %}
+                <a href="/admin/settings?category={{ cat.value }}"
+                   class="btn {% if current_category == cat.value %}btn-primary{% else %}btn-secondary{% endif %}">
+                    {{ cat.label }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <form method="POST" action="/admin/settings" class="settings-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        <input type="hidden" name="category" value="{{ current_category }}">
+
+        {% for field in fields %}
+        <div class="form-group">
+            <label class="form-label" for="{{ field.key }}">{{ field.label }}</label>
+            {% if field.type == "textarea" %}
+            <textarea
+                id="{{ field.key }}"
+                name="{{ field.key }}"
+                class="form-textarea"
+                rows="3"
+            >{{ settings.get(field.key, '') }}</textarea>
+            {% elif field.type == "number" %}
+            <input
+                type="number"
+                id="{{ field.key }}"
+                name="{{ field.key }}"
+                class="form-input"
+                value="{{ settings.get(field.key, '') }}"
+            >
+            {% elif field.type == "url" %}
+            <input
+                type="url"
+                id="{{ field.key }}"
+                name="{{ field.key }}"
+                class="form-input"
+                value="{{ settings.get(field.key, '') }}"
+                placeholder="https://..."
+            >
+            {% else %}
+            <input
+                type="text"
+                id="{{ field.key }}"
+                name="{{ field.key }}"
+                class="form-input"
+                value="{{ settings.get(field.key, '') }}"
+            >
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+    </form>
+</div>
+
+<style>
+.category-tabs {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.settings-form {
+    padding: 1.5rem;
+}
+
+.form-actions {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
+    margin-top: 1.5rem;
+}
+</style>
+{% endblock %}

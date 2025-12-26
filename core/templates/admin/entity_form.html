@@ -1,0 +1,529 @@
+{% extends "admin/base.html" %}
+
+{% block title %}{% if entity %}Edit{% else %}New{% endif %} {{ content_type.label }} - Focomy{% endblock %}
+{% block header_title %}{% if entity %}Edit{% else %}New{% endif %} {{ content_type.label }}{% endblock %}
+
+{% block content %}
+<div class="card">
+    {% if error %}
+    <div class="alert alert-error">{{ error }}</div>
+    {% endif %}
+
+    {% if message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    <form method="POST" action="/admin/{{ type_name }}{% if entity %}/{{ entity.id }}{% endif %}" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+        {% for field in content_type.fields %}
+        <div class="form-group">
+            <label class="form-label" for="{{ field.name }}">
+                {{ field.label or field.name }}
+                {% if field.required %}<span style="color: var(--error);">*</span>{% endif %}
+            </label>
+
+            {% if field.type == 'text' or field.type == 'string' %}
+                <input
+                    type="text"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    value="{{ entity.get(field.name, '') if entity else '' }}"
+                    {% if field.required %}required{% endif %}
+                >
+
+            {% elif field.type == 'email' %}
+                <input
+                    type="email"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    value="{{ entity.get(field.name, '') if entity else '' }}"
+                    {% if field.required %}required{% endif %}
+                >
+
+            {% elif field.type == 'password' %}
+                <input
+                    type="password"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    {% if not entity %}required{% endif %}
+                >
+                {% if entity %}
+                <p class="form-hint">Leave empty to keep current password</p>
+                {% endif %}
+
+            {% elif field.type == 'slug' %}
+                <input
+                    type="text"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    value="{{ entity.get(field.name, '') if entity else '' }}"
+                    pattern="[a-z0-9-]+"
+                    {% if field.required %}required{% endif %}
+                >
+                <p class="form-hint">URL-friendly identifier (lowercase letters, numbers, hyphens)</p>
+
+            {% elif field.type == 'textarea' or field.type == 'richtext' %}
+                <textarea
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-textarea"
+                    {% if field.required %}required{% endif %}
+                >{{ entity.get(field.name, '') if entity else '' }}</textarea>
+
+            {% elif field.type == 'blocks' %}
+                {% set blocks_value = entity.get(field.name, '') if entity else '' %}
+                <input
+                    type="hidden"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    value="{{ blocks_value | tojson if blocks_value else '' }}"
+                >
+                <div class="editor-container" id="editor-{{ field.name }}" data-editor="{{ field.name }}"></div>
+
+            {% elif field.type == 'number' or field.type == 'integer' %}
+                <input
+                    type="number"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    value="{{ entity.get(field.name, '') if entity else '' }}"
+                    {% if field.min is defined %}min="{{ field.min }}"{% endif %}
+                    {% if field.max is defined %}max="{{ field.max }}"{% endif %}
+                    {% if field.required %}required{% endif %}
+                >
+
+            {% elif field.type == 'float' %}
+                <input
+                    type="number"
+                    step="any"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    value="{{ entity.get(field.name, '') if entity else '' }}"
+                    {% if field.required %}required{% endif %}
+                >
+
+            {% elif field.type == 'boolean' %}
+                <input
+                    type="checkbox"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    value="true"
+                    {% if entity and entity.get(field.name) %}checked{% endif %}
+                >
+
+            {% elif field.type == 'select' %}
+                <select
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-select"
+                    {% if field.required %}required{% endif %}
+                >
+                    <option value="">-- Select --</option>
+                    {% for option in field.options %}
+                    {% set opt_value = option.value if option is mapping else option %}
+                    {% set opt_label = option.label if option is mapping else option %}
+                    <option value="{{ opt_value }}" {% if entity and entity.get(field.name) == opt_value %}selected{% endif %}>
+                        {{ opt_label }}
+                    </option>
+                    {% endfor %}
+                </select>
+
+            {% elif field.type == 'datetime' %}
+                <input
+                    type="datetime-local"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    value="{{ entity.get(field.name, '')[:16] if entity and entity.get(field.name) else '' }}"
+                    {% if field.required %}required{% endif %}
+                >
+
+            {% elif field.type == 'date' %}
+                <input
+                    type="date"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    value="{{ entity.get(field.name, '')[:10] if entity and entity.get(field.name) else '' }}"
+                    {% if field.required %}required{% endif %}
+                >
+
+            {% elif field.type == 'image' or field.type == 'file' %}
+                {% if entity and entity.get(field.name) %}
+                <div class="mb-2">
+                    <img src="{{ entity.get(field.name) }}" alt="" style="max-width: 200px; max-height: 150px;">
+                </div>
+                {% endif %}
+                <input
+                    type="file"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    {% if field.type == 'image' %}accept="image/*"{% endif %}
+                >
+
+            {% elif field.type == 'json' %}
+                <textarea
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-textarea"
+                    style="font-family: monospace;"
+                    {% if field.required %}required{% endif %}
+                >{{ entity.get(field.name, '{}') | tojson if entity else '{}' }}</textarea>
+                <p class="form-hint">JSON format</p>
+
+            {% else %}
+                <input
+                    type="text"
+                    id="{{ field.name }}"
+                    name="{{ field.name }}"
+                    class="form-input"
+                    value="{{ entity.get(field.name, '') if entity else '' }}"
+                    {% if field.required %}required{% endif %}
+                >
+            {% endif %}
+
+            {% if field.hint %}
+            <p class="form-hint">{{ field.hint }}</p>
+            {% endif %}
+        </div>
+        {% endfor %}
+
+        {% if relations %}
+        <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
+        <h3 style="margin-bottom: 1rem;">Relations</h3>
+
+        {% for rel in relations %}
+        <div class="form-group">
+            <label class="form-label" for="rel_{{ rel.name }}">
+                {{ rel.label or rel.name }}
+            </label>
+            <select
+                id="rel_{{ rel.name }}"
+                name="rel_{{ rel.name }}"
+                class="form-select"
+                {% if rel.multiple %}multiple style="min-height: 100px;"{% endif %}
+            >
+                {% if not rel.multiple %}
+                <option value="">-- Select --</option>
+                {% endif %}
+                {% for option in rel.options %}
+                <option value="{{ option.id }}" {% if option.selected %}selected{% endif %}>
+                    {{ option.label }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        {% endfor %}
+        {% endif %}
+
+        <div class="flex gap-2 mt-4">
+            <button type="submit" class="btn btn-primary">
+                {% if entity %}Update{% else %}Create{% endif %}
+            </button>
+            <a href="/admin/{{ type_name }}" class="btn btn-secondary">Cancel</a>
+            {% if entity %}
+            <button type="button" class="btn btn-secondary" onclick="toggleRevisions()" style="margin-left: auto;">
+                History
+            </button>
+            {% endif %}
+        </div>
+        {% if entity %}
+        <div id="autosave-status" class="autosave-status"></div>
+        {% endif %}
+    </form>
+</div>
+
+{% if entity %}
+<!-- Revision History Panel -->
+<div id="revisions-panel" class="revisions-panel" style="display: none;">
+    <div class="revisions-header">
+        <h3>Version History</h3>
+        <button type="button" class="btn-close" onclick="toggleRevisions()">&times;</button>
+    </div>
+    <div class="revisions-list" id="revisions-list">
+        <p class="text-muted">Loading...</p>
+    </div>
+</div>
+
+<style>
+.autosave-status {
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+.autosave-status.saving {
+    color: var(--warning);
+}
+.autosave-status.saved {
+    color: var(--success);
+}
+.autosave-status.error {
+    color: var(--error);
+}
+
+.revisions-panel {
+    position: fixed;
+    top: 0;
+    right: 0;
+    width: 400px;
+    height: 100vh;
+    background: var(--card);
+    border-left: 1px solid var(--border);
+    z-index: 1000;
+    box-shadow: -4px 0 16px rgba(0,0,0,0.1);
+    display: flex;
+    flex-direction: column;
+}
+.revisions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+.revisions-header h3 {
+    margin: 0;
+}
+.btn-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+}
+.btn-close:hover {
+    color: var(--text);
+}
+.revisions-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 1rem;
+}
+.revision-item {
+    padding: 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.revision-item:hover {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.05);
+}
+.revision-item .revision-title {
+    font-weight: 500;
+    margin-bottom: 0.25rem;
+}
+.revision-item .revision-meta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+.revision-item .revision-type {
+    display: inline-block;
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
+    font-size: 0.625rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+.revision-type.manual { background: var(--info); color: white; }
+.revision-type.publish { background: var(--success); color: white; }
+.revision-type.autosave { background: var(--warning); color: white; }
+</style>
+{% endif %}
+
+{% set has_blocks = namespace(value=false) %}
+{% for field in content_type.fields %}
+    {% if field.type == 'blocks' %}
+        {% set has_blocks.value = true %}
+    {% endif %}
+{% endfor %}
+
+{% if has_blocks.value %}
+{% include "admin/components/editor.html" %}
+{% endif %}
+
+<script>
+// Unsaved changes warning
+(function() {
+    const form = document.querySelector('form');
+    if (!form) return;
+
+    let formChanged = false;
+    let isSubmitting = false;
+
+    // Track changes on all form inputs
+    form.addEventListener('input', function() {
+        formChanged = true;
+    });
+
+    form.addEventListener('change', function() {
+        formChanged = true;
+    });
+
+    // Mark as submitting when form is submitted
+    form.addEventListener('submit', function() {
+        isSubmitting = true;
+    });
+
+    // Warning before leaving page
+    window.addEventListener('beforeunload', function(e) {
+        if (formChanged && !isSubmitting) {
+            e.preventDefault();
+            e.returnValue = 'You have unsaved changes. Are you sure you want to leave?';
+            return e.returnValue;
+        }
+    });
+
+    // Handle cancel button clicks
+    document.querySelectorAll('a.btn-secondary').forEach(function(btn) {
+        btn.addEventListener('click', function(e) {
+            if (formChanged) {
+                if (!confirm('You have unsaved changes. Are you sure you want to leave?')) {
+                    e.preventDefault();
+                }
+            }
+        });
+    });
+})();
+
+{% if entity %}
+// Autosave functionality
+(function() {
+    const AUTOSAVE_INTERVAL = 30000; // 30 seconds
+    const entityId = '{{ entity.id }}';
+    const statusEl = document.getElementById('autosave-status');
+    let lastSavedData = null;
+
+    function getFormData() {
+        const form = document.querySelector('form');
+        const formData = new FormData(form);
+        const data = {};
+        for (const [key, value] of formData.entries()) {
+            if (!key.startsWith('csrf_') && !key.startsWith('rel_')) {
+                data[key] = value;
+            }
+        }
+        return data;
+    }
+
+    function showStatus(message, type) {
+        statusEl.textContent = message;
+        statusEl.className = 'autosave-status ' + type;
+    }
+
+    async function autosave() {
+        const currentData = getFormData();
+        const dataStr = JSON.stringify(currentData);
+
+        // Skip if no changes
+        if (dataStr === lastSavedData) return;
+
+        showStatus('Saving...', 'saving');
+
+        try {
+            const response = await fetch('/api/revisions/autosave', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    entity_id: entityId,
+                    data: currentData
+                })
+            });
+
+            if (response.ok) {
+                lastSavedData = dataStr;
+                const now = new Date().toLocaleTimeString();
+                showStatus('Autosaved at ' + now, 'saved');
+            } else {
+                showStatus('Autosave failed', 'error');
+            }
+        } catch (error) {
+            showStatus('Autosave failed', 'error');
+        }
+    }
+
+    // Start autosave timer
+    setInterval(autosave, AUTOSAVE_INTERVAL);
+
+    // Initial save of current state
+    lastSavedData = JSON.stringify(getFormData());
+})();
+
+// Revision history
+function toggleRevisions() {
+    const panel = document.getElementById('revisions-panel');
+    if (panel.style.display === 'none') {
+        panel.style.display = 'flex';
+        loadRevisions();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+async function loadRevisions() {
+    const entityId = '{{ entity.id }}';
+    const list = document.getElementById('revisions-list');
+
+    try {
+        const response = await fetch('/api/revisions/' + entityId + '?include_autosaves=true&limit=30');
+        const data = await response.json();
+
+        if (data.revisions.length === 0) {
+            list.innerHTML = '<p class="text-muted">No revision history yet.</p>';
+            return;
+        }
+
+        list.innerHTML = data.revisions.map(function(rev) {
+            const date = new Date(rev.created_at).toLocaleString();
+            return `
+                <div class="revision-item" onclick="restoreRevision('${rev.id}')">
+                    <div class="revision-title">${rev.title || 'Untitled'}</div>
+                    <div class="revision-meta">
+                        <span class="revision-type ${rev.revision_type}">${rev.revision_type}</span>
+                        ${date}
+                    </div>
+                </div>
+            `;
+        }).join('');
+    } catch (error) {
+        list.innerHTML = '<p class="text-muted">Failed to load revisions.</p>';
+    }
+}
+
+async function restoreRevision(revisionId) {
+    if (!confirm('Restore this version? Current changes will be saved as a revision first.')) {
+        return;
+    }
+
+    const entityId = '{{ entity.id }}';
+
+    try {
+        const response = await fetch('/api/revisions/' + entityId + '/restore', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ revision_id: revisionId })
+        });
+
+        if (response.ok) {
+            showToast('Revision restored. Reloading...', 'success');
+            setTimeout(function() {
+                window.location.reload();
+            }, 1000);
+        } else {
+            showToast('Failed to restore revision', 'error');
+        }
+    } catch (error) {
+        showToast('Failed to restore revision', 'error');
+    }
+}
+{% endif %}
+</script>
+{% endblock %}

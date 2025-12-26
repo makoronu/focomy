@@ -1,0 +1,459 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Menu Management - Focomy{% endblock %}
+
+{% block header_title %}Menu Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="flex items-center gap-2">
+            <h2 class="card-title">Menu Editor</h2>
+            <div class="location-tabs">
+                {% for loc in locations %}
+                <a href="/admin/menus?location={{ loc.value }}"
+                   class="btn {% if current_location == loc.value %}btn-primary{% else %}btn-secondary{% endif %}">
+                    {{ loc.label }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        <div class="flex gap-2">
+            {% if not has_db_items %}
+            <form action="/admin/menus/import" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="location" value="{{ current_location }}">
+                <button type="submit" class="btn btn-secondary"
+                        onclick="return confirm('Import menu items from config.yaml?');">
+                    Import from YAML
+                </button>
+            </form>
+            {% endif %}
+            <button type="button" class="btn btn-primary" onclick="showAddModal()">
+                Add Menu Item
+            </button>
+        </div>
+    </div>
+
+    {% if menu_tree %}
+    <div class="menu-tree" id="menu-tree">
+        {{ render_menu_items(menu_tree, 0) }}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p class="text-muted">No menu items for this location.</p>
+        <p class="text-muted mt-1">Click "Add Menu Item" to create one, or import from config.yaml.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Macros -->
+{% macro render_menu_items(items, depth) %}
+<ul class="menu-list" data-depth="{{ depth }}">
+    {% for item in items %}
+    <li class="menu-item" data-id="{{ item.id }}" data-parent="">
+        <div class="menu-item-content">
+            <span class="drag-handle">&#9776;</span>
+            <span class="menu-label">{{ item.label }}</span>
+            <span class="menu-url text-muted">{{ item.url }}</span>
+            <div class="menu-actions">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="editItem('{{ item.id }}')">Edit</button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        hx-delete="/admin/menus/item/{{ item.id }}"
+                        hx-confirm="Delete this menu item?"
+                        hx-target="closest li"
+                        hx-swap="outerHTML">Delete</button>
+            </div>
+        </div>
+        {% if item.children %}
+        {{ render_menu_items(item.children, depth + 1) }}
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endmacro %}
+
+<!-- Add/Edit Modal -->
+<div id="menu-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="hideModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal-title">Add Menu Item</h3>
+            <button type="button" class="modal-close" onclick="hideModal()">&times;</button>
+        </div>
+        <form id="menu-form" method="POST" action="/admin/menus/item">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" name="location" value="{{ current_location }}">
+            <input type="hidden" id="item-id" name="item_id" value="">
+
+            <div class="form-group">
+                <label class="form-label" for="label">Label *</label>
+                <input type="text" id="label" name="label" class="form-input" required>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="link_type">Link Type</label>
+                <select id="link_type" name="link_type" class="form-select" onchange="toggleLinkFields()">
+                    <option value="custom">Custom URL</option>
+                    <option value="page">Page</option>
+                    <option value="category">Category</option>
+                    <option value="post">Post</option>
+                </select>
+            </div>
+
+            <div class="form-group" id="url-group">
+                <label class="form-label" for="url">URL</label>
+                <input type="text" id="url" name="url" class="form-input" placeholder="https://...">
+            </div>
+
+            <div class="form-group" id="linked-entity-group" style="display: none;">
+                <label class="form-label" for="linked_entity_id">Select Content</label>
+                <select id="linked_entity_id" name="linked_entity_id" class="form-select">
+                    <option value="">-- Select --</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="target">Open In</label>
+                <select id="target" name="target" class="form-select">
+                    <option value="_self">Same Window</option>
+                    <option value="_blank">New Window</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="icon">Icon (optional)</label>
+                <input type="text" id="icon" name="icon" class="form-input" placeholder="icon-name">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="parent_id">Parent Item</label>
+                <select id="parent_id" name="parent_id" class="form-select">
+                    <option value="">-- None (Top Level) --</option>
+                    {% for item in items %}
+                    <option value="{{ item.id }}">{{ item.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.location-tabs {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.menu-tree {
+    margin-top: 1rem;
+}
+
+.menu-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.menu-list[data-depth="1"] {
+    margin-left: 2rem;
+    border-left: 2px solid var(--border);
+    padding-left: 1rem;
+}
+
+.menu-list[data-depth="2"] {
+    margin-left: 2rem;
+    border-left: 2px solid var(--border);
+    padding-left: 1rem;
+}
+
+.menu-item {
+    margin: 0.5rem 0;
+}
+
+.menu-item-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--bg);
+    border-radius: 0.375rem;
+    border: 1px solid var(--border);
+}
+
+.menu-item.sortable-ghost {
+    opacity: 0.4;
+}
+
+.menu-item.sortable-chosen {
+    background: var(--primary);
+    opacity: 0.8;
+}
+
+.drag-handle {
+    cursor: grab;
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+
+.drag-handle:active {
+    cursor: grabbing;
+}
+
+.menu-label {
+    font-weight: 500;
+    flex: 1;
+}
+
+.menu-url {
+    font-size: 0.875rem;
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.menu-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.empty-state {
+    padding: 3rem;
+    text-align: center;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    position: relative;
+    background: var(--card);
+    border-radius: 0.5rem;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--text);
+}
+
+#menu-form {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script>
+// Menu item data storage
+const menuItems = {{ items | tojson | safe }};
+
+// Initialize SortableJS
+document.addEventListener('DOMContentLoaded', function() {
+    initSortable();
+});
+
+function initSortable() {
+    const lists = document.querySelectorAll('.menu-list');
+    lists.forEach(list => {
+        new Sortable(list, {
+            group: 'menu',
+            animation: 150,
+            handle: '.drag-handle',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: function(evt) {
+                saveOrder();
+            }
+        });
+    });
+}
+
+function saveOrder() {
+    const items = [];
+    let order = 0;
+
+    function collectItems(ul, parentId = null) {
+        ul.querySelectorAll(':scope > li.menu-item').forEach(li => {
+            items.push({
+                id: li.dataset.id,
+                sort_order: order++,
+                parent_id: parentId
+            });
+
+            const childUl = li.querySelector(':scope > ul.menu-list');
+            if (childUl) {
+                collectItems(childUl, li.dataset.id);
+            }
+        });
+    }
+
+    const rootList = document.querySelector('#menu-tree > .menu-list');
+    if (rootList) {
+        collectItems(rootList);
+    }
+
+    fetch('/admin/menus/reorder', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            location: '{{ current_location }}',
+            items: items
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.status === 'ok') {
+            Toast.success('Menu order saved');
+        }
+    })
+    .catch(err => {
+        Toast.error('Failed to save order');
+    });
+}
+
+function showAddModal() {
+    document.getElementById('modal-title').textContent = 'Add Menu Item';
+    document.getElementById('menu-form').action = '/admin/menus/item';
+    document.getElementById('menu-form').reset();
+    document.getElementById('item-id').value = '';
+    toggleLinkFields();
+    document.getElementById('menu-modal').style.display = 'flex';
+}
+
+function editItem(itemId) {
+    const item = menuItems.find(i => i.id === itemId);
+    if (!item) return;
+
+    document.getElementById('modal-title').textContent = 'Edit Menu Item';
+    document.getElementById('menu-form').action = '/admin/menus/item/' + itemId;
+    document.getElementById('item-id').value = itemId;
+    document.getElementById('label').value = item.label || '';
+    document.getElementById('url').value = item.url || '#';
+    document.getElementById('target').value = item.target || '_self';
+    document.getElementById('icon').value = item.icon || '';
+    document.getElementById('parent_id').value = item.parent_id || '';
+
+    // Handle link_type if exists
+    const linkType = document.getElementById('link_type');
+    if (linkType) {
+        linkType.value = item.link_type || 'custom';
+        toggleLinkFields();
+    }
+
+    document.getElementById('menu-modal').style.display = 'flex';
+}
+
+function hideModal() {
+    document.getElementById('menu-modal').style.display = 'none';
+}
+
+function toggleLinkFields() {
+    const linkType = document.getElementById('link_type').value;
+    const urlGroup = document.getElementById('url-group');
+    const linkedGroup = document.getElementById('linked-entity-group');
+
+    if (linkType === 'custom') {
+        urlGroup.style.display = 'block';
+        linkedGroup.style.display = 'none';
+    } else {
+        urlGroup.style.display = 'none';
+        linkedGroup.style.display = 'block';
+        loadLinkedEntities(linkType);
+    }
+}
+
+function loadLinkedEntities(type) {
+    const select = document.getElementById('linked_entity_id');
+    select.innerHTML = '<option value="">Loading...</option>';
+
+    fetch(`/api/entities/${type}?limit=50`)
+        .then(res => res.json())
+        .then(data => {
+            select.innerHTML = '<option value="">-- Select --</option>';
+            (data.items || []).forEach(item => {
+                const opt = document.createElement('option');
+                opt.value = item.id;
+                opt.textContent = item.title || item.name || item.slug || item.id;
+                select.appendChild(opt);
+            });
+        })
+        .catch(() => {
+            select.innerHTML = '<option value="">Failed to load</option>';
+        });
+}
+
+// Close modal on escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideModal();
+    }
+});
+</script>
+{% endblock %}

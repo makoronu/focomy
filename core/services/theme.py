@@ -1,0 +1,769 @@
+"""ThemeService - theme management and rendering."""
+
+from pathlib import Path
+from typing import Any, Optional
+import json
+import re
+
+import yaml
+from jinja2 import Environment, FileSystemLoader, select_autoescape
+from markupsafe import escape, Markup
+
+from ..config import settings
+from .assets import get_asset_url, get_upload_url, get_static_url
+
+
+class ThemeConfig:
+    """Theme configuration."""
+
+    def __init__(self, data: dict):
+        self.name = data.get("name", "default")
+        self.label = data.get("label", "Default Theme")
+        self.version = data.get("version", "1.0.0")
+        self.author = data.get("author", "")
+        self.description = data.get("description", "")
+
+        # CSS variables
+        self.colors = data.get("colors", {})
+        self.fonts = data.get("fonts", {})
+        self.spacing = data.get("spacing", {})
+
+        # Templates
+        self.templates = data.get("templates", {})
+
+        # Custom CSS
+        self.custom_css = data.get("custom_css", "")
+
+
+class ThemeService:
+    """
+    Theme management service.
+
+    Features:
+    - CSS variables from YAML config
+    - Jinja2 template rendering
+    - Template inheritance
+    - Custom CSS injection
+    """
+
+    def __init__(self):
+        self.themes_dir = settings.base_dir / "themes"
+        self.themes_dir.mkdir(exist_ok=True)
+        self._themes: dict[str, ThemeConfig] = {}
+        self._current_theme: str = "default"
+        self._env: Optional[Environment] = None
+
+    def _load_themes(self):
+        """Load all theme configurations."""
+        if self._themes:
+            return
+
+        for theme_dir in self.themes_dir.iterdir():
+            if theme_dir.is_dir():
+                config_path = theme_dir / "theme.yaml"
+                if config_path.exists():
+                    try:
+                        with open(config_path, "r", encoding="utf-8") as f:
+                            data = yaml.safe_load(f)
+                            if data:
+                                theme = ThemeConfig(data)
+                                self._themes[theme.name] = theme
+                    except Exception as e:
+                        print(f"Error loading theme {theme_dir}: {e}")
+
+        # Ensure default theme exists
+        if "default" not in self._themes:
+            self._create_default_theme()
+
+    def _create_default_theme(self):
+        """Create default theme if not exists."""
+        default_dir = self.themes_dir / "default"
+        default_dir.mkdir(exist_ok=True)
+
+        # Create theme.yaml
+        config = {
+            "name": "default",
+            "label": "Default Theme",
+            "version": "1.0.0",
+            "colors": {
+                "primary": "#2563eb",
+                "primary-hover": "#1d4ed8",
+                "background": "#ffffff",
+                "surface": "#f8fafc",
+                "text": "#1e293b",
+                "text-muted": "#64748b",
+                "border": "#e2e8f0",
+                "success": "#22c55e",
+                "error": "#ef4444",
+                "warning": "#f59e0b",
+            },
+            "fonts": {
+                "sans": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+                "serif": "Georgia, 'Times New Roman', serif",
+                "mono": "ui-monospace, SFMono-Regular, Menlo, monospace",
+            },
+            "spacing": {
+                "xs": "0.25rem",
+                "sm": "0.5rem",
+                "md": "1rem",
+                "lg": "1.5rem",
+                "xl": "2rem",
+                "2xl": "3rem",
+            },
+        }
+
+        with open(default_dir / "theme.yaml", "w", encoding="utf-8") as f:
+            yaml.dump(config, f, allow_unicode=True, default_flow_style=False)
+
+        # Create templates directory
+        (default_dir / "templates").mkdir(exist_ok=True)
+
+        # Create base template
+        base_template = '''<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block meta %}{% endblock %}
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    <style>
+        {{ theme_css }}
+        {% block styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        {% block header %}
+        <div class="container">
+            <a href="/" class="site-logo">{{ site_name }}</a>
+            <nav class="site-nav">
+                {% block nav %}{% endblock %}
+            </nav>
+        </div>
+        {% endblock %}
+    </header>
+
+    <main class="site-main">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="site-footer">
+        {% block footer %}
+        <div class="container">
+            <p>&copy; {{ current_year }} {{ site_name }}</p>
+        </div>
+        {% endblock %}
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>
+'''
+        with open(default_dir / "templates" / "base.html", "w", encoding="utf-8") as f:
+            f.write(base_template)
+
+        # Create post template
+        post_template = '''{% extends "base.html" %}
+
+{% block title %}{{ post.title }} - {{ site_name }}{% endblock %}
+
+{% block meta %}
+{{ seo_meta | safe }}
+{% endblock %}
+
+{% block content %}
+<article class="post">
+    <header class="post-header">
+        <h1>{{ post.title }}</h1>
+        <div class="post-meta">
+            <time datetime="{{ post.created_at }}">{{ post.created_at[:10] }}</time>
+        </div>
+    </header>
+
+    <div class="post-content">
+        {{ post.body | render_blocks | safe }}
+    </div>
+</article>
+{% endblock %}
+'''
+        with open(default_dir / "templates" / "post.html", "w", encoding="utf-8") as f:
+            f.write(post_template)
+
+        # Create index template
+        index_template = '''{% extends "base.html" %}
+
+{% block title %}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="posts-list">
+    {% for post in posts %}
+    <article class="post-card">
+        <h2><a href="/{{ post.type }}/{{ post.slug }}">{{ post.title }}</a></h2>
+        <p>{{ post.excerpt or (post.body | excerpt) }}</p>
+        <time datetime="{{ post.created_at }}">{{ post.created_at[:10] }}</time>
+    </article>
+    {% else %}
+    <p>No posts yet.</p>
+    {% endfor %}
+</div>
+{% endblock %}
+'''
+        with open(default_dir / "templates" / "index.html", "w", encoding="utf-8") as f:
+            f.write(index_template)
+
+        self._themes["default"] = ThemeConfig(config)
+
+    def get_theme(self, name: str = None) -> Optional[ThemeConfig]:
+        """Get theme configuration."""
+        self._load_themes()
+        name = name or self._current_theme
+        return self._themes.get(name)
+
+    def get_all_themes(self) -> dict[str, ThemeConfig]:
+        """Get all themes."""
+        self._load_themes()
+        return self._themes.copy()
+
+    def set_current_theme(self, name: str):
+        """Set current theme."""
+        self._load_themes()
+        if name in self._themes:
+            self._current_theme = name
+            self._env = None  # Reset environment
+
+    def get_css_variables(self, theme_name: str = None) -> str:
+        """Generate CSS variables from theme config."""
+        theme = self.get_theme(theme_name)
+        if not theme:
+            return ""
+
+        lines = [":root {"]
+
+        # Colors
+        for name, value in theme.colors.items():
+            lines.append(f"  --color-{name}: {value};")
+
+        # Fonts
+        for name, value in theme.fonts.items():
+            lines.append(f"  --font-{name}: {value};")
+
+        # Spacing
+        for name, value in theme.spacing.items():
+            lines.append(f"  --space-{name}: {value};")
+
+        lines.append("}")
+
+        # Add base styles
+        lines.append("""
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: var(--font-sans);
+    background: var(--color-background);
+    color: var(--color-text);
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 var(--space-lg);
+}
+
+.site-header {
+    background: var(--color-surface);
+    border-bottom: 1px solid var(--color-border);
+    padding: var(--space-md) 0;
+}
+
+.site-header .container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.site-logo {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.site-nav a {
+    color: var(--color-text);
+    text-decoration: none;
+    margin-left: var(--space-lg);
+}
+
+.site-nav a:hover {
+    color: var(--color-primary);
+}
+
+.site-main {
+    padding: var(--space-2xl) 0;
+}
+
+.site-footer {
+    background: var(--color-surface);
+    border-top: 1px solid var(--color-border);
+    padding: var(--space-lg) 0;
+    color: var(--color-text-muted);
+    text-align: center;
+}
+
+/* Post styles */
+.post {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.post-header {
+    margin-bottom: var(--space-xl);
+}
+
+.post-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: var(--space-sm);
+}
+
+.post-meta {
+    color: var(--color-text-muted);
+}
+
+.post-content {
+    font-size: 1.125rem;
+}
+
+.post-content p {
+    margin-bottom: var(--space-md);
+}
+
+.post-content h2, .post-content h3 {
+    margin-top: var(--space-xl);
+    margin-bottom: var(--space-md);
+}
+
+.post-content img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 0.5rem;
+}
+
+.post-content blockquote {
+    border-left: 4px solid var(--color-primary);
+    padding-left: var(--space-lg);
+    margin: var(--space-lg) 0;
+    font-style: italic;
+    color: var(--color-text-muted);
+}
+
+.post-content pre {
+    background: var(--color-surface);
+    padding: var(--space-md);
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    font-family: var(--font-mono);
+}
+
+/* Post list styles */
+.posts-list {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.post-card {
+    padding: var(--space-lg) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.post-card h2 {
+    font-size: 1.5rem;
+    margin-bottom: var(--space-sm);
+}
+
+.post-card h2 a {
+    color: var(--color-text);
+    text-decoration: none;
+}
+
+.post-card h2 a:hover {
+    color: var(--color-primary);
+}
+
+.post-card time {
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
+
+/* Checklist */
+.checklist { list-style: none; padding: 0; }
+.checklist-item { display: flex; align-items: center; gap: 0.5rem; padding: 0.25rem 0; }
+.checklist-item input { width: 1.25rem; height: 1.25rem; }
+
+/* Alert */
+.alert { padding: 1rem 1.25rem; border-radius: 0.5rem; margin: 1rem 0; border-left: 4px solid; }
+.alert--info { background: #eff6ff; border-color: #3b82f6; color: #1e40af; }
+.alert--warning { background: #fffbeb; border-color: #f59e0b; color: #92400e; }
+.alert--success { background: #f0fdf4; border-color: #22c55e; color: #166534; }
+.alert--error { background: #fef2f2; border-color: #ef4444; color: #991b1b; }
+
+/* Button */
+.button-block { text-align: center; padding: 1rem 0; }
+.btn { display: inline-block; padding: 0.75rem 2rem; border-radius: 0.5rem; text-decoration: none; font-weight: 600; }
+.btn--primary { background: var(--color-primary); color: white; }
+.btn--secondary { background: var(--color-surface); color: var(--color-text); border: 1px solid var(--color-border); }
+.btn--outline { background: transparent; color: var(--color-primary); border: 2px solid var(--color-primary); }
+
+/* Link card */
+.linkcard { display: flex; gap: 1rem; border: 1px solid var(--color-border); border-radius: 0.5rem; padding: 1rem; text-decoration: none; color: inherit; margin: 1rem 0; }
+.linkcard:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+.linkcard__image { width: 120px; height: 80px; object-fit: cover; border-radius: 0.25rem; }
+.linkcard__title { font-weight: 600; margin-bottom: 0.25rem; }
+.linkcard__description { font-size: 0.875rem; color: var(--color-text-muted); }
+
+/* Columns */
+.columns { display: flex; gap: 1.5rem; margin: 1rem 0; }
+.columns--2 .column { width: 50%; }
+.columns--3 .column { width: 33.333%; }
+
+/* Embed */
+.embed { margin: 1.5rem 0; }
+.embed iframe { border-radius: 0.5rem; }
+.embed__caption { text-align: center; font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.5rem; }
+
+/* Video embeds (YouTube, Vimeo, Twitch) - 16:9 aspect ratio */
+.embed--youtube, .embed--vimeo, .embed--twitch { position: relative; padding-bottom: 56.25%; height: 0; }
+.embed--youtube iframe, .embed--vimeo iframe, .embed--twitch iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+/* Google Maps */
+.embed--googleMaps iframe { width: 100%; height: 400px; border-radius: 0.5rem; }
+
+/* Spotify */
+.embed--spotify iframe { border-radius: 12px; }
+
+/* SoundCloud */
+.embed--soundcloud iframe { border-radius: 0.5rem; }
+
+/* Social embeds */
+.embed--twitter, .embed--instagram { max-width: 550px; margin-left: auto; margin-right: auto; }
+
+/* Map */
+.map { margin: 1.5rem 0; }
+.map iframe { border-radius: 0.5rem; }
+.map__caption { text-align: center; font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.5rem; }
+
+/* Video */
+.video { margin: 1.5rem 0; }
+.video--youtube, .video--vimeo { position: relative; padding-bottom: 56.25%; height: 0; }
+.video--youtube iframe, .video--vimeo iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 0.5rem; }
+.video--native video { width: 100%; border-radius: 0.5rem; }
+.video__caption { text-align: center; font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.5rem; }
+""")
+
+        # Add custom CSS
+        if theme.custom_css:
+            lines.append(theme.custom_css)
+
+        return "\n".join(lines)
+
+    def get_template_env(self, theme_name: str = None) -> Environment:
+        """Get Jinja2 environment for theme."""
+        theme = self.get_theme(theme_name)
+        theme_dir = self.themes_dir / (theme.name if theme else "default") / "templates"
+
+        env = Environment(
+            loader=FileSystemLoader(str(theme_dir)),
+            autoescape=select_autoescape(["html", "xml"]),
+        )
+
+        # Add custom filters
+        env.filters["render_blocks"] = self._render_blocks
+        env.filters["excerpt"] = self._excerpt
+        env.filters["asset_url"] = get_asset_url
+        env.filters["upload_url"] = get_upload_url
+        env.filters["static_url"] = get_static_url
+
+        # Add global functions
+        env.globals["asset_url"] = get_asset_url
+        env.globals["upload_url"] = get_upload_url
+        env.globals["static_url"] = get_static_url
+
+        return env
+
+    def _excerpt(self, content: Any, length: int = 200) -> str:
+        """Extract plain text excerpt from content."""
+        if not content:
+            return ""
+
+        text = ""
+
+        # Handle dict (Editor.js blocks)
+        if isinstance(content, dict) and "blocks" in content:
+            texts = []
+            for block in content.get("blocks", []):
+                if block.get("type") in ("paragraph", "header"):
+                    block_text = block.get("data", {}).get("text", "")
+                    # Strip HTML tags
+                    import re
+                    block_text = re.sub(r"<[^>]+>", "", block_text)
+                    texts.append(block_text)
+            text = " ".join(texts)
+        elif isinstance(content, str):
+            # Try parsing as JSON
+            try:
+                data = json.loads(content)
+                return self._excerpt(data, length)
+            except (json.JSONDecodeError, TypeError):
+                import re
+                text = re.sub(r"<[^>]+>", "", content)
+        else:
+            text = str(content)
+
+        # Truncate
+        if len(text) <= length:
+            return text
+        return text[:length - 3].rsplit(" ", 1)[0] + "..."
+
+    def _sanitize_url(self, url: str) -> str:
+        """Sanitize URL to prevent XSS via javascript: or data: URLs."""
+        if not url:
+            return ""
+        url = url.strip()
+        # Allow only safe protocols
+        if url.startswith(("http://", "https://", "/", "./", "../")):
+            return escape(url)
+        # Block javascript:, data:, vbscript:, etc.
+        return ""
+
+    def _sanitize_html(self, html: str, allow_tags: set = None) -> str:
+        """Sanitize HTML allowing only specific tags."""
+        if allow_tags is None:
+            allow_tags = {"b", "i", "strong", "em", "a", "br", "u", "mark", "code"}
+
+        # Simple regex-based sanitizer for inline content
+        import re
+
+        def replace_tag(match):
+            tag = match.group(1).lower().split()[0]  # Get tag name without attributes
+            if tag.lstrip('/') in allow_tags:
+                return match.group(0)
+            return escape(match.group(0))
+
+        return re.sub(r'<(/?\w+[^>]*)>', replace_tag, html)
+
+    def _render_blocks(self, content: Any) -> str:
+        """Render Editor.js blocks to HTML."""
+        if not content:
+            return ""
+
+        data = content
+
+        # Handle string content (possibly JSON)
+        if isinstance(content, str):
+            try:
+                data = json.loads(content)
+                # Handle double-encoded JSON (legacy data)
+                if isinstance(data, str):
+                    data = json.loads(data.replace('\\!', '!'))
+            except json.JSONDecodeError:
+                return content
+
+        if not isinstance(data, dict) or "blocks" not in data:
+            return str(content)
+
+        html_parts = []
+        for block in data.get("blocks", []):
+            block_type = block.get("type")
+            block_data = block.get("data", {})
+
+            if block_type == "paragraph":
+                html_parts.append(f'<p>{block_data.get("text", "")}</p>')
+
+            elif block_type == "header":
+                level = block_data.get("level", 2)
+                text = block_data.get("text", "")
+                html_parts.append(f'<h{level}>{text}</h{level}>')
+
+            elif block_type == "list":
+                style = block_data.get("style", "unordered")
+                tag = "ol" if style == "ordered" else "ul"
+                items = block_data.get("items", [])
+                items_html = "".join(f"<li>{item}</li>" for item in items)
+                html_parts.append(f"<{tag}>{items_html}</{tag}>")
+
+            elif block_type == "image":
+                file_data = block_data.get("file", {})
+                url = self._sanitize_url(file_data.get("url", ""))
+                caption = escape(block_data.get("caption", ""))
+                if url:
+                    html_parts.append(f'<figure><img src="{url}" alt="{caption}"><figcaption>{caption}</figcaption></figure>')
+
+            elif block_type == "quote":
+                text = block_data.get("text", "")
+                caption = block_data.get("caption", "")
+                html_parts.append(f'<blockquote><p>{text}</p><cite>{caption}</cite></blockquote>')
+
+            elif block_type == "code":
+                code = escape(block_data.get("code", ""))
+                html_parts.append(f"<pre><code>{code}</code></pre>")
+
+            elif block_type == "delimiter":
+                html_parts.append("<hr>")
+
+            elif block_type == "table":
+                content = block_data.get("content", [])
+                rows = []
+                for row in content:
+                    cells = "".join(f"<td>{self._sanitize_html(cell)}</td>" for cell in row)
+                    rows.append(f"<tr>{cells}</tr>")
+                html_parts.append(f'<table>{"".join(rows)}</table>')
+
+            elif block_type == "raw":
+                html_parts.append(block_data.get("html", ""))
+
+            elif block_type == "embed":
+                service = escape(block_data.get("service", ""))
+                embed = self._sanitize_url(block_data.get("embed", ""))
+                caption = escape(block_data.get("caption", ""))
+                caption_html = f'<figcaption class="embed__caption">{caption}</figcaption>' if caption else ""
+                if not embed:
+                    continue
+
+                # サービスごとに最適なiframe設定
+                if service == "youtube":
+                    iframe = f'<iframe src="{embed}" width="100%" height="400" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>'
+                elif service == "vimeo":
+                    iframe = f'<iframe src="{embed}" width="100%" height="400" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>'
+                elif service == "googleMaps":
+                    iframe = f'<iframe src="{embed}" width="100%" height="400" style="border:0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>'
+                elif service == "spotify":
+                    iframe = f'<iframe src="{embed}" width="100%" height="352" frameborder="0" allow="autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture" loading="lazy"></iframe>'
+                elif service == "soundcloud":
+                    iframe = f'<iframe src="{embed}" width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay"></iframe>'
+                elif service == "twitter":
+                    iframe = f'<iframe src="{embed}" width="100%" height="500" frameborder="0"></iframe>'
+                elif service == "instagram":
+                    iframe = f'<iframe src="{embed}" width="100%" height="600" frameborder="0" scrolling="no" allowtransparency="true"></iframe>'
+                elif service == "twitch":
+                    iframe = f'<iframe src="{embed}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>'
+                else:
+                    iframe = f'<iframe src="{embed}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>'
+
+                html_parts.append(f'<figure class="embed embed--{service}">{iframe}{caption_html}</figure>')
+
+            elif block_type == "checklist":
+                items = block_data.get("items", [])
+                items_html = []
+                for item in items:
+                    checked = "checked" if item.get("checked") else ""
+                    text = self._sanitize_html(item.get("text", ""))
+                    items_html.append(f'<li class="checklist-item"><input type="checkbox" {checked} disabled><span>{text}</span></li>')
+                html_parts.append(f'<ul class="checklist">{"".join(items_html)}</ul>')
+
+            elif block_type == "alert":
+                alert_type = escape(block_data.get("type", "info"))
+                message = self._sanitize_html(block_data.get("message", ""))
+                html_parts.append(f'<div class="alert alert--{alert_type}">{message}</div>')
+
+            elif block_type == "button":
+                text = escape(block_data.get("text", "ボタン"))
+                url = self._sanitize_url(block_data.get("url", "#")) or "#"
+                style = escape(block_data.get("style", "primary"))
+                html_parts.append(f'<div class="button-block"><a href="{url}" class="btn btn--{style}">{text}</a></div>')
+
+            elif block_type == "linkCard":
+                url = self._sanitize_url(block_data.get("url", ""))
+                title = escape(block_data.get("title", ""))
+                description = escape(block_data.get("description", ""))
+                image = self._sanitize_url(block_data.get("image", ""))
+                img_html = f'<img src="{image}" alt="" class="linkcard__image">' if image else ""
+                if url:
+                    html_parts.append(f'''<a href="{url}" class="linkcard" target="_blank" rel="noopener">
+                        {img_html}
+                        <div class="linkcard__content">
+                            <div class="linkcard__title">{title}</div>
+                            <div class="linkcard__description">{description}</div>
+                        </div>
+                    </a>''')
+
+            elif block_type == "columns":
+                cols = block_data.get("content", [])
+                cols_html = "".join(f'<div class="column">{self._sanitize_html(col)}</div>' for col in cols)
+                html_parts.append(f'<div class="columns columns--{len(cols)}">{cols_html}</div>')
+
+            elif block_type == "map":
+                src = self._sanitize_url(block_data.get("src", ""))
+                caption = escape(block_data.get("caption", ""))
+                caption_html = f'<figcaption class="map__caption">{caption}</figcaption>' if caption else ""
+                if src:
+                    html_parts.append(f'''<figure class="map">
+                        <iframe src="{src}" width="100%" height="400" style="border:0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+                        {caption_html}
+                    </figure>''')
+
+            elif block_type == "video":
+                url = block_data.get("url", "")
+                caption = escape(block_data.get("caption", ""))
+                caption_html = f'<figcaption class="video__caption">{caption}</figcaption>' if caption else ""
+
+                # YouTube - extract video ID safely
+                yt_match = re.search(r'(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]+)', url)
+                if yt_match:
+                    video_id = escape(yt_match.group(1))
+                    html_parts.append(f'''<figure class="video video--youtube">
+                        <iframe src="https://www.youtube.com/embed/{video_id}" width="100%" height="400" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
+                        {caption_html}
+                    </figure>''')
+                    continue
+
+                # Vimeo - extract video ID safely
+                vimeo_match = re.search(r'vimeo\.com/(\d+)', url)
+                if vimeo_match:
+                    video_id = escape(vimeo_match.group(1))
+                    html_parts.append(f'''<figure class="video video--vimeo">
+                        <iframe src="https://player.vimeo.com/video/{video_id}" width="100%" height="400" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+                        {caption_html}
+                    </figure>''')
+                    continue
+
+                # Direct video (mp4, webm, ogg)
+                safe_url = self._sanitize_url(url)
+                if safe_url and re.search(r'\.(mp4|webm|ogg)(\?.*)?$', url, re.IGNORECASE):
+                    html_parts.append(f'''<figure class="video video--native">
+                        <video src="{safe_url}" controls width="100%"></video>
+                        {caption_html}
+                    </figure>''')
+                    continue
+
+                # Generic iframe - only for safe URLs
+                safe_url = self._sanitize_url(url)
+                if safe_url:
+                    html_parts.append(f'''<figure class="video">
+                        <iframe src="{safe_url}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
+                        {caption_html}
+                    </figure>''')
+
+        return "\n".join(html_parts)
+
+    def render(
+        self,
+        template_name: str,
+        context: dict[str, Any],
+        theme_name: str = None,
+    ) -> str:
+        """Render a template with context."""
+        from datetime import datetime
+
+        env = self.get_template_env(theme_name)
+        template = env.get_template(template_name)
+
+        # Add theme CSS to context
+        context["theme_css"] = self.get_css_variables(theme_name)
+        context["current_year"] = datetime.now().year
+        context.setdefault("site_name", "Focomy")
+
+        return template.render(**context)
+
+
+# Singleton
+theme_service = ThemeService()

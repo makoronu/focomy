@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% block meta %}{% endblock %}
+    <title>{% block title %}{{ site_name }}{% endblock %}</title>
+    <style>
+        {{ theme_css }}
+
+        /* Dropdown menu styles */
+        .nav-item { position: relative; display: inline-block; }
+        .nav-item > a { padding: 0.5rem 1rem; display: block; }
+        .nav-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            background: var(--color-surface, #fff);
+            border: 1px solid var(--color-border, #e2e8f0);
+            border-radius: 0.375rem;
+            min-width: 180px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+            z-index: 100;
+        }
+        .nav-item:hover .nav-dropdown { display: block; }
+        .nav-dropdown a {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: var(--color-text, #1e293b);
+            text-decoration: none;
+            white-space: nowrap;
+        }
+        .nav-dropdown a:hover { background: var(--color-background, #f8fafc); }
+
+        /* Footer nav */
+        .footer-nav { display: flex; gap: 1.5rem; justify-content: center; margin-bottom: 1rem; }
+        .footer-nav a { color: var(--color-text-muted, #64748b); text-decoration: none; }
+        .footer-nav a:hover { color: var(--color-primary, #2563eb); }
+
+        /* Main layout with sidebar */
+        .main-container { display: flex; gap: 2rem; }
+        .main-content { flex: 1; min-width: 0; }
+        .sidebar { width: 300px; flex-shrink: 0; }
+
+        /* Widget styles */
+        .widget { background: var(--color-surface, #f8fafc); border-radius: 0.5rem; padding: 1.25rem; margin-bottom: 1.5rem; }
+        .widget-title { font-size: 1rem; font-weight: 600; margin-bottom: 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--color-primary, #2563eb); }
+        .widget-content ul { list-style: none; padding: 0; margin: 0; }
+        .widget-content li { padding: 0.5rem 0; border-bottom: 1px solid var(--color-border, #e2e8f0); }
+        .widget-content li:last-child { border-bottom: none; }
+        .widget-content a { color: var(--color-text, #1e293b); text-decoration: none; }
+        .widget-content a:hover { color: var(--color-primary, #2563eb); }
+        .widget-post-date, .widget-archive-count { font-size: 0.75rem; color: var(--color-text-muted, #64748b); }
+        .widget-search-form { display: flex; gap: 0.5rem; }
+        .widget-search-input { flex: 1; padding: 0.5rem; border: 1px solid var(--color-border, #e2e8f0); border-radius: 0.25rem; }
+        .widget-search-button { padding: 0.5rem 1rem; background: var(--color-primary, #2563eb); color: white; border: none; border-radius: 0.25rem; cursor: pointer; }
+
+        /* Footer widgets */
+        .footer-widgets { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2rem; margin-bottom: 2rem; }
+        .footer-widgets .widget { background: transparent; }
+
+        @media (max-width: 768px) {
+            .main-container { flex-direction: column; }
+            .sidebar { width: 100%; }
+            .footer-widgets { grid-template-columns: 1fr; }
+        }
+
+        {% block styles %}{% endblock %}
+    </style>
+</head>
+<body>
+    <header class="site-header">
+        {% block header %}
+        <div class="container">
+            <a href="/" class="site-logo">{{ site_name }}</a>
+            <nav class="site-nav">
+                {% block nav %}
+                {% if menus and menus.header %}
+                    {% for item in menus.header %}
+                    <span class="nav-item">
+                        <a href="{{ item.url }}" {% if item.target == '_blank' %}target="_blank" rel="noopener"{% endif %}>
+                            {% if item.icon %}<span class="nav-icon {{ item.icon }}"></span>{% endif %}
+                            {{ item.label }}
+                        </a>
+                        {% if item.children %}
+                        <div class="nav-dropdown">
+                            {% for child in item.children %}
+                            <a href="{{ child.url }}" {% if child.target == '_blank' %}target="_blank" rel="noopener"{% endif %}>
+                                {{ child.label }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </span>
+                    {% endfor %}
+                {% endif %}
+                {% endblock %}
+            </nav>
+        </div>
+        {% endblock %}
+    </header>
+
+    <main class="site-main">
+        <div class="container main-container">
+            <div class="main-content">
+                {% block content %}{% endblock %}
+            </div>
+            {% if widgets and widgets.sidebar %}
+            <aside class="sidebar">
+                {{ widgets.sidebar | safe }}
+            </aside>
+            {% endif %}
+        </div>
+    </main>
+
+    <footer class="site-footer">
+        {% block footer %}
+        <div class="container">
+            {% if widgets and (widgets.footer_1 or widgets.footer_2 or widgets.footer_3) %}
+            <div class="footer-widgets">
+                <div class="footer-widget-area">{{ widgets.footer_1 | safe }}</div>
+                <div class="footer-widget-area">{{ widgets.footer_2 | safe }}</div>
+                <div class="footer-widget-area">{{ widgets.footer_3 | safe }}</div>
+            </div>
+            {% endif %}
+            {% if menus and menus.footer %}
+            <nav class="footer-nav">
+                {% for item in menus.footer %}
+                <a href="{{ item.url }}" {% if item.target == '_blank' %}target="_blank" rel="noopener"{% endif %}>
+                    {{ item.label }}
+                </a>
+                {% endfor %}
+            </nav>
+            {% endif %}
+            <p>&copy; {{ current_year }} {{ site_name }}</p>
+        </div>
+        {% endblock %}
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+</html>

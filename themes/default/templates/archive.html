@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}{{ year }}年{{ month }}月のアーカイブ - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="archive-page">
+    <header class="archive-header">
+        <h1>{{ year }}年{{ month }}月のアーカイブ</h1>
+    </header>
+
+    <div class="posts-list">
+        {% for post in posts %}
+        <article class="post-item">
+            <time class="post-date">{{ post.created_at[:10] }}</time>
+            <h2><a href="/post/{{ post.slug }}">{{ post.title }}</a></h2>
+            <p class="post-excerpt">{{ post.excerpt }}</p>
+        </article>
+        {% else %}
+        <p class="no-posts">この月には記事がありません。</p>
+        {% endfor %}
+    </div>
+
+    <nav class="archive-nav">
+        {% set prev_month = month - 1 if month > 1 else 12 %}
+        {% set prev_year = year if month > 1 else year - 1 %}
+        {% set next_month = month + 1 if month < 12 else 1 %}
+        {% set next_year = year if month < 12 else year + 1 %}
+        <a href="/archive/{{ prev_year }}/{{ prev_month }}" class="prev">前月</a>
+        <a href="/" class="home">ホーム</a>
+        <a href="/archive/{{ next_year }}/{{ next_month }}" class="next">次月</a>
+    </nav>
+</div>
+
+<style>
+.archive-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.archive-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.posts-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.post-item {
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.post-item time {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.post-item h2 {
+    margin: 0.5rem 0;
+}
+
+.post-item h2 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.post-item h2 a:hover {
+    color: var(--color-primary);
+}
+
+.post-excerpt {
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}
+
+.archive-nav {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-top: 3rem;
+}
+
+.archive-nav a {
+    padding: 0.5rem 1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: 0.25rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.archive-nav a:hover {
+    background: var(--color-primary);
+    color: white;
+}
+
+.no-posts {
+    text-align: center;
+    color: var(--color-text-muted);
+}
+</style>
+{% endblock %}
