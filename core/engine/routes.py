@@ -100,6 +100,23 @@ async def get_seo_settings(db: AsyncSession, site_url: str = "") -> dict:
     }
 
 
+# === Static Assets ===
+
+@router.get("/css/theme.css", response_class=Response)
+async def theme_css():
+    """Serve theme CSS with caching headers."""
+    css_content = theme_service.get_css_variables()
+
+    return Response(
+        content=css_content,
+        media_type="text/css",
+        headers={
+            "Cache-Control": "public, max-age=86400",  # 24 hours
+            "Vary": "Accept-Encoding",
+        }
+    )
+
+
 # === SEO Routes (must be before dynamic routes) ===
 
 @router.get("/robots.txt", response_class=Response)
