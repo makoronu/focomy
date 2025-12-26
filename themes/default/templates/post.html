@@ -4,10 +4,44 @@
 
 {% block meta %}
 {{ seo_meta | safe }}
+{% if breadcrumb_json_ld %}{{ breadcrumb_json_ld | safe }}{% endif %}
 {% endblock %}
 
 {% block styles %}
 <style>
+/* Breadcrumb styles */
+.breadcrumb {
+    margin-bottom: 1.5rem;
+    font-size: 0.875rem;
+}
+.breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    gap: 0.5rem;
+}
+.breadcrumb-item {
+    display: flex;
+    align-items: center;
+}
+.breadcrumb-item:not(:last-child)::after {
+    content: "›";
+    margin-left: 0.5rem;
+    color: var(--color-text-muted, #64748b);
+}
+.breadcrumb-item a {
+    color: var(--color-primary, #2563eb);
+    text-decoration: none;
+}
+.breadcrumb-item a:hover {
+    text-decoration: underline;
+}
+.breadcrumb-item.active span {
+    color: var(--color-text-muted, #64748b);
+}
+
 /* Comment styles */
 .comments-section {
     margin-top: 3rem;
@@ -180,6 +214,22 @@
 {% endblock %}
 
 {% block content %}
+{% if breadcrumb_items %}
+<nav class="breadcrumb" aria-label="パンくずリスト">
+    <ol class="breadcrumb-list">
+        {% for item in breadcrumb_items %}
+        <li class="breadcrumb-item{% if loop.last %} active{% endif %}">
+            {% if loop.last %}
+            <span>{{ item.name }}</span>
+            {% else %}
+            <a href="{{ item.url }}">{{ item.name }}</a>
+            {% endif %}
+        </li>
+        {% endfor %}
+    </ol>
+</nav>
+{% endif %}
+
 <article class="post">
     <header class="post-header">
         <h1>{{ post.title }}</h1>

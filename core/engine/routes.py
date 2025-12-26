@@ -21,6 +21,46 @@ from ..services.settings import SettingsService
 router = APIRouter(tags=["public"])
 
 
+def generate_breadcrumbs(items: list[dict], site_url: str) -> dict:
+    """Generate breadcrumb data and JSON-LD.
+
+    Args:
+        items: List of {"name": str, "url": str} (relative URLs)
+        site_url: Base site URL
+
+    Returns:
+        Dict with breadcrumb_items and breadcrumb_json_ld
+    """
+    import json as json_mod
+
+    # Add home as first item if not present
+    breadcrumb_items = []
+    if not items or items[0].get("url") != "/":
+        breadcrumb_items.append({"name": "ホーム", "url": "/"})
+
+    breadcrumb_items.extend(items)
+
+    # Generate JSON-LD
+    json_ld = {
+        "@context": "https://schema.org",
+        "@type": "BreadcrumbList",
+        "itemListElement": [
+            {
+                "@type": "ListItem",
+                "position": i + 1,
+                "name": item["name"],
+                "item": f"{site_url}{item['url']}" if not item["url"].startswith("http") else item["url"]
+            }
+            for i, item in enumerate(breadcrumb_items)
+        ]
+    }
+
+    return {
+        "breadcrumb_items": breadcrumb_items,
+        "breadcrumb_json_ld": f'<script type="application/ld+json">{json_mod.dumps(json_ld, ensure_ascii=False)}</script>',
+    }
+
+
 async def get_seo_settings(db: AsyncSession, site_url: str = "") -> dict:
     """Get SEO settings for templates."""
     settings_svc = SettingsService(db)
@@ -240,11 +280,17 @@ async def view_post(
     menus_ctx = await get_menus_context(db)
     seo_ctx = await get_seo_settings(db, site_url)
 
+    # Generate breadcrumbs
+    breadcrumb_ctx = generate_breadcrumbs([
+        {"name": post_data.get("title", "投稿"), "url": f"/post/{slug}"}
+    ], site_url)
+
     html = theme_service.render("post.html", {
         "post": post_data,
         "seo_meta": seo_meta,
         **menus_ctx,
         **seo_ctx,
+        **breadcrumb_ctx,
     })
 
     cache_service.set(cache_key, html, PAGE_CACHE_TTL)
@@ -282,11 +328,17 @@ async def view_page(
     menus_ctx = await get_menus_context(db)
     seo_ctx = await get_seo_settings(db, site_url)
 
+    # Generate breadcrumbs
+    breadcrumb_ctx = generate_breadcrumbs([
+        {"name": page_data.get("title", "ページ"), "url": f"/page/{slug}"}
+    ], site_url)
+
     html = theme_service.render("post.html", {
         "post": page_data,
         "seo_meta": seo_meta,
         **menus_ctx,
         **seo_ctx,
+        **breadcrumb_ctx,
     })
 
     return HTMLResponse(content=html)
