@@ -1,0 +1,525 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Redirect Management - Focomy{% endblock %}
+
+{% block header_title %}Redirect Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <div class="flex items-center gap-2">
+            <h2 class="card-title">URL Redirects</h2>
+            <span class="badge">{{ redirects | length }} rules</span>
+        </div>
+        <div class="flex gap-2">
+            <button type="button" class="btn btn-secondary" onclick="showTestModal()">
+                Test Redirect
+            </button>
+            <button type="button" class="btn btn-primary" onclick="showAddModal()">
+                Add Redirect
+            </button>
+        </div>
+    </div>
+
+    {% if message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    {% if redirects %}
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>From</th>
+                    <th>To</th>
+                    <th>Code</th>
+                    <th>Type</th>
+                    <th>Status</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for redirect in redirects %}
+                <tr data-id="{{ redirect.id }}">
+                    <td>
+                        <code class="path-code">{{ redirect.from_path }}</code>
+                    </td>
+                    <td>
+                        <span class="to-path" title="{{ redirect.to_path }}">
+                            {{ redirect.to_path[:50] }}{% if redirect.to_path | length > 50 %}...{% endif %}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ 'success' if redirect.status_code == '301' else 'warning' }}">
+                            {{ redirect.status_code }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="text-muted">{{ redirect.match_type }}</span>
+                    </td>
+                    <td>
+                        {% if redirect.is_active %}
+                        <span class="badge badge-success">Active</span>
+                        {% else %}
+                        <span class="badge badge-secondary">Inactive</span>
+                        {% endif %}
+                    </td>
+                    <td class="actions">
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                onclick="editRedirect('{{ redirect.id }}')">
+                            Edit
+                        </button>
+                        <button type="button" class="btn btn-secondary btn-sm"
+                                onclick="toggleActive('{{ redirect.id }}', {{ 'true' if redirect.is_active else 'false' }})">
+                            {{ 'Disable' if redirect.is_active else 'Enable' }}
+                        </button>
+                        <button type="button" class="btn btn-danger btn-sm"
+                                hx-delete="/admin/redirects/{{ redirect.id }}"
+                                hx-confirm="Delete this redirect rule?"
+                                hx-target="closest tr"
+                                hx-swap="outerHTML">
+                            Delete
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <p class="text-muted">No redirect rules configured.</p>
+        <p class="text-muted mt-1">Click "Add Redirect" to create a new rule.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Usage Tips -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3 class="card-title">Usage Tips</h3>
+    </div>
+    <div class="card-body">
+        <ul class="tips-list">
+            <li><strong>301:</strong> Permanent redirect (SEO-friendly, search engines transfer page rank)</li>
+            <li><strong>302:</strong> Temporary redirect (use for maintenance or A/B testing)</li>
+            <li><strong>Exact match:</strong> Match the exact path only</li>
+            <li><strong>Prefix match:</strong> Match paths starting with the pattern (e.g., /old-blog/* to /blog/*)</li>
+            <li><strong>Regex:</strong> Use regular expressions with capture groups (e.g., ^/post/(\d+)$ to /article/$1)</li>
+        </ul>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+<div id="redirect-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="hideModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modal-title">Add Redirect</h3>
+            <button type="button" class="modal-close" onclick="hideModal()">&times;</button>
+        </div>
+        <form id="redirect-form" method="POST" action="/admin/redirects">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <input type="hidden" id="redirect-id" name="redirect_id" value="">
+
+            <div class="form-group">
+                <label class="form-label" for="from_path">From Path *</label>
+                <input type="text" id="from_path" name="from_path" class="form-input"
+                       placeholder="/old-page" required>
+                <span class="form-help">The original URL path to redirect from</span>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="to_path">To Path *</label>
+                <input type="text" id="to_path" name="to_path" class="form-input"
+                       placeholder="/new-page" required>
+                <span class="form-help">The destination URL or path</span>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="form-label" for="status_code">Status Code</label>
+                    <select id="status_code" name="status_code" class="form-select">
+                        <option value="301">301 - Permanent</option>
+                        <option value="302">302 - Temporary</option>
+                        <option value="307">307 - Temporary Redirect</option>
+                        <option value="308">308 - Permanent Redirect</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label" for="match_type">Match Type</label>
+                    <select id="match_type" name="match_type" class="form-select">
+                        <option value="exact">Exact Match</option>
+                        <option value="prefix">Prefix Match</option>
+                        <option value="regex">Regex</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" id="preserve_query" name="preserve_query" value="true" checked>
+                    <span>Preserve query parameters</span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="form-checkbox">
+                    <input type="checkbox" id="is_active" name="is_active" value="true" checked>
+                    <span>Active</span>
+                </label>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="notes">Notes</label>
+                <textarea id="notes" name="notes" class="form-textarea" rows="2"
+                          placeholder="Internal notes about this redirect"></textarea>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="hideModal()">Cancel</button>
+                <button type="submit" class="btn btn-primary">Save Redirect</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Test Modal -->
+<div id="test-modal" class="modal" style="display: none;">
+    <div class="modal-overlay" onclick="hideTestModal()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Test Redirect</h3>
+            <button type="button" class="modal-close" onclick="hideTestModal()">&times;</button>
+        </div>
+        <div class="test-form">
+            <div class="form-group">
+                <label class="form-label" for="test_path">Test Path</label>
+                <div class="input-group">
+                    <input type="text" id="test_path" class="form-input" placeholder="/some/path">
+                    <button type="button" class="btn btn-primary" onclick="testRedirect()">Test</button>
+                </div>
+            </div>
+            <div id="test-result" class="test-result" style="display: none;">
+                <div class="test-result-header">Result:</div>
+                <div id="test-result-content"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.path-code {
+    background: var(--bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-family: monospace;
+    font-size: 0.875rem;
+}
+
+.to-path {
+    font-size: 0.875rem;
+}
+
+.badge {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 0.25rem;
+    background: var(--border);
+    color: var(--text);
+}
+
+.badge-success {
+    background: #10b981;
+    color: white;
+}
+
+.badge-warning {
+    background: #f59e0b;
+    color: white;
+}
+
+.badge-secondary {
+    background: var(--border);
+    color: var(--text-muted);
+}
+
+.actions {
+    white-space: nowrap;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.empty-state {
+    padding: 3rem;
+    text-align: center;
+}
+
+.tips-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tips-list li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid var(--border);
+}
+
+.tips-list li:last-child {
+    border-bottom: none;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.form-checkbox input {
+    width: 1rem;
+    height: 1rem;
+}
+
+.form-help {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+.input-group {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.input-group .form-input {
+    flex: 1;
+}
+
+.test-result {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: var(--bg);
+    border-radius: 0.375rem;
+}
+
+.test-result-header {
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+}
+
+.test-result.match {
+    border-left: 4px solid #10b981;
+}
+
+.test-result.no-match {
+    border-left: 4px solid #ef4444;
+}
+
+/* Modal */
+.modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+    position: relative;
+    background: var(--card);
+    border-radius: 0.5rem;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: var(--text-muted);
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--text);
+}
+
+#redirect-form, .test-form {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+    margin-top: 1rem;
+}
+
+.mt-4 {
+    margin-top: 1rem;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin: 1rem;
+}
+
+.alert-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+</style>
+
+<script>
+// Redirect data storage
+const redirects = {{ redirects | tojson | safe }};
+
+function showAddModal() {
+    document.getElementById('modal-title').textContent = 'Add Redirect';
+    document.getElementById('redirect-form').action = '/admin/redirects';
+    document.getElementById('redirect-form').reset();
+    document.getElementById('redirect-id').value = '';
+    document.getElementById('preserve_query').checked = true;
+    document.getElementById('is_active').checked = true;
+    document.getElementById('redirect-modal').style.display = 'flex';
+}
+
+function editRedirect(redirectId) {
+    const redirect = redirects.find(r => r.id === redirectId);
+    if (!redirect) return;
+
+    document.getElementById('modal-title').textContent = 'Edit Redirect';
+    document.getElementById('redirect-form').action = '/admin/redirects/' + redirectId;
+    document.getElementById('redirect-id').value = redirectId;
+    document.getElementById('from_path').value = redirect.from_path || '';
+    document.getElementById('to_path').value = redirect.to_path || '';
+    document.getElementById('status_code').value = redirect.status_code || '301';
+    document.getElementById('match_type').value = redirect.match_type || 'exact';
+    document.getElementById('preserve_query').checked = redirect.preserve_query !== false;
+    document.getElementById('is_active').checked = redirect.is_active !== false;
+    document.getElementById('notes').value = redirect.notes || '';
+
+    document.getElementById('redirect-modal').style.display = 'flex';
+}
+
+function hideModal() {
+    document.getElementById('redirect-modal').style.display = 'none';
+}
+
+function toggleActive(redirectId, currentState) {
+    fetch('/admin/redirects/' + redirectId + '/toggle', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRF-Token': '{{ csrf_token }}'
+        }
+    })
+    .then(response => {
+        if (response.ok) {
+            window.location.reload();
+        }
+    })
+    .catch(err => {
+        console.error('Failed to toggle redirect:', err);
+    });
+}
+
+function showTestModal() {
+    document.getElementById('test-modal').style.display = 'flex';
+    document.getElementById('test_path').value = '';
+    document.getElementById('test-result').style.display = 'none';
+}
+
+function hideTestModal() {
+    document.getElementById('test-modal').style.display = 'none';
+}
+
+function testRedirect() {
+    const path = document.getElementById('test_path').value;
+    if (!path) return;
+
+    fetch('/admin/redirects/test?path=' + encodeURIComponent(path), {
+        headers: {
+            'X-CSRF-Token': '{{ csrf_token }}'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        const resultDiv = document.getElementById('test-result');
+        const contentDiv = document.getElementById('test-result-content');
+
+        resultDiv.style.display = 'block';
+
+        if (data.match) {
+            resultDiv.className = 'test-result match';
+            contentDiv.innerHTML = `
+                <p><strong>Match found!</strong></p>
+                <p>Redirects to: <code>${data.to_path}</code></p>
+                <p>Status code: <span class="badge">${data.status_code}</span></p>
+            `;
+        } else {
+            resultDiv.className = 'test-result no-match';
+            contentDiv.innerHTML = '<p>No matching redirect rule found.</p>';
+        }
+    })
+    .catch(err => {
+        console.error('Test failed:', err);
+    });
+}
+
+// Close modal on escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        hideModal();
+        hideTestModal();
+    }
+});
+</script>
+{% endblock %}

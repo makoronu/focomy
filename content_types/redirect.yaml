@@ -1,0 +1,62 @@
+name: redirect
+label: リダイレクト
+label_plural: リダイレクト
+admin_menu: false
+searchable: false
+
+fields:
+  - name: from_path
+    type: string
+    label: 元のパス
+    required: true
+    help: "リダイレクト元のパス（例: /old-page）"
+    placeholder: "/old-page"
+
+  - name: to_path
+    type: string
+    label: 転送先
+    required: true
+    help: "リダイレクト先のパスまたはURL"
+    placeholder: "/new-page"
+
+  - name: status_code
+    type: select
+    label: ステータスコード
+    required: true
+    default: "301"
+    options:
+      - value: "301"
+        label: "301 - 恒久的な移動"
+      - value: "302"
+        label: "302 - 一時的な移動"
+      - value: "307"
+        label: "307 - 一時的なリダイレクト"
+      - value: "308"
+        label: "308 - 恒久的なリダイレクト"
+
+  - name: is_active
+    type: boolean
+    label: 有効
+    default: true
+
+  - name: match_type
+    type: select
+    label: マッチタイプ
+    default: "exact"
+    options:
+      - value: exact
+        label: "完全一致"
+      - value: prefix
+        label: "前方一致"
+      - value: regex
+        label: "正規表現"
+
+  - name: preserve_query
+    type: boolean
+    label: クエリパラメータを保持
+    default: true
+
+  - name: notes
+    type: text
+    label: メモ
+    help: "管理用のメモ"

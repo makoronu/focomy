@@ -18,25 +18,141 @@ from .database import init_db, close_db
 from .rate_limit import limiter
 
 
+class RedirectMiddleware(BaseHTTPMiddleware):
+    """Handle URL redirects before other processing."""
+
+    # Skip paths that should not be redirected
+    SKIP_PREFIXES = ("/api/", "/admin/", "/static/", "/uploads/", "/health")
+
+    async def dispatch(self, request: Request, call_next):
+        path = request.url.path
+
+        # Skip certain paths
+        if any(path.startswith(prefix) for prefix in self.SKIP_PREFIXES):
+            return await call_next(request)
+
+        # Only check redirects for GET requests
+        if request.method != "GET":
+            return await call_next(request)
+
+        try:
+            from .database import async_session_maker
+            from .services.redirect import RedirectService
+
+            async with async_session_maker() as db:
+                redirect_svc = RedirectService(db)
+                query_string = str(request.url.query) if request.url.query else ""
+                redirect = await redirect_svc.find_redirect(path, query_string)
+
+                if redirect:
+                    from starlette.responses import RedirectResponse
+                    return RedirectResponse(
+                        url=redirect["to_path"],
+                        status_code=redirect["status_code"],
+                    )
+        except Exception:
+            # Don't break the site if redirect service fails
+            pass
+
+        return await call_next(request)
+
+
 class SecurityHeadersMiddleware(BaseHTTPMiddleware):
-    """Add security headers to all responses."""
+    """Add comprehensive security headers to all responses."""
+
+    # CSP for admin pages (allow inline styles/scripts for Editor.js)
+    ADMIN_CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https: blob:; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "frame-src https://www.youtube.com https://player.vimeo.com https://open.spotify.com "
+        "https://w.soundcloud.com https://www.google.com https://maps.google.com; "
+        "connect-src 'self' https://www.googletagmanager.com"
+    )
+
+    # CSP for public pages (more restrictive)
+    PUBLIC_CSP = (
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; "
+        "style-src 'self' 'unsafe-inline'; "
+        "img-src 'self' data: https: blob:; "
+        "font-src 'self' https://fonts.gstatic.com; "
+        "frame-src https://www.youtube.com https://player.vimeo.com https://open.spotify.com "
+        "https://w.soundcloud.com https://www.google.com https://maps.google.com; "
+        "connect-src 'self' https://www.google-analytics.com; "
+        "object-src 'none'; "
+        "base-uri 'self'; "
+        "form-action 'self'; "
+        "upgrade-insecure-requests"
+    )
+
+    # Permissions Policy (formerly Feature-Policy)
+    PERMISSIONS_POLICY = (
+        "accelerometer=(), "
+        "ambient-light-sensor=(), "
+        "autoplay=(self), "
+        "battery=(), "
+        "camera=(), "
+        "display-capture=(), "
+        "document-domain=(), "
+        "encrypted-media=(self), "
+        "fullscreen=(self), "
+        "geolocation=(), "
+        "gyroscope=(), "
+        "magnetometer=(), "
+        "microphone=(), "
+        "midi=(), "
+        "payment=(), "
+        "picture-in-picture=(self), "
+        "publickey-credentials-get=(), "
+        "screen-wake-lock=(), "
+        "usb=(), "
+        "xr-spatial-tracking=()"
+    )
 
     async def dispatch(self, request: Request, call_next):
         response = await call_next(request)
+        headers_config = settings.security.headers
+
+        # Basic security headers (always applied)
         response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "SAMEORIGIN"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        # CSP for admin pages (allow inline styles/scripts for Editor.js)
-        if request.url.path.startswith("/admin"):
-            response.headers["Content-Security-Policy"] = (
-                "default-src 'self'; "
-                "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net; "
-                "style-src 'self' 'unsafe-inline'; "
-                "img-src 'self' data: https:; "
-                "frame-src https://www.youtube.com https://player.vimeo.com https://open.spotify.com https://w.soundcloud.com https://www.google.com https://maps.google.com; "
-                "connect-src 'self'"
-            )
+
+        # X-Frame-Options
+        if headers_config.frame_options:
+            response.headers["X-Frame-Options"] = headers_config.frame_options
+
+        # HSTS (only for HTTPS in production)
+        if headers_config.hsts_enabled and not settings.debug:
+            hsts_value = f"max-age={headers_config.hsts_max_age}"
+            if headers_config.hsts_include_subdomains:
+                hsts_value += "; includeSubDomains"
+            if headers_config.hsts_preload:
+                hsts_value += "; preload"
+            response.headers["Strict-Transport-Security"] = hsts_value
+
+        # Content Security Policy
+        if headers_config.csp_enabled:
+            csp_header = "Content-Security-Policy"
+            if headers_config.csp_report_only:
+                csp_header = "Content-Security-Policy-Report-Only"
+
+            if request.url.path.startswith("/admin"):
+                response.headers[csp_header] = self.ADMIN_CSP
+            elif not request.url.path.startswith("/api"):
+                response.headers[csp_header] = self.PUBLIC_CSP
+
+        # Permissions Policy
+        if headers_config.permissions_policy_enabled:
+            response.headers["Permissions-Policy"] = self.PERMISSIONS_POLICY
+
+        # Cross-Origin headers for additional isolation
+        response.headers["Cross-Origin-Opener-Policy"] = "same-origin"
+        response.headers["Cross-Origin-Resource-Policy"] = "same-origin"
+
         return response
 
 
@@ -137,6 +253,7 @@ app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(CSRFMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=settings.security.secret_key)
+app.add_middleware(RedirectMiddleware)
 
 # CORS middleware
 app.add_middleware(

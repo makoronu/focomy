@@ -540,6 +540,17 @@
                 <a href="/admin/settings" class="nav-item {% if current_page == 'settings' %}active{% endif %}">
                     サイト設定
                 </a>
+                <a href="/admin/redirects" class="nav-item {% if current_page == 'redirects' %}active{% endif %}">
+                    リダイレクト
+                </a>
+
+                <div class="nav-section">ツール</div>
+                <a href="/admin/tools/sitemap" class="nav-item {% if current_page == 'tools' and 'sitemap' in request.url.path %}active{% endif %}">
+                    サイトマップ
+                </a>
+                <a href="/admin/tools/link-validator" class="nav-item {% if current_page == 'tools' and 'link-validator' in request.url.path %}active{% endif %}">
+                    リンク検証
+                </a>
             </nav>
         </aside>
 

@@ -1,0 +1,315 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Link Validator - Focomy{% endblock %}
+
+{% block header_title %}Link Validator{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Link Validation</h2>
+        <div class="flex gap-2">
+            <form action="/admin/tools/validate-links" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="check_external" value="false">
+                <button type="submit" class="btn btn-primary">
+                    Validate Internal Links
+                </button>
+            </form>
+            <form action="/admin/tools/validate-links" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <input type="hidden" name="check_external" value="true">
+                <button type="submit" class="btn btn-secondary"
+                        onclick="return confirm('External link checking may take a while. Continue?');">
+                    + Check External Links
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if stats %}
+    <div class="stats-grid">
+        <div class="stat-item">
+            <span class="stat-label">Total Pages</span>
+            <span class="stat-value">{{ stats.total_pages }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">Internal Links</span>
+            <span class="stat-value">{{ stats.total_internal_links }}</span>
+        </div>
+        <div class="stat-item">
+            <span class="stat-label">External Links</span>
+            <span class="stat-value">{{ stats.total_external_links }}</span>
+        </div>
+        <div class="stat-item {% if stats.broken_internal > 0 %}stat-error{% endif %}">
+            <span class="stat-label">Broken Internal</span>
+            <span class="stat-value">{{ stats.broken_internal }}</span>
+        </div>
+        {% if stats.broken_external is defined %}
+        <div class="stat-item {% if stats.broken_external > 0 %}stat-error{% endif %}">
+            <span class="stat-label">Broken External</span>
+            <span class="stat-value">{{ stats.broken_external }}</span>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    {% if broken_links %}
+    <div class="results-section">
+        <h3>Broken Internal Links ({{ broken_links | length }})</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Source Page</th>
+                    <th>Broken Link</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for link in broken_links %}
+                <tr>
+                    <td>
+                        <a href="/admin/{{ link.source_id.split('-')[0] | default('post') }}/{{ link.source_id }}/edit"
+                           class="source-link">
+                            {{ link.source_title }}
+                        </a>
+                        <div class="text-muted text-sm">{{ link.source_url }}</div>
+                    </td>
+                    <td>
+                        <code class="broken-url">{{ link.target_url }}</code>
+                        <span class="badge badge-error">{{ link.status }}</span>
+                    </td>
+                    <td>
+                        <a href="/admin/post?q={{ link.source_title | urlencode }}"
+                           class="btn btn-secondary btn-sm">
+                            Find & Edit
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if external_errors %}
+    <div class="results-section">
+        <h3>External Link Errors ({{ external_errors | length }})</h3>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Source Page</th>
+                    <th>Broken External Link</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for link in external_errors %}
+                <tr>
+                    <td>
+                        <a href="/admin/{{ link.source_id.split('-')[0] | default('post') }}/{{ link.source_id }}/edit"
+                           class="source-link">
+                            {{ link.source_title }}
+                        </a>
+                        <div class="text-muted text-sm">{{ link.source_url }}</div>
+                    </td>
+                    <td>
+                        <a href="{{ link.target_url }}" target="_blank" rel="noopener" class="external-url">
+                            {{ link.target_url[:60] }}{% if link.target_url | length > 60 %}...{% endif %}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge badge-{{ 'warning' if link.status == 'timeout' else 'error' }}">
+                            {{ link.status }}
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+
+    {% if not stats and not broken_links %}
+    <div class="empty-state">
+        <p class="text-muted">Click a button above to run link validation.</p>
+        <p class="text-muted mt-1">Internal link check is fast. External check may take several minutes for large sites.</p>
+    </div>
+    {% elif stats and not broken_links and not external_errors %}
+    <div class="success-state">
+        <p>All links are valid! No broken links found.</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Orphan Pages Section -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h2 class="card-title">Orphan Pages</h2>
+        <form action="/admin/tools/find-orphans" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+            <button type="submit" class="btn btn-secondary">
+                Find Orphan Pages
+            </button>
+        </form>
+    </div>
+
+    {% if orphans is defined %}
+        {% if orphans %}
+        <div class="results-section">
+            <p class="text-muted mb-2">
+                Found {{ orphans | length }} page(s) not linked from anywhere:
+            </p>
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Page</th>
+                        <th>URL</th>
+                        <th>Type</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for page in orphans %}
+                    <tr>
+                        <td>
+                            <strong>{{ page.title }}</strong>
+                        </td>
+                        <td>
+                            <code>{{ page.url }}</code>
+                        </td>
+                        <td>
+                            <span class="badge">{{ page.type }}</span>
+                        </td>
+                        <td>
+                            <a href="{{ page.url }}" target="_blank" class="btn btn-secondary btn-sm">
+                                View
+                            </a>
+                            <a href="/admin/{{ page.type }}/{{ page.id }}/edit"
+                               class="btn btn-secondary btn-sm">
+                                Edit
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="success-state">
+            <p>No orphan pages found! All published pages are linked.</p>
+        </div>
+        {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <p class="text-muted">Click "Find Orphan Pages" to detect pages not linked from anywhere.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.stat-item {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg);
+    border-radius: 0.5rem;
+}
+
+.stat-item.stat-error {
+    background: #fee2e2;
+}
+
+.stat-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.stat-error .stat-value {
+    color: var(--error);
+}
+
+.results-section {
+    padding: 1.5rem;
+}
+
+.results-section h3 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.source-link {
+    font-weight: 500;
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.source-link:hover {
+    text-decoration: underline;
+}
+
+.broken-url {
+    background: #fee2e2;
+    color: #991b1b;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.external-url {
+    color: var(--text);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.external-url:hover {
+    color: var(--primary);
+}
+
+.text-sm {
+    font-size: 0.75rem;
+}
+
+.empty-state, .success-state {
+    padding: 3rem;
+    text-align: center;
+}
+
+.success-state {
+    background: #dcfce7;
+    color: #166534;
+    border-radius: 0.5rem;
+    margin: 1rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.mt-4 {
+    margin-top: 1rem;
+}
+
+.mb-2 {
+    margin-bottom: 0.5rem;
+}
+</style>
+{% endblock %}

@@ -53,12 +53,31 @@ class MediaConfig(BaseModel):
     cdn: CDNConfig = CDNConfig()
 
 
+class SecurityHeadersConfig(BaseModel):
+    # HSTS settings
+    hsts_enabled: bool = True
+    hsts_max_age: int = 31536000  # 1 year
+    hsts_include_subdomains: bool = True
+    hsts_preload: bool = False
+
+    # Frame options
+    frame_options: str = "SAMEORIGIN"  # DENY, SAMEORIGIN, or empty to disable
+
+    # Content Security Policy
+    csp_enabled: bool = True
+    csp_report_only: bool = False
+
+    # Permissions Policy
+    permissions_policy_enabled: bool = True
+
+
 class SecurityConfig(BaseModel):
     secret_key: str = "change-this-in-production"
     session_expire: int = 86400
     login_attempts: int = 5
     lockout_duration: int = 900
     password_min_length: int = 12
+    headers: SecurityHeadersConfig = SecurityHeadersConfig()
 
 
 class OAuthConfig(BaseModel):

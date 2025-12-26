@@ -1,0 +1,311 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Sitemap Management - Focomy{% endblock %}
+
+{% block header_title %}Sitemap Management{% endblock %}
+
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        <h2 class="card-title">Sitemap</h2>
+        <div class="flex gap-2">
+            <a href="/sitemap.xml" target="_blank" class="btn btn-secondary">
+                View Sitemap
+            </a>
+            <form action="/admin/tools/regenerate-sitemap" method="POST" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-primary">
+                    Regenerate Sitemap
+                </button>
+            </form>
+        </div>
+    </div>
+
+    {% if message %}
+    <div class="alert alert-success">{{ message }}</div>
+    {% endif %}
+
+    <div class="sitemap-info">
+        <div class="info-item">
+            <span class="info-label">Sitemap URL</span>
+            <code class="info-value">{{ site_url }}/sitemap.xml</code>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Total URLs</span>
+            <span class="info-value">{{ total_urls }}</span>
+        </div>
+        <div class="info-item">
+            <span class="info-label">Last Generated</span>
+            <span class="info-value">{{ last_generated or 'Dynamic (on request)' }}</span>
+        </div>
+    </div>
+</div>
+
+<!-- URL Preview -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3 class="card-title">Included URLs</h3>
+    </div>
+
+    {% if urls %}
+    <div class="table-container">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>URL</th>
+                    <th>Type</th>
+                    <th>Last Modified</th>
+                    <th>Priority</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for url in urls[:50] %}
+                <tr>
+                    <td>
+                        <a href="{{ url.loc }}" target="_blank" class="url-link">
+                            {{ url.loc }}
+                        </a>
+                    </td>
+                    <td>
+                        <span class="badge">{{ url.type }}</span>
+                    </td>
+                    <td class="text-muted">
+                        {{ url.lastmod or '-' }}
+                    </td>
+                    <td>
+                        {{ url.priority }}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% if urls | length > 50 %}
+    <div class="more-urls">
+        <p class="text-muted">Showing first 50 of {{ urls | length }} URLs</p>
+    </div>
+    {% endif %}
+    {% else %}
+    <div class="empty-state">
+        <p class="text-muted">No URLs in sitemap</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Exclusion Settings -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3 class="card-title">Sitemap Exclusions</h3>
+    </div>
+
+    <form action="/admin/tools/sitemap-exclusions" method="POST" class="exclusion-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        <div class="form-group">
+            <label class="form-label">Exclude Content Types</label>
+            <div class="checkbox-group">
+                {% for ct_name, ct in content_types.items() %}
+                <label class="form-checkbox">
+                    <input type="checkbox" name="exclude_types" value="{{ ct_name }}"
+                           {% if ct_name in excluded_types %}checked{% endif %}>
+                    <span>{{ ct.label }} ({{ ct_name }})</span>
+                </label>
+                {% endfor %}
+            </div>
+            <span class="form-help">Selected content types will be excluded from the sitemap</span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Exclude Specific URLs</label>
+            <textarea name="exclude_urls" class="form-textarea" rows="5"
+                      placeholder="/page/private&#10;/post/draft-post&#10;/category/hidden">{{ excluded_urls | join('\n') }}</textarea>
+            <span class="form-help">Enter one URL path per line</span>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Default Settings</label>
+            <div class="settings-row">
+                <div class="setting-item">
+                    <label for="default_changefreq">Change Frequency</label>
+                    <select name="default_changefreq" id="default_changefreq" class="form-select">
+                        <option value="always" {% if default_changefreq == 'always' %}selected{% endif %}>Always</option>
+                        <option value="hourly" {% if default_changefreq == 'hourly' %}selected{% endif %}>Hourly</option>
+                        <option value="daily" {% if default_changefreq == 'daily' %}selected{% endif %}>Daily</option>
+                        <option value="weekly" {% if default_changefreq == 'weekly' %}selected{% endif %}>Weekly</option>
+                        <option value="monthly" {% if default_changefreq == 'monthly' %}selected{% endif %}>Monthly</option>
+                        <option value="yearly" {% if default_changefreq == 'yearly' %}selected{% endif %}>Yearly</option>
+                        <option value="never" {% if default_changefreq == 'never' %}selected{% endif %}>Never</option>
+                    </select>
+                </div>
+                <div class="setting-item">
+                    <label for="default_priority">Default Priority</label>
+                    <select name="default_priority" id="default_priority" class="form-select">
+                        <option value="1.0" {% if default_priority == '1.0' %}selected{% endif %}>1.0 (Highest)</option>
+                        <option value="0.9" {% if default_priority == '0.9' %}selected{% endif %}>0.9</option>
+                        <option value="0.8" {% if default_priority == '0.8' %}selected{% endif %}>0.8</option>
+                        <option value="0.7" {% if default_priority == '0.7' %}selected{% endif %}>0.7</option>
+                        <option value="0.6" {% if default_priority == '0.6' %}selected{% endif %}>0.6</option>
+                        <option value="0.5" {% if default_priority == '0.5' %}selected{% endif %}>0.5 (Default)</option>
+                        <option value="0.4" {% if default_priority == '0.4' %}selected{% endif %}>0.4</option>
+                        <option value="0.3" {% if default_priority == '0.3' %}selected{% endif %}>0.3</option>
+                        <option value="0.2" {% if default_priority == '0.2' %}selected{% endif %}>0.2</option>
+                        <option value="0.1" {% if default_priority == '0.1' %}selected{% endif %}>0.1 (Lowest)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+        </div>
+    </form>
+</div>
+
+<!-- robots.txt Preview -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h3 class="card-title">robots.txt</h3>
+        <a href="/robots.txt" target="_blank" class="btn btn-secondary btn-sm">View</a>
+    </div>
+    <div class="robots-preview">
+        <pre>{{ robots_txt }}</pre>
+    </div>
+</div>
+
+<style>
+.sitemap-info {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--bg);
+}
+
+.info-item {
+    padding: 1rem;
+    background: var(--card);
+    border-radius: 0.375rem;
+}
+
+.info-label {
+    display: block;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 0.25rem;
+}
+
+.info-value {
+    font-size: 1rem;
+    font-weight: 500;
+}
+
+code.info-value {
+    font-family: monospace;
+    background: var(--bg);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.875rem;
+}
+
+.url-link {
+    color: var(--primary);
+    text-decoration: none;
+    word-break: break-all;
+}
+
+.url-link:hover {
+    text-decoration: underline;
+}
+
+.more-urls {
+    padding: 1rem;
+    text-align: center;
+    border-top: 1px solid var(--border);
+}
+
+.exclusion-form {
+    padding: 1.5rem;
+}
+
+.checkbox-group {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.form-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.form-checkbox input {
+    width: 1rem;
+    height: 1rem;
+}
+
+.form-help {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+}
+
+.settings-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.setting-item label {
+    display: block;
+    font-size: 0.875rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-actions {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.robots-preview {
+    padding: 1.5rem;
+    background: var(--bg);
+}
+
+.robots-preview pre {
+    margin: 0;
+    font-family: monospace;
+    font-size: 0.875rem;
+    white-space: pre-wrap;
+}
+
+.empty-state {
+    padding: 3rem;
+    text-align: center;
+}
+
+.mt-4 {
+    margin-top: 1rem;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+.alert {
+    padding: 1rem;
+    border-radius: 0.375rem;
+    margin: 1rem;
+}
+
+.alert-success {
+    background: #d1fae5;
+    color: #065f46;
+}
+</style>
+{% endblock %}
