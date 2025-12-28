@@ -1,10 +1,8 @@
 """ScheduleService - scheduled publish/unpublish management."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
-from typing import Optional
+from datetime import datetime
 
-from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .entity import EntityService
@@ -19,8 +17,8 @@ class ScheduledAction:
     scheduled_at: datetime
     created_by: str
     status: str  # pending, completed, cancelled, failed
-    error_message: Optional[str] = None
-    completed_at: Optional[datetime] = None
+    error_message: str | None = None
+    completed_at: datetime | None = None
 
 
 class ScheduleService:

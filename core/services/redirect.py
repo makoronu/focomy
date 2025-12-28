@@ -1,7 +1,7 @@
 """RedirectService - URL redirect management."""
 
 import re
-from typing import Optional
+
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .entity import EntityService
@@ -47,7 +47,7 @@ class RedirectService:
 
         return redirects
 
-    async def find_redirect(self, path: str, query_string: str = "") -> Optional[dict]:
+    async def find_redirect(self, path: str, query_string: str = "") -> dict | None:
         """
         Find a matching redirect for the given path.
 
@@ -151,7 +151,7 @@ class RedirectService:
         match_type: str = "exact",
         preserve_query: bool = True,
         notes: str = "",
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> dict:
         """Create a new redirect rule."""
         # Validate paths
@@ -192,8 +192,8 @@ class RedirectService:
         self,
         redirect_id: str,
         data: dict,
-        user_id: Optional[str] = None,
-    ) -> Optional[dict]:
+        user_id: str | None = None,
+    ) -> dict | None:
         """Update a redirect rule."""
         entity = await self.entity_svc.update(redirect_id, data, user_id=user_id)
         if entity:
@@ -204,7 +204,7 @@ class RedirectService:
     async def delete_redirect(
         self,
         redirect_id: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> bool:
         """Delete a redirect rule."""
         result = await self.entity_svc.delete(redirect_id, user_id=user_id)
@@ -228,7 +228,7 @@ class RedirectService:
 
         return redirects
 
-    async def get_redirect(self, redirect_id: str) -> Optional[dict]:
+    async def get_redirect(self, redirect_id: str) -> dict | None:
         """Get a single redirect by ID."""
         entity = await self.entity_svc.get(redirect_id)
         if entity and entity.type == "redirect":
@@ -238,8 +238,8 @@ class RedirectService:
     async def toggle_active(
         self,
         redirect_id: str,
-        user_id: Optional[str] = None,
-    ) -> Optional[dict]:
+        user_id: str | None = None,
+    ) -> dict | None:
         """Toggle redirect active status."""
         entity = await self.entity_svc.get(redirect_id)
         if not entity or entity.type != "redirect":
@@ -257,7 +257,7 @@ class RedirectService:
     async def import_redirects(
         self,
         redirects: list[dict],
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> int:
         """
         Bulk import redirects.
@@ -287,7 +287,7 @@ class RedirectService:
 
         return count
 
-    async def test_redirect(self, path: str) -> Optional[dict]:
+    async def test_redirect(self, path: str) -> dict | None:
         """
         Test a path against redirect rules.
 

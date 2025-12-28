@@ -4,21 +4,18 @@ Provides common fixtures for database, services, and test data.
 """
 
 import asyncio
-import os
-from typing import AsyncGenerator, Generator
-from pathlib import Path
+from collections.abc import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
-from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
 from core.database import Base
+from core.services.auth import AuthService
 from core.services.entity import EntityService
 from core.services.field import FieldService
 from core.services.relation import RelationService
-from core.services.auth import AuthService
-
 
 # Test database URL (in-memory SQLite)
 TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
@@ -191,6 +188,6 @@ def assert_entity_created(entity, expected_type: str, expected_values: dict):
 
 def assert_entity_has_values(entity, values: dict, field_service: FieldService):
     """Assert entity has expected field values."""
-    for field_name, expected_value in values.items():
+    for _field_name, _expected_value in values.items():
         # Would need to implement value retrieval
         pass

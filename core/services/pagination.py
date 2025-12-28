@@ -3,13 +3,12 @@
 Provides both offset-based and cursor-based pagination.
 """
 
-from dataclasses import dataclass
-from typing import Any, Generic, Optional, TypeVar
 import base64
 import json
+from dataclasses import dataclass
+from typing import Any, Generic, TypeVar
 
 from pydantic import BaseModel
-
 
 T = TypeVar("T")
 
@@ -71,10 +70,10 @@ class PaginatedResult(BaseModel, Generic[T]):
 @dataclass
 class CursorInfo:
     """Cursor-based pagination metadata."""
-    cursor: Optional[str]
+    cursor: str | None
     limit: int
     has_more: bool
-    next_cursor: Optional[str]
+    next_cursor: str | None
 
 
 class CursorPaginatedResult(BaseModel, Generic[T]):
@@ -82,7 +81,7 @@ class CursorPaginatedResult(BaseModel, Generic[T]):
     items: list
     limit: int
     has_more: bool
-    next_cursor: Optional[str]
+    next_cursor: str | None
 
     @classmethod
     def create(
@@ -129,7 +128,7 @@ def encode_cursor(value: Any) -> str:
     return base64.urlsafe_b64encode(data.encode()).decode()
 
 
-def decode_cursor(cursor: str) -> Optional[str]:
+def decode_cursor(cursor: str) -> str | None:
     """Decode a cursor value."""
     try:
         data = base64.urlsafe_b64decode(cursor.encode())
@@ -143,7 +142,7 @@ class PaginationParams(BaseModel):
     """Standard pagination parameters."""
     page: int = 1
     per_page: int = 20
-    cursor: Optional[str] = None
+    cursor: str | None = None
     sort: str = "-created_at"
 
     @property
@@ -151,7 +150,7 @@ class PaginationParams(BaseModel):
         return (self.page - 1) * self.per_page
 
     @property
-    def decoded_cursor(self) -> Optional[str]:
+    def decoded_cursor(self) -> str | None:
         if self.cursor:
             return decode_cursor(self.cursor)
         return None

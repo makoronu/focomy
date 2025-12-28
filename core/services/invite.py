@@ -4,11 +4,9 @@ Handles inviting users via email with initial password setup.
 """
 
 import secrets
-from datetime import datetime, timedelta
-from typing import Optional
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
-from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity
@@ -24,7 +22,7 @@ class Invitation:
     expires_at: datetime
     created_by: str
     created_at: datetime
-    accepted_at: Optional[datetime] = None
+    accepted_at: datetime | None = None
 
 
 # In-memory storage for invitations (use Redis in production)
@@ -64,7 +62,7 @@ class InviteService:
         email: str,
         role: str,
         invited_by: str,
-        expiry_days: Optional[int] = None,
+        expiry_days: int | None = None,
     ) -> Invitation:
         """
         Create an invitation for a new user.
@@ -111,7 +109,7 @@ class InviteService:
         _invitations[token] = invitation
         return invitation
 
-    async def get_invitation(self, token: str) -> Optional[Invitation]:
+    async def get_invitation(self, token: str) -> Invitation | None:
         """Get invitation by token."""
         invitation = _invitations.get(token)
         if not invitation:
@@ -174,7 +172,7 @@ class InviteService:
             return True
         return False
 
-    async def resend_invitation(self, token: str) -> Optional[Invitation]:
+    async def resend_invitation(self, token: str) -> Invitation | None:
         """Resend invitation with new token."""
         old_invite = _invitations.get(token)
         if not old_invite or old_invite.accepted_at is not None:

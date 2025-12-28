@@ -6,12 +6,11 @@ Supports:
 - User account merging
 """
 
-from datetime import datetime
-from typing import Optional
 from dataclasses import dataclass
+from datetime import datetime
 
 from authlib.integrations.starlette_client import OAuth
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
@@ -24,7 +23,7 @@ class OAuthUserInfo:
     provider_id: str
     email: str
     name: str
-    picture: Optional[str] = None
+    picture: str | None = None
 
 
 @dataclass
@@ -34,12 +33,12 @@ class OAuthConnection:
     user_id: str
     provider: str
     provider_user_id: str
-    provider_email: Optional[str]
-    access_token: Optional[str]
-    refresh_token: Optional[str]
-    token_expires_at: Optional[datetime]
+    provider_email: str | None
+    access_token: str | None
+    refresh_token: str | None
+    token_expires_at: datetime | None
     connected_at: datetime
-    last_used_at: Optional[datetime]
+    last_used_at: datetime | None
 
 
 @dataclass
@@ -50,7 +49,7 @@ class MergeResult:
     entities_transferred: int
     oauth_connections_transferred: int
     success: bool
-    error: Optional[str] = None
+    error: str | None = None
 
 
 class OAuthService:
@@ -135,7 +134,7 @@ class OAuthService:
         self,
         provider: str,
         request,
-    ) -> Optional[OAuthUserInfo]:
+    ) -> OAuthUserInfo | None:
         """Handle OAuth callback and return user info."""
         if not hasattr(self.oauth, provider):
             raise ValueError(f"Unknown provider: {provider}")
@@ -294,14 +293,14 @@ class OAuthAccountManager:
 
         return True
 
-    async def get_connection(self, user_id: str, provider: str) -> Optional[OAuthConnection]:
+    async def get_connection(self, user_id: str, provider: str) -> OAuthConnection | None:
         """Get connection for a user and provider."""
         connections = await self.list_connections(user_id)
         return next((c for c in connections if c.provider == provider), None)
 
     async def list_connections(self, user_id: str) -> list[OAuthConnection]:
         """List all OAuth connections for a user."""
-        from ..models import Entity, EntityValue
+        from ..models import Entity
 
         query = select(Entity).where(
             and_(
@@ -320,7 +319,7 @@ class OAuthAccountManager:
 
         return connections
 
-    async def find_by_provider(self, provider: str, provider_user_id: str) -> Optional[OAuthConnection]:
+    async def find_by_provider(self, provider: str, provider_user_id: str) -> OAuthConnection | None:
         """Find connection by provider credentials."""
         from ..models import Entity
 

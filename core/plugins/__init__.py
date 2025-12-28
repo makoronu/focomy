@@ -12,9 +12,9 @@ Features:
 """
 
 from .base import Plugin, PluginMeta, PluginState
-from .manager import PluginManager
-from .hooks import HookRegistry, hook, filter_hook, action_hook
+from .hooks import HookRegistry, action_hook, filter_hook, hook
 from .loader import PluginLoader
+from .manager import PluginManager
 
 __all__ = [
     "Plugin",

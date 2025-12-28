@@ -8,22 +8,21 @@ Features:
 - Alt text management for accessibility
 """
 
-from typing import Any, Optional
+from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..services.media import MediaService
 
-
 router = APIRouter(prefix="/media", tags=["Media"])
 
 
 class MediaUpdate(BaseModel):
     """Update media metadata."""
-    alt_text: Optional[str] = Field(None, description="Alt text for accessibility")
+    alt_text: str | None = Field(None, description="Alt text for accessibility")
 
 
 @router.post(
@@ -98,7 +97,7 @@ async def upload_file(
 async def list_media(
     page: int = Query(1, ge=1, description="Page number"),
     per_page: int = Query(20, ge=1, le=100, description="Items per page (max 100)"),
-    mime_type: Optional[str] = Query(None, description="Filter by MIME type prefix (e.g., 'image')"),
+    mime_type: str | None = Query(None, description="Filter by MIME type prefix (e.g., 'image')"),
     db: AsyncSession = Depends(get_db),
 ) -> dict[str, Any]:
     """List media files.

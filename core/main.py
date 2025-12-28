@@ -1,24 +1,24 @@
 """Focomy - The Most Beautiful CMS."""
 
-from contextlib import asynccontextmanager
 import secrets
 import time
 import uuid
+from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.staticfiles import StaticFiles
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
+from fastapi.staticfiles import StaticFiles
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.middleware.sessions import SessionMiddleware
 from starlette.responses import Response
-from slowapi import _rate_limit_exceeded_handler
-from slowapi.errors import RateLimitExceeded
 
 from .config import settings
-from .database import init_db, close_db
+from .database import close_db, init_db
 from .rate_limit import limiter
-from .services.logging import configure_logging, get_logger, bind_context, clear_context
+from .services.logging import bind_context, clear_context, configure_logging, get_logger
 
 
 class RedirectMiddleware(BaseHTTPMiddleware):
@@ -378,8 +378,9 @@ async def health():
 
 
 # Exception handlers
-from starlette.exceptions import HTTPException as StarletteHTTPException
 from fastapi.responses import HTMLResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
 
 @app.exception_handler(404)
 async def not_found_handler(request: Request, exc: StarletteHTTPException):
@@ -434,8 +435,8 @@ async def server_error_handler(request: Request, exc: Exception):
 
 
 # Include routers
-from .api import entities, schema, relations, auth, media, seo, forms, revisions, comments, search
 from .admin import routes as admin
+from .api import auth, comments, entities, forms, media, relations, revisions, schema, search, seo
 from .engine import routes as engine
 
 app.include_router(entities.router, prefix="/api")

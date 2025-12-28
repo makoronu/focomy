@@ -5,13 +5,12 @@ DB settings take precedence over config.yaml.
 """
 
 import json
-from typing import Any, Optional
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings as app_settings
 from .entity import EntityService
-
 
 # Default settings by category
 DEFAULT_SETTINGS = {
@@ -183,7 +182,7 @@ class SettingsService:
 
         return result
 
-    async def _get_db_value(self, key: str) -> Optional[Any]:
+    async def _get_db_value(self, key: str) -> Any | None:
         """Get a setting value from the database."""
         entities = await self.entity_svc.find(
             "site_setting",
@@ -221,7 +220,7 @@ class SettingsService:
 
         return result
 
-    def _get_yaml_value(self, key: str) -> Optional[Any]:
+    def _get_yaml_value(self, key: str) -> Any | None:
         """Get a setting value from YAML config."""
         parts = key.split(".", 1)
         if len(parts) != 2:

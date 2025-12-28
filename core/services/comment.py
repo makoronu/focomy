@@ -7,9 +7,9 @@ Features:
 - Rate limiting
 """
 
-from datetime import datetime, timedelta
-from typing import Any, Optional
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -67,7 +67,7 @@ class CommentService:
         user_agent: str = None,
         parent_id: str = None,
         honeypot: str = None,
-    ) -> Optional[dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """
         Create a new comment.
 
@@ -267,7 +267,6 @@ class CommentService:
     async def _check_rate_limit(self, ip_address: str) -> bool:
         """Check if IP is within rate limit."""
         # Get recent comments from this IP
-        from datetime import datetime
         cutoff = (datetime.utcnow() - timedelta(seconds=self.RATE_WINDOW)).isoformat()
 
         comments = await self.entity_svc.find(

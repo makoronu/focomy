@@ -1,11 +1,8 @@
 """Redirect Generator - Creates URL redirects for WordPress migration."""
 
-import re
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
-from typing import Optional
-from urllib.parse import urlparse, urljoin
+from urllib.parse import urlparse
 
 
 @dataclass
@@ -373,7 +370,7 @@ class RedirectGenerator:
         categories: list[dict],
         tags: list[dict],
         authors: list[dict],
-        config: Optional[dict] = None,
+        config: dict | None = None,
     ) -> RedirectReport:
         """
         Generate all redirects.
@@ -452,7 +449,7 @@ class RedirectGenerator:
 
         return report
 
-    def _url_to_path(self, url: str) -> Optional[str]:
+    def _url_to_path(self, url: str) -> str | None:
         """Extract path from URL."""
         if not url:
             return None

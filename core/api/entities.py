@@ -6,17 +6,16 @@ in the CMS. It supports CRUD operations for any registered content type.
 Example content types: post, page, category, tag, etc.
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..rate_limit import limiter
 from ..services.entity import EntityService, QueryParams
 from ..services.field import field_service
-from ..rate_limit import limiter
-
 
 router = APIRouter(prefix="/entities", tags=["Entities"])
 
@@ -79,8 +78,8 @@ class EntityResponse(BaseModel):
     type: str = Field(..., description="Content type name")
     created_at: str = Field(..., description="Creation timestamp (ISO 8601)")
     updated_at: str = Field(..., description="Last update timestamp (ISO 8601)")
-    created_by: Optional[str] = Field(None, description="Creator user ID")
-    updated_by: Optional[str] = Field(None, description="Last updater user ID")
+    created_by: str | None = Field(None, description="Creator user ID")
+    updated_by: str | None = Field(None, description="Last updater user ID")
     data: dict[str, Any] = Field(default_factory=dict, description="Entity field values")
 
     class Config:

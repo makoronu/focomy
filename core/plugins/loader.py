@@ -5,7 +5,7 @@ import importlib.util
 import logging
 import sys
 from pathlib import Path
-from typing import Any, Optional, Type
+from typing import Any
 
 import yaml
 
@@ -61,7 +61,7 @@ class PluginLoader:
 
         return self._discovered
 
-    def _discover_plugin(self, path: Path) -> Optional[PluginMeta]:
+    def _discover_plugin(self, path: Path) -> PluginMeta | None:
         """
         Discover a single plugin from its directory.
 
@@ -127,7 +127,7 @@ class PluginLoader:
             logger.exception(f"Error discovering plugin at {path}: {e}")
             return None
 
-    def load(self, plugin_id: str, app: Any = None) -> Optional[Plugin]:
+    def load(self, plugin_id: str, app: Any = None) -> Plugin | None:
         """
         Load a discovered plugin.
 
@@ -189,7 +189,7 @@ class PluginLoader:
         self,
         plugin_id: str,
         plugin_file: Path,
-    ) -> Optional[Type[Plugin]]:
+    ) -> type[Plugin] | None:
         """
         Load the plugin class from a file.
 
@@ -260,7 +260,7 @@ class PluginLoader:
         if plugin_id not in self._loaded:
             return False
 
-        plugin = self._loaded[plugin_id]
+        self._loaded[plugin_id]
 
         try:
             # Remove from loaded
@@ -283,7 +283,7 @@ class PluginLoader:
             logger.exception(f"Error unloading plugin {plugin_id}: {e}")
             return False
 
-    def reload(self, plugin_id: str, app: Any = None) -> Optional[Plugin]:
+    def reload(self, plugin_id: str, app: Any = None) -> Plugin | None:
         """
         Reload a plugin (unload and load again).
 
@@ -297,7 +297,7 @@ class PluginLoader:
         self.unload(plugin_id)
         return self.load(plugin_id, app)
 
-    def get_loaded(self, plugin_id: str) -> Optional[Plugin]:
+    def get_loaded(self, plugin_id: str) -> Plugin | None:
         """Get a loaded plugin by ID."""
         return self._loaded.get(plugin_id)
 

@@ -1,7 +1,7 @@
 """Configuration management."""
 
-from pathlib import Path
 from functools import lru_cache
+from pathlib import Path
 from typing import Any
 
 import yaml
@@ -152,7 +152,7 @@ def load_yaml_config(path: Path) -> dict[str, Any]:
     """Load YAML config file."""
     if not path.exists():
         return {}
-    with open(path, "r", encoding="utf-8") as f:
+    with open(path, encoding="utf-8") as f:
         return yaml.safe_load(f) or {}
 
 

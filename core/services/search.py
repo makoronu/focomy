@@ -5,13 +5,11 @@ which works well with Japanese text without requiring
 morphological analysis.
 """
 
-from typing import Any, Optional
 from dataclasses import dataclass
 
-from sqlalchemy import text, select, func, and_, or_
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Entity, EntityValue
 from .entity import EntityService
 from .field import field_service
 
@@ -412,7 +410,7 @@ class SearchService:
             """))
             await self.db.commit()
             created.append("idx_entity_values_text_trgm")
-        except Exception as e:
+        except Exception:
             await self.db.rollback()
             # pg_trgm might not be available
             pass

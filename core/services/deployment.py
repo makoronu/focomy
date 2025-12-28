@@ -7,15 +7,12 @@ Provides:
 """
 
 import asyncio
-import os
 import signal
-import subprocess
-import sys
-from datetime import datetime
-from pathlib import Path
-from typing import Optional, Callable, Awaitable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
+from pathlib import Path
 
 
 class DeploymentState(Enum):
@@ -42,7 +39,7 @@ class DeploymentInfo:
     version: str
     deployed_at: datetime
     state: DeploymentState
-    previous_version: Optional[str]
+    previous_version: str | None
 
 
 class DeploymentService:
@@ -70,7 +67,7 @@ class DeploymentService:
         self._active_requests = 0
         self._shutting_down = False
         self._version = self._read_version()
-        self._previous_version: Optional[str] = None
+        self._previous_version: str | None = None
         self._health_checks: list[Callable[[], Awaitable[bool]]] = []
         self._shutdown_hooks: list[Callable[[], Awaitable[None]]] = []
 
@@ -163,8 +160,9 @@ class DeploymentService:
     async def _check_database(self) -> bool:
         """Check database connectivity."""
         try:
-            from ..database import engine
             from sqlalchemy import text
+
+            from ..database import engine
 
             async with engine.connect() as conn:
                 await conn.execute(text("SELECT 1"))

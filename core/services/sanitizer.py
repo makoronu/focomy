@@ -6,8 +6,7 @@ Prevents XSS attacks by sanitizing HTML output.
 
 import html
 import re
-from typing import Any, Optional
-
+from typing import Any
 
 # Allowed HTML tags and their attributes
 ALLOWED_TAGS = {

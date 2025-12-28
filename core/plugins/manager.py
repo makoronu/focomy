@@ -1,12 +1,12 @@
 """Plugin Manager - Central management for the plugin system."""
 
-import asyncio
 import json
 import logging
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 from .base import Plugin, PluginMeta, PluginState
 from .hooks import HookRegistry, get_registry
@@ -44,7 +44,7 @@ class PluginManager:
         plugin_dirs: list[Path],
         data_dir: Path,
         app: Any = None,
-        hook_registry: Optional[HookRegistry] = None,
+        hook_registry: HookRegistry | None = None,
     ):
         """
         Initialize plugin manager.
@@ -118,7 +118,7 @@ class PluginManager:
 
         return result
 
-    def get_plugin(self, plugin_id: str) -> Optional[Plugin]:
+    def get_plugin(self, plugin_id: str) -> Plugin | None:
         """
         Get a loaded plugin instance.
 
@@ -454,7 +454,7 @@ class PluginManager:
         all_hooks = self.hooks.get_all_hooks()
         hook_count = 0
 
-        for hook_name, info in all_hooks.items():
+        for hook_name, _info in all_hooks.items():
             filters = self.hooks.get_filters(hook_name)
             actions = self.hooks.get_actions(hook_name)
 

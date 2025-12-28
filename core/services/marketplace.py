@@ -1,9 +1,7 @@
 """Plugin Marketplace Service."""
 
-from typing import Optional, List
-from decimal import Decimal
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, EntityValue
@@ -23,13 +21,13 @@ class MarketplaceService:
 
     async def list_plugins(
         self,
-        category: Optional[str] = None,
-        search: Optional[str] = None,
+        category: str | None = None,
+        search: str | None = None,
         featured_only: bool = False,
         sort_by: str = "downloads",
         page: int = 1,
         per_page: int = 20,
-    ) -> tuple[List[Entity], int]:
+    ) -> tuple[list[Entity], int]:
         """List approved plugins with filters."""
         query = select(Entity).where(
             Entity.type == "plugin",
@@ -60,7 +58,7 @@ class MarketplaceService:
                 select(EntityValue.entity_id)
                 .where(
                     EntityValue.field == "is_featured",
-                    EntityValue.value_boolean == True,
+                    EntityValue.value_boolean,
                 )
             )
             query = query.where(Entity.id.in_(featured_subquery))
@@ -120,16 +118,16 @@ class MarketplaceService:
 
         return plugins, total
 
-    async def get_plugin_by_slug(self, slug: str) -> Optional[Entity]:
+    async def get_plugin_by_slug(self, slug: str) -> Entity | None:
         """Get plugin by slug."""
         return await self.entity_svc.get_by_slug("plugin", slug)
 
     async def validate_price(
         self,
         pricing_type: str,
-        price: Optional[int],
-        subscription_price: Optional[int],
-    ) -> tuple[bool, Optional[str]]:
+        price: int | None,
+        subscription_price: int | None,
+    ) -> tuple[bool, str | None]:
         """Validate plugin pricing against caps."""
         if pricing_type == "free":
             return True, None
@@ -164,7 +162,7 @@ class MarketplaceService:
         plugin_id: int,
         user_id: int,
         rating: int,
-        title: Optional[str],
+        title: str | None,
         content: str,
     ) -> Entity:
         """Submit a plugin review."""
@@ -254,7 +252,7 @@ class MarketplaceService:
             "total_earnings": total_earnings,
         }
 
-    def format_price(self, cents: Optional[int]) -> str:
+    def format_price(self, cents: int | None) -> str:
         """Format price in cents to display string."""
         if cents is None or cents == 0:
             return "無料"

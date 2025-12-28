@@ -8,10 +8,11 @@ Defines clear priority order:
 """
 
 import os
-from pathlib import Path
-from typing import Any, Optional, Callable
 from dataclasses import dataclass
 from enum import IntEnum
+from pathlib import Path
+from typing import Any
+
 import yaml
 
 
@@ -110,7 +111,7 @@ class ConfigPriorityService:
 
         self._yaml_file = yaml_path
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
         self._yaml_values = self._flatten_dict(data)
@@ -144,7 +145,7 @@ class ConfigPriorityService:
             return value_info.value
         return default
 
-    def get_with_source(self, key: str) -> Optional[ConfigValue]:
+    def get_with_source(self, key: str) -> ConfigValue | None:
         """Get a configuration value with source information."""
         # Check environment first (highest priority)
         env_value = self._get_from_env(key)
@@ -185,7 +186,7 @@ class ConfigPriorityService:
 
         return None
 
-    def _get_from_env(self, key: str) -> Optional[Any]:
+    def _get_from_env(self, key: str) -> Any | None:
         """Get value from environment variable."""
         # Convert dot notation to uppercase
         env_key = key.upper().replace(".", "_")

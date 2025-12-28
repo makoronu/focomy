@@ -3,12 +3,10 @@
 Tests entity CRUD operations, soft delete, and unique constraints.
 """
 
+
 import pytest
-import pytest_asyncio
-from datetime import datetime
 
 from core.services.entity import EntityService, QueryParams
-from core.models import Entity
 
 
 class TestEntityService:

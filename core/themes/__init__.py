@@ -11,9 +11,9 @@ Features:
 - Theme export/import
 """
 
+from .customizer import CustomizerSection, CustomizerSetting, ThemeCustomizer
 from .manager import ThemeManager, ThemeMeta, ThemeState
-from .marketplace import ThemeMarketplace, MarketplaceTheme
-from .customizer import ThemeCustomizer, CustomizerSection, CustomizerSetting
+from .marketplace import MarketplaceTheme, ThemeMarketplace
 
 __all__ = [
     "ThemeManager",

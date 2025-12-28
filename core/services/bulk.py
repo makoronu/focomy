@@ -3,14 +3,11 @@
 Provides efficient bulk create, update, and delete operations.
 """
 
-from datetime import datetime
-from typing import Any, Optional
 from dataclasses import dataclass
+from typing import Any
 
-from sqlalchemy import select, and_
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Entity, EntityValue
 from .entity import EntityService
 
 
@@ -51,7 +48,7 @@ class BulkOperationService:
         self,
         entity_ids: list[str],
         data: dict[str, Any],
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         validate: bool = True,
     ) -> BulkResult:
         """
@@ -93,7 +90,7 @@ class BulkOperationService:
     async def delete_many(
         self,
         entity_ids: list[str],
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
         hard: bool = False,
     ) -> BulkResult:
         """
@@ -139,7 +136,7 @@ class BulkOperationService:
     async def restore_many(
         self,
         entity_ids: list[str],
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> BulkResult:
         """
         Restore multiple soft-deleted entities.
@@ -183,7 +180,7 @@ class BulkOperationService:
         self,
         entity_type: str,
         items: list[dict[str, Any]],
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> BulkResult:
         """
         Create multiple entities.
@@ -224,7 +221,7 @@ class BulkOperationService:
         self,
         entity_ids: list[str],
         status: str,
-        user_id: Optional[str] = None,
+        user_id: str | None = None,
     ) -> BulkResult:
         """
         Update status for multiple entities.
@@ -249,7 +246,7 @@ class BulkOperationService:
         self,
         entity_ids: list[str],
         user_id: str,
-        assigned_by: Optional[str] = None,
+        assigned_by: str | None = None,
     ) -> BulkResult:
         """
         Assign multiple entities to a user.

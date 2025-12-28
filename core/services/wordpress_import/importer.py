@@ -1,19 +1,17 @@
 """WordPress Importer - Main orchestration for WordPress site migration."""
 
-import asyncio
 import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from .wxr_parser import WXRParser, WXRData, WXRPost, WXRAuthor, WXRTerm
-from .analyzer import WordPressAnalyzer, AnalysisReport
-from .media import MediaImporter, MediaItem, MediaImportResult
-from .acf import ACFConverter, ACFFieldGroup
+from .acf import ACFConverter
+from .analyzer import AnalysisReport, WordPressAnalyzer
+from .media import MediaImporter, MediaImportResult, MediaItem
 from .redirects import RedirectGenerator, RedirectReport
-
+from .wxr_parser import WXRData, WXRParser, WXRPost
 
 logger = logging.getLogger(__name__)
 
@@ -22,7 +20,7 @@ logger = logging.getLogger(__name__)
 class ImportConfig:
     """Configuration for WordPress import."""
     # File paths
-    wxr_file: Optional[Path] = None
+    wxr_file: Path | None = None
     upload_dir: Path = Path("uploads")
     output_dir: Path = Path("import_output")
 
@@ -51,7 +49,7 @@ class ImportConfig:
 
     # ACF options
     convert_acf: bool = True
-    acf_export_file: Optional[Path] = None
+    acf_export_file: Path | None = None
 
     # Redirect options
     generate_redirects: bool = True
@@ -64,7 +62,7 @@ class ImportConfig:
     default_author_id: str = ""
 
     # Checkpoint
-    checkpoint_file: Optional[Path] = None
+    checkpoint_file: Path | None = None
     resume_from_checkpoint: bool = False
 
 
@@ -83,7 +81,7 @@ class ImportProgress:
 class ImportResult:
     """Complete import result."""
     success: bool = True
-    analysis: Optional[AnalysisReport] = None
+    analysis: AnalysisReport | None = None
     posts_imported: int = 0
     pages_imported: int = 0
     media_imported: int = 0
@@ -95,8 +93,8 @@ class ImportResult:
     redirects_generated: int = 0
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
-    media_result: Optional[MediaImportResult] = None
-    redirect_report: Optional[RedirectReport] = None
+    media_result: MediaImportResult | None = None
+    redirect_report: RedirectReport | None = None
     duration_seconds: float = 0
     output_files: list[str] = field(default_factory=list)
 
@@ -135,14 +133,14 @@ class WordPressImporter:
 
         self._parser = WXRParser()
         self._analyzer = WordPressAnalyzer()
-        self._media_importer: Optional[MediaImporter] = None
+        self._media_importer: MediaImporter | None = None
         self._acf_converter = ACFConverter()
-        self._redirect_generator: Optional[RedirectGenerator] = None
+        self._redirect_generator: RedirectGenerator | None = None
 
-        self._wxr_data: Optional[WXRData] = None
-        self._analysis: Optional[AnalysisReport] = None
+        self._wxr_data: WXRData | None = None
+        self._analysis: AnalysisReport | None = None
         self._checkpoint: dict = {}
-        self._progress_callback: Optional[callable] = None
+        self._progress_callback: callable | None = None
 
         # Setup output directory
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -704,7 +702,7 @@ async def import_wordpress(
     output_dir: Path,
     new_base_url: str,
     content_service: Any = None,
-    progress_callback: Optional[callable] = None,
+    progress_callback: callable | None = None,
 ) -> ImportResult:
     """
     Simple WordPress import function.

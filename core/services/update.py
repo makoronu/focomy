@@ -1,8 +1,6 @@
 """Update check service."""
 
-import asyncio
 from datetime import datetime, timedelta
-from typing import Optional
 
 import httpx
 
@@ -20,9 +18,9 @@ class UpdateInfo:
         current_version: str,
         latest_version: str,
         has_update: bool,
-        release_url: Optional[str] = None,
-        release_notes: Optional[str] = None,
-        checked_at: Optional[datetime] = None,
+        release_url: str | None = None,
+        release_notes: str | None = None,
+        checked_at: datetime | None = None,
     ):
         self.current_version = current_version
         self.latest_version = latest_version
@@ -35,7 +33,7 @@ class UpdateInfo:
 class UpdateService:
     """Service for checking updates."""
 
-    _cache: Optional[UpdateInfo] = None
+    _cache: UpdateInfo | None = None
     _cache_duration = timedelta(hours=6)
 
     async def check_for_updates(self, force: bool = False) -> UpdateInfo:

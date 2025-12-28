@@ -8,12 +8,11 @@ Handles cleanup of:
 """
 
 from datetime import datetime, timedelta
-from typing import Optional
 
-from sqlalchemy import select, delete, and_, text
+from sqlalchemy import and_, delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Entity, EntityValue, Relation, Session, Media
+from ..models import Entity, EntityValue, Media, Relation, Session
 
 
 class CleanupService:

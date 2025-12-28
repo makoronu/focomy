@@ -5,14 +5,14 @@ If menu items exist in DB for a location, use those.
 Otherwise, fall back to config.yaml menus.
 """
 
-from typing import Any, Optional
 from dataclasses import dataclass, field
+from typing import Any
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Entity, EntityValue, Relation
-from ..config import settings, MenuItemConfig
+from ..config import MenuItemConfig, settings
+from ..models import Entity
 from .entity import EntityService
 from .relation import RelationService
 
@@ -275,7 +275,7 @@ class MenuService:
         data: dict[str, Any],
         parent_id: str = None,
         user_id: str = None,
-    ) -> Optional[Entity]:
+    ) -> Entity | None:
         """Update a menu item."""
         entity = await self.entity_svc.update(
             menu_item_id, data, user_id, create_revision=False

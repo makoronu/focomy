@@ -8,7 +8,6 @@ import subprocess
 import sys
 from importlib import resources
 from pathlib import Path
-from typing import Optional
 
 # Version
 __version__ = "0.1.1"
@@ -124,8 +123,8 @@ def _copy_scaffold_file(
     scaffold_path: Path,
     target: Path,
     src_name: str,
-    dst_name: Optional[str] = None,
-    replacements: Optional[dict] = None,
+    dst_name: str | None = None,
+    replacements: dict | None = None,
 ) -> None:
     """Copy a file from scaffold to target, with optional replacements."""
     dst_name = dst_name or src_name
@@ -240,6 +239,7 @@ def cmd_serve(args):
 def cmd_migrate(args):
     """Run database migrations using Alembic."""
     from alembic.config import Config
+
     from alembic import command
 
     alembic_cfg = Config("alembic.ini")
@@ -284,7 +284,7 @@ def cmd_migrate(args):
             results = await index_svc.create_indexes_for_all_types()
             if results:
                 print("Created indexes:")
-                for type_name, indexes in results.items():
+                for _type_name, indexes in results.items():
                     for idx in indexes:
                         print(f"  - {idx}")
 
@@ -294,6 +294,7 @@ def cmd_migrate(args):
 def cmd_makemigrations(args):
     """Generate a new migration using Alembic."""
     from alembic.config import Config
+
     from alembic import command
 
     alembic_cfg = Config("alembic.ini")
@@ -427,12 +428,12 @@ def cmd_build(args):
 
 def cmd_backup(args):
     """Backup database and uploads."""
+    import tempfile
     import zipfile
     from datetime import datetime
-    import tempfile
 
     output = Path(args.output)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    datetime.now().strftime("%Y%m%d_%H%M%S")
 
     if output.suffix != ".zip":
         output = output.with_suffix(".zip")
@@ -444,8 +445,8 @@ def cmd_backup(args):
         if args.include_db:
             print("  Dumping database...")
             try:
+
                 from .config import settings
-                import urllib.parse
 
                 # Parse database URL
                 db_url = settings.database_url
@@ -585,7 +586,7 @@ def cmd_createuser(args):
     print(f"Creating user: {email}")
 
     async def create_user():
-        from .database import init_db, async_session
+        from .database import async_session, init_db
         from .services.auth import AuthService
 
         await init_db()
@@ -599,7 +600,7 @@ def cmd_createuser(args):
                     name=name,
                     role=role,
                 )
-                print(f"\nUser created successfully!")
+                print("\nUser created successfully!")
                 print(f"  ID: {user.id}")
                 print(f"  Email: {email}")
                 print(f"  Name: {name}")

@@ -1,13 +1,12 @@
 """WXR Parser - WordPress eXtended RSS format parser."""
 
-import re
 import xml.etree.ElementTree as ET
+from collections.abc import Generator
 from dataclasses import dataclass, field
 from datetime import datetime
-from pathlib import Path
-from typing import Any, Generator, Optional
 from html import unescape
-
+from pathlib import Path
+from typing import Any
 
 # WordPress XML namespaces
 WP_NS = "http://wordpress.org/export/1.2/"
@@ -137,7 +136,7 @@ class WXRParser:
     """
 
     def __init__(self):
-        self._current_file: Optional[Path] = None
+        self._current_file: Path | None = None
 
     def parse(self, file_path: Path) -> WXRData:
         """
@@ -228,7 +227,7 @@ class WXRParser:
         # Use iterparse for memory efficiency
         context = ET.iterparse(file_path, events=("end",))
 
-        for event, elem in context:
+        for _event, elem in context:
             if elem.tag == "item":
                 post = self._parse_post(elem)
                 if post:
@@ -261,7 +260,7 @@ class WXRParser:
                     last_name=self._get_text(author_el, "wp:author_last_name") or "",
                 )
 
-    def _parse_term(self, term_el: ET.Element) -> Optional[WXRTerm]:
+    def _parse_term(self, term_el: ET.Element) -> WXRTerm | None:
         """Parse a wp:term element."""
         term_id = self._get_int(term_el, "wp:term_id")
         if not term_id:
@@ -276,7 +275,7 @@ class WXRParser:
             parent_id=self._get_int(term_el, "wp:term_parent") or 0,
         )
 
-    def _parse_old_category(self, cat_el: ET.Element) -> Optional[WXRTerm]:
+    def _parse_old_category(self, cat_el: ET.Element) -> WXRTerm | None:
         """Parse old-style wp:category element."""
         return WXRTerm(
             id=self._get_int(cat_el, "wp:term_id") or 0,
@@ -287,7 +286,7 @@ class WXRParser:
             parent_id=0,  # Old format doesn't include parent
         )
 
-    def _parse_old_tag(self, tag_el: ET.Element) -> Optional[WXRTerm]:
+    def _parse_old_tag(self, tag_el: ET.Element) -> WXRTerm | None:
         """Parse old-style wp:tag element."""
         return WXRTerm(
             id=self._get_int(tag_el, "wp:term_id") or 0,
@@ -298,7 +297,7 @@ class WXRParser:
             parent_id=0,
         )
 
-    def _parse_post(self, item: ET.Element) -> Optional[WXRPost]:
+    def _parse_post(self, item: ET.Element) -> WXRPost | None:
         """Parse a post/page/attachment item."""
         post_id = self._get_int(item, "wp:post_id")
         if not post_id:
@@ -372,7 +371,7 @@ class WXRParser:
             comments=comments,
         )
 
-    def _parse_comment(self, comment_el: ET.Element, post_id: int) -> Optional[WXRComment]:
+    def _parse_comment(self, comment_el: ET.Element, post_id: int) -> WXRComment | None:
         """Parse a comment."""
         comment_id = self._get_int(comment_el, "wp:comment_id")
         if not comment_id:
@@ -392,7 +391,7 @@ class WXRParser:
             user_id=self._get_int(comment_el, "wp:comment_user_id") or 0,
         )
 
-    def _parse_menu_item(self, item: ET.Element) -> Optional[WXRMenuItem]:
+    def _parse_menu_item(self, item: ET.Element) -> WXRMenuItem | None:
         """Parse a navigation menu item."""
         post_id = self._get_int(item, "wp:post_id")
         if not post_id:
@@ -426,7 +425,7 @@ class WXRParser:
                 return cat_el.text or "default"
         return "default"
 
-    def _get_text(self, el: ET.Element, path: str) -> Optional[str]:
+    def _get_text(self, el: ET.Element, path: str) -> str | None:
         """Get text content of a child element."""
         # Handle namespaced paths
         if ":" in path:
@@ -453,7 +452,7 @@ class WXRParser:
                 pass
         return 0
 
-    def _parse_date(self, date_str: Optional[str]) -> datetime:
+    def _parse_date(self, date_str: str | None) -> datetime:
         """Parse WordPress date string."""
         if not date_str or date_str == "0000-00-00 00:00:00":
             return datetime.utcnow()

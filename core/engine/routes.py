@@ -1,22 +1,20 @@
 """Public routes - theme-based content rendering."""
 
 from datetime import datetime
-from typing import Optional
 
-from fastapi import APIRouter, Depends, Request, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..services.entity import EntityService, QueryParams
-from ..services.seo import SEOService
-from ..services.theme import theme_service
-from ..services.field import field_service
 from ..services.cache import cache_service
+from ..services.entity import EntityService, QueryParams
+from ..services.field import field_service
 from ..services.menu import MenuService
-from ..services.widget import WidgetService
+from ..services.seo import SEOService
 from ..services.settings import SettingsService
-
+from ..services.theme import theme_service
+from ..services.widget import WidgetService
 
 router = APIRouter(tags=["public"])
 
@@ -367,7 +365,7 @@ async def view_category(
             if post_data.get("status") == "published":
                 posts.append(post_data)
 
-    total = len([pid for pid in post_ids])  # Simplified count
+    total = len(list(post_ids))  # Simplified count
     total_pages = (total + per_page - 1) // per_page
 
     # Get menus
@@ -399,11 +397,11 @@ async def view_archive(
 
     # Calculate date range
     from datetime import date
-    start_date = date(year, month, 1)
+    date(year, month, 1)
     if month == 12:
-        end_date = date(year + 1, 1, 1)
+        date(year + 1, 1, 1)
     else:
-        end_date = date(year, month + 1, 1)
+        date(year, month + 1, 1)
 
     per_page = 10
     offset = (page - 1) * per_page
@@ -535,7 +533,7 @@ async def content_type_feed(
     content_types = field_service.get_all_content_types()
     target_ct = None
 
-    for ct_name, ct in content_types.items():
+    for _ct_name, ct in content_types.items():
         prefix = ct.path_prefix.strip("/")
         if prefix and prefix == path_prefix and ct.feed_enabled:
             target_ct = ct
@@ -698,7 +696,7 @@ async def content_type_archive(
     content_types = field_service.get_all_content_types()
     target_ct = None
 
-    for ct_name, ct in content_types.items():
+    for _ct_name, ct in content_types.items():
         prefix = ct.path_prefix.strip("/")
         if prefix and prefix == path_prefix and ct.archive_enabled:
             target_ct = ct
@@ -764,7 +762,7 @@ async def content_type_listing(
     content_types = field_service.get_all_content_types()
     target_ct = None
 
-    for ct_name, ct in content_types.items():
+    for _ct_name, ct in content_types.items():
         prefix = ct.path_prefix.strip("/") if ct.path_prefix else ""
         if prefix and prefix == path_prefix:
             target_ct = ct
@@ -838,7 +836,7 @@ async def view_content_by_path(
     content_types = field_service.get_all_content_types()
 
     target_ct = None
-    for ct_name, ct in content_types.items():
+    for _ct_name, ct in content_types.items():
         prefix = ct.path_prefix.strip("/") if ct.path_prefix else ""
         if prefix and prefix == path_prefix:
             target_ct = ct

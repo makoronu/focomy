@@ -3,14 +3,11 @@
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
 
 import yaml
-from sqlalchemy import insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
-from ..models.entity import Entity, EntityValue
 from .entity import EntityService
 
 
@@ -45,21 +42,21 @@ class WorkflowDefinition:
     transitions: list[WorkflowTransition] = field(default_factory=list)
 
     @property
-    def initial_state(self) -> Optional[str]:
+    def initial_state(self) -> str | None:
         """Get the initial state name."""
         for state in self.states:
             if state.initial:
                 return state.name
         return self.states[0].name if self.states else None
 
-    def get_state(self, name: str) -> Optional[WorkflowState]:
+    def get_state(self, name: str) -> WorkflowState | None:
         """Get state by name."""
         for state in self.states:
             if state.name == name:
                 return state
         return None
 
-    def get_transition(self, from_state: str, to_state: str) -> Optional[WorkflowTransition]:
+    def get_transition(self, from_state: str, to_state: str) -> WorkflowTransition | None:
         """Get transition between states."""
         for t in self.transitions:
             if t.from_state == from_state and t.to_state == to_state:
@@ -78,7 +75,7 @@ class WorkflowHistoryEntry:
     from_state: str
     to_state: str
     user_id: str
-    comment: Optional[str]
+    comment: str | None
     created_at: datetime
 
 
@@ -109,10 +106,10 @@ class WorkflowService:
 
         self._loaded = True
 
-    def _load_workflow(self, path: Path) -> Optional[WorkflowDefinition]:
+    def _load_workflow(self, path: Path) -> WorkflowDefinition | None:
         """Load a single workflow from YAML."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
 
             if not data:
@@ -151,7 +148,7 @@ class WorkflowService:
             print(f"Error loading workflow {path}: {e}")
             return None
 
-    async def get_workflow(self, name: str) -> Optional[WorkflowDefinition]:
+    async def get_workflow(self, name: str) -> WorkflowDefinition | None:
         """Get workflow definition by name."""
         await self._load_workflows()
         return self._workflows.get(name)
@@ -161,7 +158,7 @@ class WorkflowService:
         await self._load_workflows()
         return self._workflows.copy()
 
-    async def get_entity_state(self, entity_id: str) -> Optional[str]:
+    async def get_entity_state(self, entity_id: str) -> str | None:
         """Get current workflow state of an entity."""
         entity = await self.entity_svc.get(entity_id)
         if not entity:
@@ -353,7 +350,7 @@ class WorkflowService:
 
         elif action_type == "notify":
             # Send notification (placeholder - integrate with notification service)
-            to = action.get("to")
+            action.get("to")
             message = action.get("message", "")
             if comment:
                 message = message.replace("{comment}", comment)
@@ -362,7 +359,7 @@ class WorkflowService:
 
         elif action_type == "webhook":
             # Call webhook (placeholder)
-            url = action.get("url")
+            action.get("url")
             # TODO: Implement webhook call
             pass
 

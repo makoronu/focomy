@@ -4,7 +4,8 @@ Tests translation, interpolation, and language switching.
 """
 
 import pytest
-from core.services.i18n import I18nService, t, SUPPORTED_LANGUAGES
+
+from core.services.i18n import I18nService, t
 
 
 class TestI18nService:

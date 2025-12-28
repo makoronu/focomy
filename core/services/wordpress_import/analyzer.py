@@ -2,11 +2,10 @@
 
 import re
 from dataclasses import dataclass, field
-from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
-from .wxr_parser import WXRParser, WXRData, WXRPost
+from .wxr_parser import WXRData, WXRParser
 
 
 @dataclass
@@ -54,7 +53,7 @@ class CustomFieldAnalysis:
     sample_values: list[Any]
     inferred_type: str
     is_acf: bool = False
-    acf_field_key: Optional[str] = None
+    acf_field_key: str | None = None
     post_types: list[str] = field(default_factory=list)
 
 

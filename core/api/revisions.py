@@ -16,9 +16,8 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..services.revision import RevisionService
 from ..services.entity import EntityService
-
+from ..services.revision import RevisionService
 
 router = APIRouter(prefix="/revisions", tags=["Revisions"])
 

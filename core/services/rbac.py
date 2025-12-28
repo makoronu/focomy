@@ -5,7 +5,6 @@ Provides permission checking based on user roles and content types.
 
 from dataclasses import dataclass
 from enum import Enum
-from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -79,7 +78,7 @@ OWNER_ONLY_ACTIONS: dict[str, set[Permission]] = {
 class PermissionResult:
     """Result of permission check."""
     allowed: bool
-    reason: Optional[str] = None
+    reason: str | None = None
     requires_ownership: bool = False
 
 
@@ -149,7 +148,7 @@ class RBACService:
         user_id: str,
         content_type: str,
         permission: Permission,
-        entity_id: Optional[str] = None,
+        entity_id: str | None = None,
     ) -> PermissionResult:
         """Check if user can perform action, considering ownership."""
         # Get user role

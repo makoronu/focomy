@@ -1,10 +1,9 @@
 """Mail service for sending emails."""
 
 import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
-from typing import Optional
 from dataclasses import dataclass
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
 
 from ..config import settings
 
@@ -15,8 +14,8 @@ class EmailMessage:
     to: str
     subject: str
     body: str
-    html: Optional[str] = None
-    reply_to: Optional[str] = None
+    html: str | None = None
+    reply_to: str | None = None
 
 
 class MailService:
@@ -86,7 +85,7 @@ class MailService:
         to: str,
         form_title: str,
         submission_data: dict,
-        reply_to: Optional[str] = None,
+        reply_to: str | None = None,
     ) -> bool:
         """Send form submission notification."""
         # Build plain text body

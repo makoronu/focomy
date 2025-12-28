@@ -1,13 +1,13 @@
 """MediaService - file upload and image processing."""
 
-from datetime import datetime
-from pathlib import Path
-from typing import Optional, BinaryIO
 import hashlib
 import mimetypes
+from datetime import datetime
+from pathlib import Path
+from typing import BinaryIO
 
 from PIL import Image
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
@@ -126,7 +126,7 @@ class MediaService:
 
         return media
 
-    async def get(self, media_id: str, include_deleted: bool = False) -> Optional[Media]:
+    async def get(self, media_id: str, include_deleted: bool = False) -> Media | None:
         """Get media by ID."""
         query = select(Media).where(Media.id == media_id)
         if not include_deleted:
@@ -134,7 +134,7 @@ class MediaService:
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
-    async def get_by_path(self, stored_path: str, include_deleted: bool = False) -> Optional[Media]:
+    async def get_by_path(self, stored_path: str, include_deleted: bool = False) -> Media | None:
         """Get media by stored path."""
         query = select(Media).where(Media.stored_path == stored_path)
         if not include_deleted:
@@ -220,7 +220,7 @@ class MediaService:
             references = await self.find_references(media_id)
             if references:
                 ref_count = len(references)
-                entity_types = list(set(r["entity_type"] for r in references))
+                entity_types = list({r["entity_type"] for r in references})
                 raise ValueError(
                     f"Cannot delete media: referenced by {ref_count} entities "
                     f"(types: {', '.join(entity_types)}). Use force=True to delete anyway."
@@ -243,8 +243,9 @@ class MediaService:
         Returns:
             List of {entity_id, entity_type, field_name} dicts
         """
-        from ..models import Entity, EntityValue
         from sqlalchemy import or_
+
+        from ..models import Entity, EntityValue
 
         media = await self.get(media_id, include_deleted=True)
         if not media:
@@ -358,7 +359,7 @@ class MediaService:
 
         return True
 
-    async def restore(self, media_id: str, user_id: str = None) -> Optional[Media]:
+    async def restore(self, media_id: str, user_id: str = None) -> Media | None:
         """論理削除を取り消す（復元）。"""
         media = await self.get(media_id, include_deleted=True)
         if not media or media.deleted_at is None:
@@ -372,7 +373,7 @@ class MediaService:
 
         return media
 
-    async def update_alt_text(self, media_id: str, alt_text: str) -> Optional[Media]:
+    async def update_alt_text(self, media_id: str, alt_text: str) -> Media | None:
         """Update alt text for media."""
         media = await self.get(media_id)
         if not media:

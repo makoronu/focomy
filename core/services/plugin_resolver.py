@@ -6,9 +6,8 @@ Handles:
 - Load order calculation
 """
 
-from typing import Optional
-from dataclasses import dataclass
 from collections import defaultdict
+from dataclasses import dataclass
 
 
 @dataclass
@@ -194,10 +193,10 @@ class PluginResolver:
     def _detect_circular_dependencies(self, plugins: set[str]) -> list[str]:
         """Detect circular dependencies using DFS."""
         WHITE, GRAY, BLACK = 0, 1, 2
-        color = {p: WHITE for p in plugins}
+        color = dict.fromkeys(plugins, WHITE)
         path = []
 
-        def dfs(plugin_name: str) -> Optional[list[str]]:
+        def dfs(plugin_name: str) -> list[str] | None:
             if plugin_name not in self._plugins:
                 return None
 
@@ -230,7 +229,7 @@ class PluginResolver:
 
     def _topological_sort(self, plugins: set[str]) -> list[str]:
         """Perform topological sort for load order."""
-        in_degree = {p: 0 for p in plugins}
+        in_degree = dict.fromkeys(plugins, 0)
         graph = defaultdict(list)
 
         # Build graph
@@ -285,7 +284,7 @@ class PluginResolver:
 
         return len(dependents) == 0, dependents
 
-    def get_plugin_info(self, plugin_name: str) -> Optional[PluginInfo]:
+    def get_plugin_info(self, plugin_name: str) -> PluginInfo | None:
         """Get plugin information."""
         return self._plugins.get(plugin_name)
 

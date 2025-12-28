@@ -8,7 +8,6 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Optional
 
 import yaml
 
@@ -42,7 +41,7 @@ class ThemeMeta:
     tags: list[str] = field(default_factory=list)
 
     # Parent theme for child themes
-    parent: Optional[str] = None
+    parent: str | None = None
 
     # Features
     supports: list[str] = field(default_factory=list)
@@ -56,10 +55,10 @@ class ThemeMeta:
     templates: dict[str, str] = field(default_factory=dict)
 
     # Runtime info
-    path: Optional[Path] = None
+    path: Path | None = None
     state: ThemeState = ThemeState.AVAILABLE
     error_message: str = ""
-    activated_at: Optional[datetime] = None
+    activated_at: datetime | None = None
 
 
 @dataclass
@@ -102,7 +101,7 @@ class ThemeManager:
         self.data_dir = Path(data_dir)
 
         self._themes: dict[str, ThemeMeta] = {}
-        self._active_theme_id: Optional[str] = None
+        self._active_theme_id: str | None = None
         self._customizations: dict[str, dict] = {}
 
         # Ensure directories exist
@@ -134,7 +133,7 @@ class ThemeManager:
 
         return self._themes
 
-    def _discover_theme(self, path: Path) -> Optional[ThemeMeta]:
+    def _discover_theme(self, path: Path) -> ThemeMeta | None:
         """
         Discover a single theme.
 
@@ -238,11 +237,11 @@ class ThemeManager:
 
         return result
 
-    def get_theme(self, theme_id: str) -> Optional[ThemeMeta]:
+    def get_theme(self, theme_id: str) -> ThemeMeta | None:
         """Get theme metadata by ID."""
         return self._themes.get(theme_id)
 
-    def get_active_theme(self) -> Optional[ThemeMeta]:
+    def get_active_theme(self) -> ThemeMeta | None:
         """Get currently active theme."""
         if self._active_theme_id:
             return self._themes.get(self._active_theme_id)
@@ -284,8 +283,8 @@ class ThemeManager:
     def get_template_path(
         self,
         template_name: str,
-        theme_id: Optional[str] = None,
-    ) -> Optional[Path]:
+        theme_id: str | None = None,
+    ) -> Path | None:
         """
         Find template file path, checking child theme first.
 
@@ -322,8 +321,8 @@ class ThemeManager:
     def get_asset_path(
         self,
         asset_name: str,
-        theme_id: Optional[str] = None,
-    ) -> Optional[Path]:
+        theme_id: str | None = None,
+    ) -> Path | None:
         """
         Find asset file path.
 
@@ -357,7 +356,7 @@ class ThemeManager:
 
         return None
 
-    def get_screenshot_url(self, theme_id: str) -> Optional[str]:
+    def get_screenshot_url(self, theme_id: str) -> str | None:
         """Get screenshot URL for a theme."""
         theme = self._themes.get(theme_id)
         if not theme:
@@ -365,7 +364,7 @@ class ThemeManager:
 
         return f"/themes/{theme_id}/screenshot.png"
 
-    def install_from_zip(self, zip_path: Path) -> tuple[bool, str, Optional[str]]:
+    def install_from_zip(self, zip_path: Path) -> tuple[bool, str, str | None]:
         """
         Install a theme from a ZIP file.
 
@@ -495,12 +494,12 @@ class ThemeManager:
             logger.exception(f"Error exporting theme: {e}")
             return False, f"Export error: {e}"
 
-    def get_customizations(self, theme_id: Optional[str] = None) -> dict:
+    def get_customizations(self, theme_id: str | None = None) -> dict:
         """Get theme customizations."""
         theme_id = theme_id or self._active_theme_id
         return self._customizations.get(theme_id, {}).copy() if theme_id else {}
 
-    def set_customizations(self, customizations: dict, theme_id: Optional[str] = None) -> None:
+    def set_customizations(self, customizations: dict, theme_id: str | None = None) -> None:
         """Set theme customizations."""
         theme_id = theme_id or self._active_theme_id
         if theme_id:

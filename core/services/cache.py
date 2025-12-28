@@ -8,12 +8,13 @@ Provides a unified caching interface that:
 """
 
 import asyncio
-import json
 import hashlib
+import json
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from datetime import datetime, timedelta
 from functools import wraps
-from typing import Any, Callable, Optional, TypeVar
+from typing import Any, Optional, TypeVar
 
 try:
     import redis.asyncio as aioredis
@@ -29,11 +30,11 @@ class CacheBackend(ABC):
     """Abstract base class for cache backends."""
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         pass
 
     @abstractmethod
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         pass
 
     @abstractmethod
@@ -71,7 +72,7 @@ class InMemoryBackend(CacheBackend):
         self._cache: dict[str, CacheEntry] = {}
         self._lock = asyncio.Lock()
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         async with self._lock:
             entry = self._cache.get(key)
             if entry is None:
@@ -81,7 +82,7 @@ class InMemoryBackend(CacheBackend):
                 return None
             return entry.value
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         ttl = ttl or 300  # Default 5 minutes
         async with self._lock:
             self._cache[key] = CacheEntry(value, ttl)
@@ -146,7 +147,7 @@ class RedisBackend(CacheBackend):
     def _key(self, key: str) -> str:
         return f"{self._prefix}{key}"
 
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         try:
             data = await self._redis.get(self._key(key))
             if data is None:
@@ -155,7 +156,7 @@ class RedisBackend(CacheBackend):
         except Exception:
             return None
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         ttl = ttl or 300
         try:
             serialized = json.dumps(value, default=str)
@@ -222,7 +223,7 @@ class CacheService:
 
     _instance: Optional["CacheService"] = None
 
-    def __new__(cls, redis_url: Optional[str] = None):
+    def __new__(cls, redis_url: str | None = None):
         if cls._instance is None:
             cls._instance = super().__new__(cls)
             cls._instance._redis_url = redis_url
@@ -230,7 +231,7 @@ class CacheService:
             cls._instance._connected = False
         return cls._instance
 
-    async def connect(self, redis_url: Optional[str] = None) -> None:
+    async def connect(self, redis_url: str | None = None) -> None:
         """Initialize cache backend."""
         if self._connected:
             return
@@ -267,10 +268,10 @@ class CacheService:
         return self._backend
 
     # Core operations (async)
-    async def get(self, key: str) -> Optional[Any]:
+    async def get(self, key: str) -> Any | None:
         return await self.backend.get(key)
 
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
+    async def set(self, key: str, value: Any, ttl: int | None = None) -> None:
         await self.backend.set(key, value, ttl)
 
     async def delete(self, key: str) -> bool:
@@ -286,7 +287,7 @@ class CacheService:
         return await self.backend.exists(key)
 
     # Sync operations (for backward compatibility)
-    def get_sync(self, key: str) -> Optional[Any]:
+    def get_sync(self, key: str) -> Any | None:
         """Synchronous get (only works with in-memory backend)."""
         if isinstance(self.backend, InMemoryBackend):
             entry = self.backend._cache.get(key)
@@ -312,7 +313,7 @@ class CacheService:
         self,
         key: str,
         factory: Callable[[], Any],
-        ttl: Optional[int] = None,
+        ttl: int | None = None,
     ) -> Any:
         """Get from cache or compute and store."""
         value = await self.get(key)

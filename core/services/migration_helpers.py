@@ -3,7 +3,6 @@
 Provides utilities for schema changes that need to be done carefully.
 """
 
-from typing import Optional
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -278,7 +277,7 @@ class MigrationHelpers:
                         )
                     """), {"table": table})
                 else:
-                    check = await self.db.execute(text(f"""
+                    check = await self.db.execute(text("""
                         SELECT name FROM sqlite_master
                         WHERE type='table' AND name=:table
                     """), {"table": table})

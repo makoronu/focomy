@@ -5,6 +5,7 @@ Reads YAML content type definitions and creates appropriate indexes.
 """
 
 from typing import Any
+
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 

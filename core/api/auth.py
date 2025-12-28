@@ -10,17 +10,16 @@ Security features:
 - OAuth support (Google, etc.)
 """
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response
 from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..rate_limit import limiter
 from ..services.auth import AuthService
 from ..services.entity import EntityService
-from ..rate_limit import limiter
-
 
 router = APIRouter(prefix="/auth", tags=["Authentication"])
 
@@ -45,7 +44,7 @@ class ChangePasswordRequest(BaseModel):
     new_password: str = Field(..., min_length=12, description="New password (min 12 characters)")
 
 
-def get_session_token(request: Request) -> Optional[str]:
+def get_session_token(request: Request) -> str | None:
     """Extract session token from cookie or header."""
     # Try cookie first
     token = request.cookies.get("session")

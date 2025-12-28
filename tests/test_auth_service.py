@@ -3,9 +3,8 @@
 Tests user registration, login, password reset, and TOTP.
 """
 
+
 import pytest
-import pytest_asyncio
-from datetime import datetime, timedelta
 
 from core.services.auth import AuthService
 
@@ -276,7 +275,7 @@ class TestSessionManagement:
         )
 
         # Create multiple sessions by logging in
-        for i in range(3):
+        for _i in range(3):
             await auth_service.login(
                 email=sample_user_data["email"],
                 password=sample_user_data["password"],

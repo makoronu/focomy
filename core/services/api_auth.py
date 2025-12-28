@@ -5,18 +5,15 @@ Provides authentication for external API consumers:
 - API keys for long-lived integrations
 """
 
-import secrets
 import hashlib
-from datetime import datetime, timedelta
-from typing import Optional
+import secrets
 from dataclasses import dataclass
+from datetime import datetime, timedelta
 
-from jose import jwt, JWTError
-from sqlalchemy import select, and_
+from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
-
 
 # JWT Configuration
 JWT_ALGORITHM = "HS256"
@@ -33,8 +30,8 @@ class APIKey:
     scopes: list[str]  # e.g., ["read:entities", "write:entities"]
     user_id: str
     created_at: datetime
-    last_used_at: Optional[datetime]
-    expires_at: Optional[datetime]
+    last_used_at: datetime | None
+    expires_at: datetime | None
     is_active: bool = True
 
 
@@ -86,7 +83,7 @@ class APIAuthService:
         self,
         user_id: str,
         scopes: list[str] = None,
-        expiry_hours: Optional[int] = None,
+        expiry_hours: int | None = None,
     ) -> str:
         """
         Create a JWT access token.
@@ -112,7 +109,7 @@ class APIAuthService:
 
         return jwt.encode(payload, self._secret_key, algorithm=JWT_ALGORITHM)
 
-    async def verify_jwt(self, token: str) -> Optional[TokenPayload]:
+    async def verify_jwt(self, token: str) -> TokenPayload | None:
         """
         Verify and decode a JWT token.
 
@@ -156,7 +153,7 @@ class APIAuthService:
         self,
         refresh_token: str,
         scopes: list[str] = None,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Use a refresh token to get a new access token.
 
@@ -180,7 +177,7 @@ class APIAuthService:
         name: str,
         user_id: str,
         scopes: list[str] = None,
-        expires_in_days: Optional[int] = None,
+        expires_in_days: int | None = None,
     ) -> tuple[APIKey, str]:
         """
         Create a new API key.
@@ -221,7 +218,7 @@ class APIAuthService:
 
         return api_key, raw_key
 
-    async def verify_api_key(self, raw_key: str) -> Optional[APIKey]:
+    async def verify_api_key(self, raw_key: str) -> APIKey | None:
         """
         Verify an API key and return its data.
 
@@ -232,7 +229,7 @@ class APIAuthService:
             APIKey if valid, None otherwise
         """
         key_hash = self._hash_key(raw_key)
-        prefix = raw_key[:12] if len(raw_key) >= 12 else ""
+        raw_key[:12] if len(raw_key) >= 12 else ""
 
         for api_key in _api_keys.values():
             if api_key.key_hash == key_hash:

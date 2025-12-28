@@ -1,11 +1,12 @@
 """Plugin base classes and interfaces."""
 
 from abc import ABC, abstractmethod
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 
 class PluginState(Enum):
@@ -50,11 +51,11 @@ class PluginMeta:
     uses_hooks: list[str] = field(default_factory=list)
 
     # Runtime info
-    path: Optional[Path] = None
+    path: Path | None = None
     state: PluginState = PluginState.UNKNOWN
     error_message: str = ""
-    loaded_at: Optional[datetime] = None
-    activated_at: Optional[datetime] = None
+    loaded_at: datetime | None = None
+    activated_at: datetime | None = None
 
 
 class Plugin(ABC):
@@ -108,7 +109,7 @@ class Plugin(ABC):
         return self.meta.version
 
     @property
-    def path(self) -> Optional[Path]:
+    def path(self) -> Path | None:
         """Plugin directory path."""
         return self.meta.path
 
@@ -209,7 +210,7 @@ class Plugin(ABC):
         title: str,
         path: str,
         icon: str = "puzzle",
-        parent: Optional[str] = None,
+        parent: str | None = None,
     ) -> None:
         """
         Register an admin menu item.

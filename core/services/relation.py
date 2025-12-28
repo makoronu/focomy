@@ -1,13 +1,12 @@
 """RelationService - relationship management."""
 
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
-from sqlalchemy import select, and_, delete
+from sqlalchemy import and_, delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, Relation
-from .field import field_service, FieldService
+from .field import FieldService, field_service
 
 
 class RelationService:
@@ -103,7 +102,7 @@ class RelationService:
                     parent_id = rel.to_entity_id
                     if parent_id == from_id:
                         raise ValueError(
-                            f"Circular reference detected: adding this relation would create a cycle"
+                            "Circular reference detected: adding this relation would create a cycle"
                         )
                     if parent_id not in visited:
                         visited.add(parent_id)
@@ -223,7 +222,7 @@ class RelationService:
         from_id: str,
         to_id: str,
         relation_type: str,
-    ) -> Optional[Relation]:
+    ) -> Relation | None:
         """Get a specific relation."""
         query = select(Relation).where(
             and_(

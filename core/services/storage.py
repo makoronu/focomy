@@ -5,13 +5,12 @@ Provides a unified interface for file storage that can use:
 - Amazon S3 or compatible services (when configured)
 """
 
-import os
 import mimetypes
 from abc import ABC, abstractmethod
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO, Optional
-from dataclasses import dataclass
 
 try:
     import boto3
@@ -28,7 +27,7 @@ class StoredFile:
     url: str  # Public URL
     size: int
     content_type: str
-    last_modified: Optional[datetime] = None
+    last_modified: datetime | None = None
 
 
 class StorageBackend(ABC):
@@ -46,7 +45,7 @@ class StorageBackend(ABC):
         pass
 
     @abstractmethod
-    async def get(self, key: str) -> Optional[bytes]:
+    async def get(self, key: str) -> bytes | None:
         """Get file contents."""
         pass
 
@@ -104,7 +103,7 @@ class LocalStorageBackend(StorageBackend):
             last_modified=datetime.utcnow(),
         )
 
-    async def get(self, key: str) -> Optional[bytes]:
+    async def get(self, key: str) -> bytes | None:
         """Get file from local filesystem."""
         file_path = self.upload_dir / key
         if not file_path.exists():
@@ -206,7 +205,7 @@ class S3StorageBackend(StorageBackend):
             last_modified=datetime.utcnow(),
         )
 
-    async def get(self, key: str) -> Optional[bytes]:
+    async def get(self, key: str) -> bytes | None:
         """Download file from S3."""
         try:
             response = self.client.get_object(
@@ -268,7 +267,7 @@ class StorageService:
     """
 
     _instance: Optional["StorageService"] = None
-    _backend: Optional[StorageBackend] = None
+    _backend: StorageBackend | None = None
 
     def __new__(cls):
         if cls._instance is None:
@@ -310,7 +309,7 @@ class StorageService:
     ) -> StoredFile:
         return await self.backend.put(key, data, content_type, metadata)
 
-    async def get(self, key: str) -> Optional[bytes]:
+    async def get(self, key: str) -> bytes | None:
         return await self.backend.get(key)
 
     async def delete(self, key: str) -> bool:

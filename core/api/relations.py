@@ -1,16 +1,15 @@
 """Relation API endpoints - relationship management."""
 
-from typing import Any, Optional
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
 from ..services.entity import EntityService
-from ..services.relation import RelationService
 from ..services.field import field_service
-
+from ..services.relation import RelationService
 
 router = APIRouter(tags=["relations"])
 
@@ -19,7 +18,7 @@ class RelationAttach(BaseModel):
     """Request to attach a relation."""
     to_id: str
     sort_order: int = 0
-    metadata: Optional[dict[str, Any]] = None
+    metadata: dict[str, Any] | None = None
 
 
 class RelationSync(BaseModel):

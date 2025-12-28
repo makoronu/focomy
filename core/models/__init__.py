@@ -1,14 +1,14 @@
 """Database models."""
 
+from .auth import LoginLog, Session, UserAuth
 from .entity import Entity, EntityValue
-from .relation import Relation
 from .media import Media
-from .auth import UserAuth, Session, LoginLog
+from .relation import Relation
 from .revision import (
-    Revision,
     REVISION_TYPE_AUTOSAVE,
     REVISION_TYPE_MANUAL,
     REVISION_TYPE_PUBLISH,
+    Revision,
 )
 
 __all__ = [

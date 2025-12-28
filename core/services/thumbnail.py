@@ -6,7 +6,7 @@ Creates multiple size variants of uploaded images for responsive use.
 import io
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Optional, BinaryIO
+from typing import BinaryIO
 
 from PIL import Image
 
@@ -140,7 +140,7 @@ class ThumbnailService:
         self,
         image: Image.Image,
         size: ThumbnailSize,
-    ) -> Optional[Image.Image]:
+    ) -> Image.Image | None:
         """Create a single thumbnail."""
         orig_width, orig_height = image.size
 

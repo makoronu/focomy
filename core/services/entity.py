@@ -1,15 +1,15 @@
 """EntityService - unified CRUD for all content types."""
 
-from datetime import datetime
-from typing import Any, Optional
 from dataclasses import dataclass, field
+from datetime import datetime, timedelta
+from typing import Any
 
-from sqlalchemy import select, func, and_, or_
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, EntityValue
-from .field import field_service, FieldService
 from .cache import cache_service
+from .field import FieldService, field_service
 
 
 @dataclass
@@ -81,7 +81,7 @@ class EntityService:
 
             return entity
 
-        except Exception as e:
+        except Exception:
             await self.db.rollback()
             raise
 
@@ -93,7 +93,7 @@ class EntityService:
         create_revision: bool = True,
         revision_type: str = "manual",
         expected_version: int = None,
-    ) -> Optional[Entity]:
+    ) -> Entity | None:
         """Update an existing entity.
 
         All operations are performed in a single transaction.
@@ -163,7 +163,7 @@ class EntityService:
 
             return entity
 
-        except Exception as e:
+        except Exception:
             await self.db.rollback()
             raise
 
@@ -215,7 +215,7 @@ class EntityService:
 
             return True
 
-        except Exception as e:
+        except Exception:
             await self.db.rollback()
             raise
 
@@ -241,7 +241,7 @@ class EntityService:
             return 0
 
         count = 0
-        for relation_name, rel_def in cascade_relations:
+        for relation_name, _rel_def in cascade_relations:
             # Find all entities that have a relation TO the deleted entity
             query = select(Relation).where(
                 and_(
@@ -274,7 +274,7 @@ class EntityService:
         self,
         entity_id: str,
         user_id: str = None,
-    ) -> Optional[Entity]:
+    ) -> Entity | None:
         """
         Restore a soft-deleted entity.
 
@@ -387,7 +387,7 @@ class EntityService:
         self,
         entity_id: str,
         include_deleted: bool = False,
-    ) -> Optional[Entity]:
+    ) -> Entity | None:
         """Get entity by ID."""
         query = select(Entity).where(Entity.id == entity_id)
         if not include_deleted:

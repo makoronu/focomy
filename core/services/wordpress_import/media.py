@@ -2,15 +2,15 @@
 
 import asyncio
 import hashlib
+import io
 import mimetypes
 import re
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, Optional
 from urllib.parse import urljoin, urlparse
+
 import aiohttp
 from PIL import Image
-import io
 
 
 @dataclass
@@ -104,7 +104,7 @@ class MediaImporter:
     async def import_media(
         self,
         items: list[MediaItem],
-        progress_callback: Optional[callable] = None,
+        progress_callback: callable | None = None,
     ) -> MediaImportResult:
         """
         Import multiple media items.
@@ -127,7 +127,7 @@ class MediaImporter:
 
             imported_items = await asyncio.gather(*tasks, return_exceptions=True)
 
-            for item, imported in zip(items, imported_items):
+            for item, imported in zip(items, imported_items, strict=False):
                 if isinstance(imported, Exception):
                     failed = ImportedMedia(
                         original_url=item.original_url,
@@ -154,7 +154,7 @@ class MediaImporter:
         item: MediaItem,
         index: int,
         total: int,
-        progress_callback: Optional[callable],
+        progress_callback: callable | None,
     ) -> ImportedMedia:
         """Import a single media item."""
         async with self._semaphore:
@@ -228,7 +228,7 @@ class MediaImporter:
                     error=str(e),
                 )
 
-    async def _download(self, session: aiohttp.ClientSession, url: str) -> Optional[bytes]:
+    async def _download(self, session: aiohttp.ClientSession, url: str) -> bytes | None:
         """Download a file from URL."""
         try:
             async with session.get(

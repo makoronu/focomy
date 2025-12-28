@@ -2,13 +2,11 @@
 
 import secrets
 from datetime import datetime, timedelta
-from typing import Optional
 
-from sqlalchemy import select, and_, delete
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity
-
 
 # In-memory preview token storage (for simplicity)
 # In production, consider using Redis or database
@@ -38,7 +36,7 @@ class PreviewService:
         self,
         entity_id: str,
         user_id: str,
-        expiry_hours: Optional[int] = None,
+        expiry_hours: int | None = None,
     ) -> str:
         """
         Create a preview token for an entity.
@@ -66,7 +64,7 @@ class PreviewService:
 
         return token
 
-    async def get_preview_entity(self, token: str) -> Optional[Entity]:
+    async def get_preview_entity(self, token: str) -> Entity | None:
         """
         Get entity for preview if token is valid.
 

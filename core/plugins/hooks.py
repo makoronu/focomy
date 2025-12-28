@@ -1,11 +1,11 @@
 """Hook system for plugin extensibility."""
 
 import asyncio
-import functools
 import logging
 from collections import defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
-from typing import Any, Callable, Optional, TypeVar, Union
+from typing import Any, TypeVar
 
 logger = logging.getLogger(__name__)
 
@@ -17,7 +17,7 @@ class HookHandler:
     """Registered hook handler."""
     callback: Callable
     priority: int = 10
-    plugin_id: Optional[str] = None
+    plugin_id: str | None = None
     is_async: bool = False
     accepts_args: int = -1  # -1 means any
 
@@ -79,7 +79,7 @@ class HookRegistry:
         hook_name: str,
         callback: Callable,
         priority: int = 10,
-        plugin_id: Optional[str] = None,
+        plugin_id: str | None = None,
     ) -> None:
         """
         Register a filter handler.
@@ -104,7 +104,7 @@ class HookRegistry:
         hook_name: str,
         callback: Callable,
         priority: int = 10,
-        plugin_id: Optional[str] = None,
+        plugin_id: str | None = None,
     ) -> None:
         """
         Register an action handler.
@@ -127,8 +127,8 @@ class HookRegistry:
     def remove_filter(
         self,
         hook_name: str,
-        callback: Optional[Callable] = None,
-        plugin_id: Optional[str] = None,
+        callback: Callable | None = None,
+        plugin_id: str | None = None,
     ) -> int:
         """
         Remove filter handler(s).
@@ -146,8 +146,8 @@ class HookRegistry:
     def remove_action(
         self,
         hook_name: str,
-        callback: Optional[Callable] = None,
-        plugin_id: Optional[str] = None,
+        callback: Callable | None = None,
+        plugin_id: str | None = None,
     ) -> int:
         """
         Remove action handler(s).
@@ -166,8 +166,8 @@ class HookRegistry:
         self,
         registry: dict,
         hook_name: str,
-        callback: Optional[Callable],
-        plugin_id: Optional[str],
+        callback: Callable | None,
+        plugin_id: str | None,
     ) -> int:
         """Remove handlers from a registry."""
         if hook_name not in registry:

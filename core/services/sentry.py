@@ -3,8 +3,8 @@
 Provides error tracking and performance monitoring via Sentry.
 """
 
-from typing import Any, Optional
 from contextlib import contextmanager
+from typing import Any
 
 try:
     import sentry_sdk
@@ -43,7 +43,7 @@ class SentryService:
         self,
         dsn: str,
         environment: str = "production",
-        release: Optional[str] = None,
+        release: str | None = None,
         sample_rate: float = 1.0,
         traces_sample_rate: float = 0.1,
         debug: bool = False,
@@ -92,7 +92,7 @@ class SentryService:
         self,
         exception: Exception = None,
         **context,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Capture an exception.
 
@@ -116,7 +116,7 @@ class SentryService:
         message: str,
         level: str = "info",
         **context,
-    ) -> Optional[str]:
+    ) -> str | None:
         """
         Capture a message.
 

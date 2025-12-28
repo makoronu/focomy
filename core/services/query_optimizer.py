@@ -7,12 +7,12 @@ Provides utilities for:
 - Efficient counting
 """
 
-from typing import Any, AsyncGenerator, Callable, Optional, TypeVar
+from collections.abc import AsyncGenerator, Callable
 from dataclasses import dataclass
+from typing import Any, TypeVar
 
-from sqlalchemy import select, func
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
-
 
 T = TypeVar("T")
 
@@ -90,7 +90,7 @@ class QueryOptimizer:
         result = await self.db.execute(query)
         return result.scalar() or 0, False
 
-    async def _get_pg_estimate(self, table_name: str) -> Optional[int]:
+    async def _get_pg_estimate(self, table_name: str) -> int | None:
         """Get PostgreSQL's row count estimate from pg_class."""
         try:
             from sqlalchemy import text
@@ -212,7 +212,7 @@ class LazyLoader:
         self._pending: dict[str, set[str]] = {}
         self._loaded: dict[str, dict[str, Any]] = {}
 
-    def add(self, entity_type: str, entity_id: Optional[str]) -> None:
+    def add(self, entity_type: str, entity_id: str | None) -> None:
         """Add an entity ID to load."""
         if entity_id is None:
             return
@@ -220,7 +220,7 @@ class LazyLoader:
             self._pending[entity_type] = set()
         self._pending[entity_type].add(entity_id)
 
-    def get(self, entity_type: str, entity_id: str) -> Optional[Any]:
+    def get(self, entity_type: str, entity_id: str) -> Any | None:
         """Get a loaded entity."""
         return self._loaded.get(entity_type, {}).get(entity_id)
 

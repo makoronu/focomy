@@ -4,12 +4,11 @@ Detects media files that are no longer referenced by any entity.
 """
 
 import os
+from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import Optional
-from dataclasses import dataclass
 
-from sqlalchemy import select, and_, func, not_
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, EntityValue
@@ -168,7 +167,7 @@ class MediaCleanupService:
 
         return media_ids
 
-    async def _get_media_file_info(self, media_id: str) -> Optional[dict]:
+    async def _get_media_file_info(self, media_id: str) -> dict | None:
         """Get file info for a media entity."""
         query = select(EntityValue).where(
             EntityValue.entity_id == media_id
@@ -297,7 +296,7 @@ class MediaCleanupService:
         known_paths = {row for row in result.scalars().all() if row}
 
         # Walk uploads directory
-        for root, dirs, files in os.walk(self._upload_dir):
+        for root, _dirs, files in os.walk(self._upload_dir):
             for filename in files:
                 file_path = Path(root) / filename
                 relative_path = str(file_path.relative_to(self._upload_dir))

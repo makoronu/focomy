@@ -1,14 +1,11 @@
 """Theme Marketplace - Remote theme discovery and installation."""
 
-import asyncio
-import hashlib
-import json
 import logging
 import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional
+from typing import Any
 
 import aiohttp
 
@@ -42,8 +39,8 @@ class MarketplaceTheme:
     # Metadata
     tags: list[str] = field(default_factory=list)
     category: str = ""
-    last_updated: Optional[datetime] = None
-    created_at: Optional[datetime] = None
+    last_updated: datetime | None = None
+    created_at: datetime | None = None
 
     # Requirements
     requires_focomy: str = ">=1.0.0"
@@ -71,8 +68,8 @@ class InstallResult:
     """Result of theme installation."""
     success: bool
     message: str
-    theme_id: Optional[str] = None
-    version: Optional[str] = None
+    theme_id: str | None = None
+    version: str | None = None
 
 
 class ThemeMarketplace:
@@ -92,9 +89,9 @@ class ThemeMarketplace:
     def __init__(
         self,
         theme_manager: Any,
-        marketplace_url: Optional[str] = None,
-        api_key: Optional[str] = None,
-        cache_dir: Optional[Path] = None,
+        marketplace_url: str | None = None,
+        api_key: str | None = None,
+        cache_dir: Path | None = None,
     ):
         """
         Initialize marketplace client.
@@ -118,8 +115,8 @@ class ThemeMarketplace:
     async def search(
         self,
         query: str = "",
-        category: Optional[str] = None,
-        tags: Optional[list[str]] = None,
+        category: str | None = None,
+        tags: list[str] | None = None,
         free_only: bool = False,
         sort_by: str = "popular",
         page: int = 1,
@@ -199,7 +196,7 @@ class ThemeMarketplace:
             logger.exception(f"Failed to get categories: {e}")
             return []
 
-    async def get_theme_details(self, theme_id: str) -> Optional[MarketplaceTheme]:
+    async def get_theme_details(self, theme_id: str) -> MarketplaceTheme | None:
         """
         Get detailed information about a theme.
 
@@ -219,8 +216,8 @@ class ThemeMarketplace:
     async def install(
         self,
         theme_id: str,
-        license_key: Optional[str] = None,
-        progress_callback: Optional[callable] = None,
+        license_key: str | None = None,
+        progress_callback: callable | None = None,
     ) -> InstallResult:
         """
         Download and install a theme from marketplace.
@@ -362,8 +359,8 @@ class ThemeMarketplace:
         self,
         method: str,
         path: str,
-        params: Optional[dict] = None,
-        json: Optional[dict] = None,
+        params: dict | None = None,
+        json: dict | None = None,
     ) -> dict:
         """Make API request."""
         url = f"{self.marketplace_url}{path}"
@@ -397,8 +394,8 @@ class ThemeMarketplace:
     async def _get_download_url(
         self,
         theme_id: str,
-        license_key: Optional[str] = None,
-    ) -> Optional[str]:
+        license_key: str | None = None,
+    ) -> str | None:
         """Get theme download URL."""
         try:
             json_data = {}
@@ -419,8 +416,8 @@ class ThemeMarketplace:
         self,
         url: str,
         theme_id: str,
-        progress_callback: Optional[callable] = None,
-    ) -> Optional[Path]:
+        progress_callback: callable | None = None,
+    ) -> Path | None:
         """Download theme ZIP file."""
         zip_path = self.cache_dir / f"{theme_id}.zip"
 
@@ -481,7 +478,7 @@ class ThemeMarketplace:
             support_url=data.get("support_url", ""),
         )
 
-    def _parse_date(self, date_str: Optional[str]) -> Optional[datetime]:
+    def _parse_date(self, date_str: str | None) -> datetime | None:
         """Parse date string."""
         if not date_str:
             return None

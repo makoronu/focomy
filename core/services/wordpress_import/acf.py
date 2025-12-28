@@ -3,7 +3,7 @@
 import json
 import re
 from dataclasses import dataclass, field
-from typing import Any, Optional
+from typing import Any
 
 
 @dataclass
@@ -30,10 +30,10 @@ class ACFField:
     default_value: Any = None
     placeholder: str = ""
     choices: list[dict] = field(default_factory=list)
-    min: Optional[int] = None
-    max: Optional[int] = None
-    min_length: Optional[int] = None
-    max_length: Optional[int] = None
+    min: int | None = None
+    max: int | None = None
+    min_length: int | None = None
+    max_length: int | None = None
     sub_fields: list["ACFField"] = field(default_factory=list)
     layouts: list[dict] = field(default_factory=list)
     conditional_logic: list[dict] = field(default_factory=list)
@@ -50,10 +50,10 @@ class FocomyField:
     required: bool = False
     default: Any = None
     options: list[str] = field(default_factory=list)
-    min: Optional[int] = None
-    max: Optional[int] = None
-    min_length: Optional[int] = None
-    max_length: Optional[int] = None
+    min: int | None = None
+    max: int | None = None
+    min_length: int | None = None
+    max_length: int | None = None
     fields: list["FocomyField"] = field(default_factory=list)
     layouts: list[dict] = field(default_factory=list)
     conditions: list[dict] = field(default_factory=list)
@@ -158,7 +158,7 @@ class ACFConverter:
         self._field_groups = groups
         return groups
 
-    def _parse_field_group(self, data: dict) -> Optional[ACFFieldGroup]:
+    def _parse_field_group(self, data: dict) -> ACFFieldGroup | None:
         """Parse a single field group."""
         if not isinstance(data, dict):
             return None
@@ -183,7 +183,7 @@ class ACFConverter:
             active=data.get("active", True),
         )
 
-    def _parse_field(self, data: dict) -> Optional[ACFField]:
+    def _parse_field(self, data: dict) -> ACFField | None:
         """Parse a single ACF field."""
         if not isinstance(data, dict):
             return None
@@ -275,7 +275,7 @@ class ACFConverter:
 
         return result
 
-    def _convert_field(self, acf_field: ACFField) -> Optional[FocomyField]:
+    def _convert_field(self, acf_field: ACFField) -> FocomyField | None:
         """Convert a single ACF field to Focomy field."""
         focomy_type = ACF_TYPE_MAP.get(acf_field.type, "string")
 

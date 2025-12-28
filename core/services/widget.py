@@ -6,8 +6,8 @@ Each widget type has its own rendering logic.
 
 import json
 from abc import ABC, abstractmethod
-from typing import Any, Optional
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -77,7 +77,7 @@ class CategoriesWidget(BaseWidget):
     label = "Categories"
 
     async def render(self, config: dict, context: WidgetContext) -> str:
-        show_count = config.get("show_count", True)
+        config.get("show_count", True)
 
         categories = await context.entity_svc.find(
             "category",

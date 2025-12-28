@@ -1,12 +1,11 @@
 """RevisionService - version history management."""
 
 from datetime import datetime, timedelta
-from typing import Optional
 
-from sqlalchemy import select, func, and_
+from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..models import Revision, Entity
+from ..models import Revision
 
 
 class RevisionService:
@@ -48,7 +47,7 @@ class RevisionService:
         await self.db.refresh(revision)
         return revision
 
-    async def get(self, revision_id: str) -> Optional[Revision]:
+    async def get(self, revision_id: str) -> Revision | None:
         """Get a revision by ID."""
         query = select(Revision).where(Revision.id == revision_id)
         result = await self.db.execute(query)
@@ -93,7 +92,7 @@ class RevisionService:
         self,
         entity_id: str,
         revision_type: str = None,
-    ) -> Optional[Revision]:
+    ) -> Revision | None:
         """Get the latest revision for an entity."""
         query = select(Revision).where(Revision.entity_id == entity_id)
 

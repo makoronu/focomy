@@ -7,13 +7,9 @@ Handles:
 """
 
 import re
-from datetime import datetime
-from pathlib import PurePosixPath
-from typing import Optional, Literal
 from dataclasses import dataclass
-
-from ..config import settings
-
+from datetime import datetime
+from typing import Literal
 
 RoutingPattern = Literal[
     "simple",           # /{type}/{slug}
@@ -39,7 +35,7 @@ class RouteMatch:
     """Route matching result."""
     matched: bool
     content_type: str
-    entity_id: Optional[str]
+    entity_id: str | None
     params: dict
 
 
@@ -49,7 +45,7 @@ class RouteConfig:
     content_type: str
     pattern: RoutingPattern
     prefix: str
-    custom_pattern: Optional[str] = None
+    custom_pattern: str | None = None
     params: dict = None
 
 
@@ -118,7 +114,7 @@ class RoutingService:
                         path=f"{prefix1} <-> {prefix2}",
                         types=prefixes[prefix1] + prefixes[prefix2],
                         severity="warning",
-                        message=f"Overlapping path prefixes may cause routing ambiguity",
+                        message="Overlapping path prefixes may cause routing ambiguity",
                     ))
 
         return collisions
@@ -253,7 +249,7 @@ class RoutingService:
 
         return url
 
-    def match_url(self, url: str) -> Optional[RouteMatch]:
+    def match_url(self, url: str) -> RouteMatch | None:
         """
         Match URL to a registered route.
 
@@ -277,7 +273,7 @@ class RoutingService:
 
         return None
 
-    def get_route_config(self, content_type: str) -> Optional[RouteConfig]:
+    def get_route_config(self, content_type: str) -> RouteConfig | None:
         """Get route configuration for a content type."""
         return self._routes.get(content_type)
 

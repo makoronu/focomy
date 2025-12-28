@@ -1,9 +1,9 @@
 """Relation model - relationships as first-class citizens."""
 
 from datetime import datetime
-from typing import Optional, TYPE_CHECKING
+from typing import TYPE_CHECKING
 
-from sqlalchemy import String, DateTime, Integer, Index, ForeignKey, JSON
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -44,7 +44,7 @@ class Relation(Base):
         Integer,
         default=0,
     )
-    metadata_: Mapped[Optional[dict]] = mapped_column(
+    metadata_: Mapped[dict | None] = mapped_column(
         "metadata",
         JSON,
         nullable=True,

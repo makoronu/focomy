@@ -1,21 +1,19 @@
 """Admin routes - HTMX-powered admin interface."""
 
-from typing import Optional
 
-from fastapi import APIRouter, Depends, Request, Form, HTTPException
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..services.entity import EntityService
-from ..services.auth import AuthService
-from ..services.field import field_service
-from ..services.audit import AuditService, get_client_ip, get_request_id
-from ..services.rbac import RBACService, Permission
 from ..models import Entity
 from ..rate_limit import limiter
-
+from ..services.audit import AuditService, get_client_ip, get_request_id
+from ..services.auth import AuthService
+from ..services.entity import EntityService
+from ..services.field import field_service
+from ..services.rbac import Permission, RBACService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -26,7 +24,7 @@ templates = Jinja2Templates(directory="core/templates")
 async def get_current_admin(
     request: Request,
     db: AsyncSession = Depends(get_db),
-) -> Optional[Entity]:
+) -> Entity | None:
     """Get current admin user from session."""
     token = request.cookies.get("session")
     if not token:
@@ -48,7 +46,7 @@ async def get_current_admin(
     return user
 
 
-def require_admin(request: Request, user: Optional[Entity] = Depends(get_current_admin)):
+def require_admin(request: Request, user: Entity | None = Depends(get_current_admin)):
     """Require admin authentication."""
     if not user:
         raise HTTPException(status_code=303, headers={"Location": "/admin/login"})
@@ -60,12 +58,12 @@ async def check_permission(
     user: Entity,
     content_type: str,
     permission: Permission,
-    entity_id: Optional[str] = None,
+    entity_id: str | None = None,
 ) -> None:
     """Check if user has permission. Raises HTTPException if denied."""
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(user)
-    user_role = user_data.get("role", "author")
+    user_data.get("role", "author")
 
     rbac_svc = RBACService(db)
     result = await rbac_svc.can_access(
@@ -83,7 +81,7 @@ async def check_permission(
 async def get_context(
     request: Request,
     db: AsyncSession,
-    current_user: Optional[Entity] = None,
+    current_user: Entity | None = None,
     current_page: str = "dashboard",
 ):
     """Get common template context."""
@@ -291,9 +289,9 @@ async def forgot_password_submit(
     db: AsyncSession = Depends(get_db),
 ):
     """Process forgot password request."""
-    from ..main import validate_csrf_token
-    from ..services.mail import mail_service, EmailMessage
     from ..config import settings
+    from ..main import validate_csrf_token
+    from ..services.mail import EmailMessage, mail_service
 
     if not validate_csrf_token(request, csrf_token):
         return templates.TemplateResponse("admin/forgot_password.html", {
@@ -637,11 +635,11 @@ async def themes_page(
     current_user: Entity = Depends(require_admin),
 ):
     """Theme management page."""
-    from ..services.theme import theme_service
     from ..services.settings import SettingsService
+    from ..services.theme import theme_service
 
     themes_data = []
-    for name, theme in theme_service.get_all_themes().items():
+    for _name, theme in theme_service.get_all_themes().items():
         themes_data.append({
             "name": theme.name,
             "label": theme.label,
@@ -674,8 +672,8 @@ async def activate_theme(
     current_user: Entity = Depends(require_admin),
 ):
     """Activate a theme."""
-    from ..services.theme import theme_service
     from ..services.settings import SettingsService
+    from ..services.theme import theme_service
 
     # Validate theme exists
     themes = theme_service.get_all_themes()
@@ -967,7 +965,6 @@ async def menu_reorder(
     current_user: Entity = Depends(require_admin),
 ):
     """Reorder menu items via AJAX."""
-    import json
     from ..services.menu import MenuService
     menu_svc = MenuService(db)
     entity_svc = EntityService(db)
@@ -991,8 +988,8 @@ async def sitemap_page(
     current_user: Entity = Depends(require_admin),
 ):
     """Sitemap management page."""
-    from ..services.settings import SettingsService
     from ..services.seo import SEOService
+    from ..services.settings import SettingsService
 
     site_url = str(request.base_url).rstrip("/")
     entity_svc = EntityService(db)
@@ -1005,7 +1002,7 @@ async def sitemap_page(
     excluded_urls = [u.strip() for u in excluded_urls if u.strip()]
 
     # Get current sitemap URLs
-    seo_svc = SEOService(entity_svc, site_url)
+    SEOService(entity_svc, site_url)
 
     # Get all URLs that would be in sitemap
     urls = []
@@ -1915,7 +1912,7 @@ async def entity_bulk_action(
 
 async def _get_relation_options(
     type_name: str,
-    entity_id: Optional[str],
+    entity_id: str | None,
     db: AsyncSession,
 ) -> list:
     """Get relation options for entity form."""
@@ -1991,9 +1988,10 @@ async def system_info(
     current_user: Entity = Depends(require_admin),
 ):
     """System information page."""
-    from ..services.update import update_service
     import platform
     import sys
+
+    from ..services.update import update_service
 
     context = await get_context(request, db, current_user, "system")
     update_info = await update_service.check_for_updates()

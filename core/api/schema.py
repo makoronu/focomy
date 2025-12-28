@@ -6,7 +6,6 @@ from fastapi import APIRouter, HTTPException
 
 from ..services.field import field_service
 
-
 router = APIRouter(prefix="/schema", tags=["schema"])
 
 

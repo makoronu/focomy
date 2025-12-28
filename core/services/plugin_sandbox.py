@@ -7,13 +7,11 @@ Provides:
 """
 
 import os
-import sys
-import ast
 import time
-from typing import Any, Callable, Optional, Set
-from dataclasses import dataclass, field
-from functools import wraps
+from collections.abc import Callable
 from contextlib import contextmanager
+from dataclasses import dataclass, field
+from typing import Any
 
 
 @dataclass
@@ -23,16 +21,16 @@ class PluginPermissions:
     can_read_entities: bool = True
     can_write_entities: bool = False
     can_delete_entities: bool = False
-    allowed_entity_types: Set[str] = field(default_factory=set)  # Empty = all
+    allowed_entity_types: set[str] = field(default_factory=set)  # Empty = all
 
     # File system access
     can_read_files: bool = False
     can_write_files: bool = False
-    allowed_paths: Set[str] = field(default_factory=set)
+    allowed_paths: set[str] = field(default_factory=set)
 
     # Network access
     can_make_requests: bool = False
-    allowed_domains: Set[str] = field(default_factory=set)
+    allowed_domains: set[str] = field(default_factory=set)
 
     # Admin features
     can_modify_settings: bool = False

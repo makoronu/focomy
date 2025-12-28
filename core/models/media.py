@@ -1,10 +1,9 @@
 """Media model - uploaded files management."""
 
-from datetime import datetime
-from typing import Optional
 import uuid
+from datetime import datetime
 
-from sqlalchemy import String, DateTime, Integer, Text
+from sqlalchemy import DateTime, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -44,15 +43,15 @@ class Media(Base):
         Integer,
         nullable=False,
     )
-    width: Mapped[Optional[int]] = mapped_column(
+    width: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
-    height: Mapped[Optional[int]] = mapped_column(
+    height: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
-    alt_text: Mapped[Optional[str]] = mapped_column(
+    alt_text: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
@@ -61,20 +60,20 @@ class Media(Base):
         nullable=False,
         default=datetime.utcnow,
     )
-    created_by: Mapped[Optional[str]] = mapped_column(
+    created_by: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
     )
-    updated_at: Mapped[Optional[datetime]] = mapped_column(
+    updated_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
         onupdate=datetime.utcnow,
     )
-    updated_by: Mapped[Optional[str]] = mapped_column(
+    updated_by: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
         index=True,

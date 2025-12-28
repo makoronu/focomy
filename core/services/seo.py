@@ -2,8 +2,7 @@
 
 import json
 import re
-from datetime import datetime
-from typing import Any, Optional
+from typing import Any
 
 from ..models import Entity
 from .entity import EntityService
@@ -86,7 +85,7 @@ class SEOService:
         slug = data.get("slug", entity.id)
         return f"{self.site_url}/{entity.type}/{slug}"
 
-    def _get_image(self, data: dict) -> Optional[str]:
+    def _get_image(self, data: dict) -> str | None:
         """Extract featured image."""
         for field in ["featured_image", "image", "thumbnail", "og_image"]:
             if field in data and data[field]:
@@ -102,7 +101,7 @@ class SEOService:
         title: str,
         description: str,
         url: str,
-        image: Optional[str],
+        image: str | None,
         entity_type: str,
         entity_data: dict = None,
     ) -> dict[str, str]:
@@ -157,7 +156,7 @@ class SEOService:
         title: str,
         description: str,
         url: str,
-        image: Optional[str],
+        image: str | None,
     ) -> dict[str, Any]:
         """Generate JSON-LD structured data."""
         if entity.type == "post":
@@ -174,7 +173,7 @@ class SEOService:
         title: str,
         description: str,
         url: str,
-        image: Optional[str],
+        image: str | None,
     ) -> dict[str, Any]:
         """Generate Article JSON-LD."""
         ld = {

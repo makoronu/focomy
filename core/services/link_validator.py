@@ -1,12 +1,10 @@
 """LinkValidatorService - detect broken links and orphan pages."""
 
-import re
-import json
-from typing import Optional
-from urllib.parse import urlparse, urljoin
 import asyncio
-import httpx
+import json
+import re
 
+import httpx
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .entity import EntityService
@@ -422,7 +420,7 @@ class LinkValidatorService:
                         "type": "external",
                         "status": "timeout",
                     })
-                except httpx.RequestError as e:
+                except httpx.RequestError:
                     results.append({
                         "source_url": link["source_url"],
                         "source_title": link["source_title"],

@@ -1,7 +1,6 @@
 """Asset URL management with CDN support."""
 
 from pathlib import Path
-from typing import Optional
 
 from ..config import settings
 
@@ -97,7 +96,7 @@ class S3Client:
         self,
         file_path: Path,
         s3_key: str,
-        content_type: Optional[str] = None,
+        content_type: str | None = None,
     ) -> str:
         """Upload file to S3.
 

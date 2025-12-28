@@ -2,15 +2,14 @@
 
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Request, Form
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, Field, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..services.comment import CommentService
 from ..rate_limit import limiter
-
+from ..services.comment import CommentService
 
 router = APIRouter(prefix="/comments", tags=["Comments"])
 

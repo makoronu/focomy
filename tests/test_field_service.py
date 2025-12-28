@@ -3,10 +3,10 @@
 Tests content type loading and validation.
 """
 
-import pytest
-from pathlib import Path
 
-from core.services.field import FieldService, ContentType, FieldDefinition, ValidationResult
+import pytest
+
+from core.services.field import ContentType, FieldDefinition, FieldService, ValidationResult
 
 
 class TestFieldServiceBasic:
@@ -28,7 +28,7 @@ class TestFieldServiceBasic:
         assert field_service._loaded is False
 
         # Access triggers loading
-        ct = field_service.get_content_type("post")
+        field_service.get_content_type("post")
 
         # Now loaded
         assert field_service._loaded is True

@@ -1,7 +1,7 @@
 """Form API endpoints - public form handling."""
 
-from typing import Any
 import json
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -9,11 +9,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..rate_limit import limiter
 from ..services.entity import EntityService
 from ..services.mail import mail_service
 from ..services.theme import theme_service
-from ..rate_limit import limiter
-
 
 router = APIRouter(prefix="/forms", tags=["forms"])
 
@@ -122,7 +121,7 @@ async def submit_form(
         raise HTTPException(status_code=400, detail={"errors": errors})
 
     # Save submission
-    submission = await entity_svc.create("form_submission", {
+    await entity_svc.create("form_submission", {
         "form_id": form.id,
         "form_title": form_data.get("title"),
         "data": submission_data,

@@ -1,10 +1,9 @@
 """Entity and EntityValue models - the core of the system."""
 
-from datetime import datetime
-from typing import Optional
 import uuid
+from datetime import datetime
 
-from sqlalchemy import String, DateTime, Integer, Float, Text, Index, ForeignKey, JSON
+from sqlalchemy import JSON, DateTime, Float, ForeignKey, Index, Integer, String, Text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from ..database import Base
@@ -45,16 +44,16 @@ class Entity(Base):
         default=datetime.utcnow,
         onupdate=datetime.utcnow,
     )
-    deleted_at: Mapped[Optional[datetime]] = mapped_column(
+    deleted_at: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
         index=True,
     )
-    created_by: Mapped[Optional[str]] = mapped_column(
+    created_by: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
     )
-    updated_by: Mapped[Optional[str]] = mapped_column(
+    updated_by: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
     )
@@ -118,23 +117,23 @@ class EntityValue(Base):
     )
 
     # Type-specific value columns
-    value_text: Mapped[Optional[str]] = mapped_column(
+    value_text: Mapped[str | None] = mapped_column(
         Text,
         nullable=True,
     )
-    value_int: Mapped[Optional[int]] = mapped_column(
+    value_int: Mapped[int | None] = mapped_column(
         Integer,
         nullable=True,
     )
-    value_float: Mapped[Optional[float]] = mapped_column(
+    value_float: Mapped[float | None] = mapped_column(
         Float,
         nullable=True,
     )
-    value_datetime: Mapped[Optional[datetime]] = mapped_column(
+    value_datetime: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
     )
-    value_json: Mapped[Optional[dict]] = mapped_column(
+    value_json: Mapped[dict | None] = mapped_column(
         JSON,
         nullable=True,
     )

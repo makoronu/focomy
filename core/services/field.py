@@ -1,15 +1,14 @@
 """FieldService - content type definitions and validation."""
 
 import re
-from pathlib import Path
 from functools import lru_cache
-from typing import Any, Optional
+from pathlib import Path
+from typing import Any
 
 import yaml
 from pydantic import BaseModel, Field
 
 from ..config import settings
-
 
 # Email regex pattern (RFC 5322 simplified)
 EMAIL_PATTERN = re.compile(
@@ -46,27 +45,27 @@ class FieldDefinition(BaseModel):
     required: bool = False
     unique: bool = False
     indexed: bool = False
-    max_length: Optional[int] = None
-    min_length: Optional[int] = None
+    max_length: int | None = None
+    min_length: int | None = None
     default: Any = None
     options: list[dict[str, str]] = Field(default_factory=list)
-    auto_generate: Optional[str] = None
-    accept: Optional[str] = None
+    auto_generate: str | None = None
+    accept: str | None = None
     multiple: bool = False
     auth_field: bool = False
-    suffix: Optional[str] = None
+    suffix: str | None = None
     # Extended properties for Content Builder
-    description: Optional[str] = None
-    hint: Optional[str] = None
-    placeholder: Optional[str] = None
-    help: Optional[str] = None
-    pattern: Optional[str] = None  # Regex pattern validation
-    min: Optional[float] = None  # Min value for numbers
-    max: Optional[float] = None  # Max value for numbers
-    step: Optional[float] = None  # Step for number input
-    decimal_places: Optional[int] = None  # For decimal/money fields
-    max_items: Optional[int] = None  # For arrays/galleries
-    min_items: Optional[int] = None  # For arrays/galleries
+    description: str | None = None
+    hint: str | None = None
+    placeholder: str | None = None
+    help: str | None = None
+    pattern: str | None = None  # Regex pattern validation
+    min: float | None = None  # Min value for numbers
+    max: float | None = None  # Max value for numbers
+    step: float | None = None  # Step for number input
+    decimal_places: int | None = None  # For decimal/money fields
+    max_items: int | None = None  # For arrays/galleries
+    min_items: int | None = None  # For arrays/galleries
     # Admin UI options
     admin_hidden: bool = False
     admin_only: bool = False
@@ -74,15 +73,15 @@ class FieldDefinition(BaseModel):
     show_in_list: bool = False  # Show in admin list view
     searchable: bool = False  # Include in search
     # Conditional logic
-    conditions: Optional[dict] = None  # {show: [...], required: [...]}
+    conditions: dict | None = None  # {show: [...], required: [...]}
     # Permissions
-    permissions: Optional[dict] = None  # {read: [...], write: [...]}
+    permissions: dict | None = None  # {read: [...], write: [...]}
     # Calculated/lookup fields
-    formula: Optional[str] = None  # For calculated fields
+    formula: str | None = None  # For calculated fields
     formula_timing: str = "save"  # When to calculate: "save" or "display"
-    source: Optional[str] = None  # For lookup fields (relation name)
-    source_field: Optional[str] = None  # Field to lookup from related entity
-    format: Optional[str] = None  # Display format (currency, percent, etc.)
+    source: str | None = None  # For lookup fields (relation name)
+    source_field: str | None = None  # Field to lookup from related entity
+    format: str | None = None  # Display format (currency, percent, etc.)
     # Repeater/flexible content
     fields: list["FieldDefinition"] = Field(default_factory=list)  # Sub-fields
     layouts: list[dict] = Field(default_factory=list)  # For flexible content
@@ -90,7 +89,7 @@ class FieldDefinition(BaseModel):
     validation: list[dict] = Field(default_factory=list)  # Custom validation rules
     # Status field transitions (for select fields with status-like behavior)
     # Format: {"draft": ["published"], "published": ["draft", "archived"]}
-    transitions: Optional[dict[str, list[str]]] = None
+    transitions: dict[str, list[str]] | None = None
 
     def is_transition_allowed(self, from_value: str, to_value: str) -> bool:
         """Check if a status transition is allowed.
@@ -110,7 +109,7 @@ class RelationDefinition(BaseModel):
     type: str
     label: str = ""
     required: bool = False
-    target: Optional[str] = None
+    target: str | None = None
     self_referential: bool = False
 
 
@@ -211,10 +210,10 @@ class FieldService:
 
         self._loaded = True
 
-    def _load_content_type(self, path: Path) -> Optional[ContentType]:
+    def _load_content_type(self, path: Path) -> ContentType | None:
         """Load a single content type from YAML."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 if data:
                     return ContentType(**data)
@@ -225,7 +224,7 @@ class FieldService:
     def _load_relations(self, path: Path):
         """Load relation definitions from YAML."""
         try:
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 if data:
                     for name, rel_data in data.items():
@@ -235,7 +234,7 @@ class FieldService:
         except Exception as e:
             print(f"Error loading relations {path}: {e}")
 
-    def get_content_type(self, type_name: str) -> Optional[ContentType]:
+    def get_content_type(self, type_name: str) -> ContentType | None:
         """Get content type definition by name."""
         self._load_all()
         return self._content_types.get(type_name)
@@ -245,7 +244,7 @@ class FieldService:
         self._load_all()
         return self._content_types.copy()
 
-    def get_relation_type(self, relation_name: str) -> Optional[RelationTypeDefinition]:
+    def get_relation_type(self, relation_name: str) -> RelationTypeDefinition | None:
         """Get relation type definition by name."""
         self._load_all()
         return self._relation_types.get(relation_name)
@@ -625,7 +624,7 @@ class FieldService:
 
     def _apply_validation_rule(
         self, field: FieldDefinition, value: Any, rule: dict, context: dict
-    ) -> Optional[ValidationError]:
+    ) -> ValidationError | None:
         """Apply a custom validation rule."""
         rule_type = rule.get("rule")
         rule_value = rule.get("value")
@@ -665,7 +664,7 @@ class FieldService:
 
         return None
 
-    def _to_number(self, value: Any) -> Optional[float]:
+    def _to_number(self, value: Any) -> float | None:
         """Convert value to number."""
         if isinstance(value, (int, float)):
             return float(value)

@@ -7,15 +7,14 @@ import hashlib
 import hmac
 import json
 import zipfile
-from pathlib import Path
-from datetime import datetime
-from typing import Optional
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 
 try:
-    from cryptography.hazmat.primitives import hashes, serialization
-    from cryptography.hazmat.primitives.asymmetric import padding, rsa
     from cryptography.exceptions import InvalidSignature
+    from cryptography.hazmat.primitives import hashes, serialization
+    from cryptography.hazmat.primitives.asymmetric import padding
     CRYPTO_AVAILABLE = True
 except ImportError:
     CRYPTO_AVAILABLE = False
@@ -41,7 +40,7 @@ class VerificationResult:
     package_name: str
     package_version: str
     verified_at: datetime
-    error: Optional[str] = None
+    error: str | None = None
     warnings: list[str] = None
 
 
@@ -157,7 +156,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                 error=f"Verification error: {str(e)}",
             )
 
-    def _extract_manifest(self, package_path: Path) -> Optional[PackageManifest]:
+    def _extract_manifest(self, package_path: Path) -> PackageManifest | None:
         """Extract manifest from package."""
         try:
             with zipfile.ZipFile(package_path, "r") as zf:

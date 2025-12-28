@@ -3,9 +3,10 @@
 Allows themes to extend parent themes with selective overrides.
 """
 
-from pathlib import Path
-from typing import Optional, Any
 from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Any
+
 import yaml
 
 
@@ -15,7 +16,7 @@ class ThemeConfig:
     name: str
     label: str
     version: str
-    parent: Optional[str] = None
+    parent: str | None = None
     description: str = ""
     author: str = ""
     templates: dict = field(default_factory=dict)
@@ -56,7 +57,7 @@ class ThemeInheritanceService:
         self.themes_dir = Path(themes_dir)
         self._cache: dict[str, ThemeConfig] = {}
 
-    def load_theme_config(self, theme_name: str) -> Optional[ThemeConfig]:
+    def load_theme_config(self, theme_name: str) -> ThemeConfig | None:
         """Load theme configuration from theme.yaml."""
         if theme_name in self._cache:
             return self._cache[theme_name]
@@ -67,7 +68,7 @@ class ThemeInheritanceService:
         if not config_path.exists():
             return None
 
-        with open(config_path, "r", encoding="utf-8") as f:
+        with open(config_path, encoding="utf-8") as f:
             data = yaml.safe_load(f) or {}
 
         config = ThemeConfig(
@@ -169,7 +170,7 @@ class ThemeInheritanceService:
         self,
         theme_name: str,
         template_name: str,
-    ) -> Optional[Path]:
+    ) -> Path | None:
         """
         Get the path to a template, checking child first then parents.
 

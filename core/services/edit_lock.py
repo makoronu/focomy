@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 from datetime import datetime, timedelta
-from typing import Optional
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -38,7 +37,7 @@ class EditLockService:
         entity_id: str,
         user_id: str,
         user_name: str = None,
-    ) -> tuple[bool, Optional[EditLock]]:
+    ) -> tuple[bool, EditLock | None]:
         """
         Try to acquire an edit lock.
 
@@ -141,7 +140,7 @@ class EditLockService:
 
         return False
 
-    async def get_lock(self, entity_id: str) -> Optional[EditLock]:
+    async def get_lock(self, entity_id: str) -> EditLock | None:
         """
         Get current lock for an entity.
 
@@ -178,7 +177,7 @@ class EditLockService:
             expires_at=expires_at,
         )
 
-    async def is_locked_by_other(self, entity_id: str, user_id: str) -> tuple[bool, Optional[EditLock]]:
+    async def is_locked_by_other(self, entity_id: str, user_id: str) -> tuple[bool, EditLock | None]:
         """
         Check if entity is locked by another user.
 

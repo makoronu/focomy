@@ -8,9 +8,7 @@ Provides multi-language support for:
 
 import json
 from pathlib import Path
-from typing import Any, Optional
-from functools import lru_cache
-
+from typing import Any
 
 # Default translations (Japanese as primary)
 DEFAULT_TRANSLATIONS = {
@@ -178,7 +176,7 @@ class I18nService:
     def t(
         self,
         key: str,
-        lang: Optional[str] = None,
+        lang: str | None = None,
         **kwargs,
     ) -> str:
         """
@@ -235,18 +233,18 @@ class I18nService:
         if not path.exists():
             return
 
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             data = json.load(f)
 
         for lang, translations in data.items():
             self.add_translations(lang, translations)
 
-    def get_all_translations(self, lang: Optional[str] = None) -> dict[str, str]:
+    def get_all_translations(self, lang: str | None = None) -> dict[str, str]:
         """Get all translations for a language."""
         lang = lang or self._current_lang
         return self._translations.get(lang, {}).copy()
 
-    def has_translation(self, key: str, lang: Optional[str] = None) -> bool:
+    def has_translation(self, key: str, lang: str | None = None) -> bool:
         """Check if a translation exists."""
         lang = lang or self._current_lang
         return key in self._translations.get(lang, {})
@@ -271,8 +269,9 @@ class ContentTranslation:
         entity_id: str,
     ) -> dict[str, Any]:
         """Get all translations for an entity."""
-        from ..models import Relation
         from sqlalchemy import select
+
+        from ..models import Relation
 
         query = select(Relation).where(
             Relation.from_entity_id == entity_id,
@@ -296,7 +295,7 @@ i18n_service = I18nService()
 
 
 # Convenience function
-def t(key: str, lang: Optional[str] = None, **kwargs) -> str:
+def t(key: str, lang: str | None = None, **kwargs) -> str:
     """Shortcut for translation."""
     return i18n_service.t(key, lang, **kwargs)
 

@@ -1,10 +1,9 @@
 """Authentication models - user auth, sessions, login logs."""
 
-from datetime import datetime
-from typing import Optional
 import uuid
+from datetime import datetime
 
-from sqlalchemy import String, DateTime, Integer, Boolean, ForeignKey, Index
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
@@ -38,11 +37,11 @@ class UserAuth(Base):
         String(255),
         nullable=False,
     )
-    totp_secret: Mapped[Optional[str]] = mapped_column(
+    totp_secret: Mapped[str | None] = mapped_column(
         String(32),
         nullable=True,
     )
-    last_login: Mapped[Optional[datetime]] = mapped_column(
+    last_login: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
     )
@@ -50,21 +49,21 @@ class UserAuth(Base):
         Integer,
         default=0,
     )
-    locked_until: Mapped[Optional[datetime]] = mapped_column(
+    locked_until: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
     )
     # Password reset
-    reset_token: Mapped[Optional[str]] = mapped_column(
+    reset_token: Mapped[str | None] = mapped_column(
         String(64),
         nullable=True,
     )
-    reset_token_expires: Mapped[Optional[datetime]] = mapped_column(
+    reset_token_expires: Mapped[datetime | None] = mapped_column(
         DateTime,
         nullable=True,
     )
     # TOTP backup codes (comma-separated hashed codes)
-    totp_backup_codes: Mapped[Optional[str]] = mapped_column(
+    totp_backup_codes: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
     )
@@ -126,7 +125,7 @@ class LoginLog(Base):
         primary_key=True,
         autoincrement=True,
     )
-    user_id: Mapped[Optional[str]] = mapped_column(
+    user_id: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
     )
@@ -134,11 +133,11 @@ class LoginLog(Base):
         String(255),
         nullable=False,
     )
-    ip_address: Mapped[Optional[str]] = mapped_column(
+    ip_address: Mapped[str | None] = mapped_column(
         String(45),
         nullable=True,
     )
-    user_agent: Mapped[Optional[str]] = mapped_column(
+    user_agent: Mapped[str | None] = mapped_column(
         String(500),
         nullable=True,
     )

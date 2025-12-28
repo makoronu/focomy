@@ -1,7 +1,9 @@
 """Alembic migration environment configuration."""
 
 import asyncio
+import sys
 from logging.config import fileConfig
+from pathlib import Path
 
 from sqlalchemy import pool
 from sqlalchemy.engine import Connection
@@ -9,18 +11,22 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
 
-# Import Focomy models and config
-import sys
-from pathlib import Path
-
 # Add parent directory to path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from core.database import Base
-from core.config import settings
+from core.config import settings  # noqa: E402
+from core.database import Base  # noqa: E402
 
 # Import all models to ensure they're registered with Base.metadata
-from core.models import Entity, EntityValue, Relation, Media, UserAuth, Session, Revision
+from core.models import (  # noqa: E402, F401
+    Entity,
+    EntityValue,
+    Media,
+    Relation,
+    Revision,
+    Session,
+    UserAuth,
+)
 
 # this is the Alembic Config object
 config = context.config

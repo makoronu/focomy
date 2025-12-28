@@ -1,16 +1,15 @@
 """ThemeService - theme management and rendering."""
 
-from pathlib import Path
-from typing import Any, Optional
 import json
 import re
+from typing import Any
 
 import yaml
 from jinja2 import Environment, FileSystemLoader, select_autoescape
-from markupsafe import escape, Markup
+from markupsafe import escape
 
 from ..config import settings
-from .assets import get_asset_url, get_upload_url, get_static_url
+from .assets import get_asset_url, get_static_url, get_upload_url
 
 
 class ThemeConfig:
@@ -59,7 +58,7 @@ class ThemeService:
         self.themes_dir.mkdir(exist_ok=True)
         self._themes: dict[str, ThemeConfig] = {}
         self._current_theme: str = "default"
-        self._env: Optional[Environment] = None
+        self._env: Environment | None = None
 
     def _load_themes(self):
         """Load all theme configurations."""
@@ -71,7 +70,7 @@ class ThemeService:
                 config_path = theme_dir / "theme.yaml"
                 if config_path.exists():
                     try:
-                        with open(config_path, "r", encoding="utf-8") as f:
+                        with open(config_path, encoding="utf-8") as f:
                             data = yaml.safe_load(f)
                             if data:
                                 theme = ThemeConfig(data)
@@ -221,7 +220,7 @@ class ThemeService:
 
         self._themes["default"] = ThemeConfig(config)
 
-    def get_theme(self, name: str = None) -> Optional[ThemeConfig]:
+    def get_theme(self, name: str = None) -> ThemeConfig | None:
         """Get theme configuration."""
         self._load_themes()
         name = name or self._current_theme

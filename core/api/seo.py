@@ -8,7 +8,6 @@ from ..database import get_db
 from ..services.entity import EntityService
 from ..services.seo import SEOService
 
-
 router = APIRouter(tags=["seo"])
 
 

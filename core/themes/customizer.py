@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Any, Callable, Optional
+from typing import Any
 
 logger = logging.getLogger(__name__)
 
@@ -40,9 +40,9 @@ class CustomizerSetting:
 
     # Type-specific options
     choices: list[dict] = field(default_factory=list)  # For select/radio
-    min: Optional[float] = None  # For number/range
-    max: Optional[float] = None
-    step: Optional[float] = None
+    min: float | None = None  # For number/range
+    max: float | None = None
+    step: float | None = None
     unit: str = ""  # px, em, rem, %
     placeholder: str = ""
 
@@ -51,7 +51,7 @@ class CustomizerSetting:
     pattern: str = ""
 
     # Dependencies
-    depends_on: Optional[dict] = None  # {"setting_id": "value"}
+    depends_on: dict | None = None  # {"setting_id": "value"}
 
     # Output
     css_property: str = ""  # CSS property to generate
@@ -288,7 +288,7 @@ class ThemeCustomizer:
         self._history: list[dict] = []
         self._history_index = -1
 
-    def get_panels(self, theme_id: Optional[str] = None) -> list[CustomizerPanel]:
+    def get_panels(self, theme_id: str | None = None) -> list[CustomizerPanel]:
         """
         Get all customizer panels for a theme.
 
@@ -322,7 +322,7 @@ class ThemeCustomizer:
         panels.append(main_panel)
         return panels
 
-    def get_values(self, theme_id: Optional[str] = None) -> dict[str, Any]:
+    def get_values(self, theme_id: str | None = None) -> dict[str, Any]:
         """
         Get current customization values.
 
@@ -363,7 +363,7 @@ class ThemeCustomizer:
     def save(
         self,
         values: dict[str, Any],
-        theme_id: Optional[str] = None,
+        theme_id: str | None = None,
     ) -> tuple[bool, str]:
         """
         Save customization values.
@@ -395,7 +395,7 @@ class ThemeCustomizer:
 
     def generate_css(
         self,
-        theme_id: Optional[str] = None,
+        theme_id: str | None = None,
         include_preview: bool = False,
     ) -> str:
         """
@@ -462,7 +462,7 @@ class ThemeCustomizer:
 
     def generate_font_imports(
         self,
-        theme_id: Optional[str] = None,
+        theme_id: str | None = None,
     ) -> str:
         """
         Generate Google Fonts import CSS.
@@ -497,7 +497,7 @@ class ThemeCustomizer:
             for font in self.GOOGLE_FONTS
         ]
 
-    def undo(self, theme_id: Optional[str] = None) -> bool:
+    def undo(self, theme_id: str | None = None) -> bool:
         """Undo last change."""
         if self._history_index <= 0:
             return False
@@ -507,7 +507,7 @@ class ThemeCustomizer:
         self.theme_manager.set_customizations(values, theme_id)
         return True
 
-    def redo(self, theme_id: Optional[str] = None) -> bool:
+    def redo(self, theme_id: str | None = None) -> bool:
         """Redo last undone change."""
         if self._history_index >= len(self._history) - 1:
             return False
@@ -525,7 +525,7 @@ class ThemeCustomizer:
         """Check if redo is available."""
         return self._history_index < len(self._history) - 1
 
-    def export_customizations(self, theme_id: Optional[str] = None) -> str:
+    def export_customizations(self, theme_id: str | None = None) -> str:
         """
         Export customizations as JSON.
 
@@ -545,7 +545,7 @@ class ThemeCustomizer:
     def import_customizations(
         self,
         data: str,
-        theme_id: Optional[str] = None,
+        theme_id: str | None = None,
     ) -> tuple[bool, str]:
         """
         Import customizations from JSON.
@@ -568,7 +568,7 @@ class ThemeCustomizer:
         except Exception as e:
             return False, f"Import failed: {e}"
 
-    def reset_to_defaults(self, theme_id: Optional[str] = None) -> tuple[bool, str]:
+    def reset_to_defaults(self, theme_id: str | None = None) -> tuple[bool, str]:
         """
         Reset all customizations to defaults.
 
@@ -588,7 +588,7 @@ class ThemeCustomizer:
 
         return self.save(defaults, theme_id)
 
-    def _parse_section(self, data: dict) -> Optional[CustomizerSection]:
+    def _parse_section(self, data: dict) -> CustomizerSection | None:
         """Parse a customizer section from dict."""
         if not data.get("id"):
             return None
@@ -608,7 +608,7 @@ class ThemeCustomizer:
             settings=settings,
         )
 
-    def _parse_setting(self, data: dict) -> Optional[CustomizerSetting]:
+    def _parse_setting(self, data: dict) -> CustomizerSetting | None:
         """Parse a customizer setting from dict."""
         if not data.get("id"):
             return None

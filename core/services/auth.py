@@ -1,19 +1,16 @@
 """AuthService - authentication and session management."""
 
-from datetime import datetime, timedelta
-from typing import Optional
 import secrets
-import base64
+from datetime import datetime, timedelta
 
 import bcrypt
 import pyotp
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
-from ..models import Entity, UserAuth, Session, LoginLog
+from ..models import Entity, LoginLog, Session, UserAuth
 from .entity import EntityService
-
 
 # TOTP configuration
 TOTP_ISSUER = "Focomy"
@@ -35,7 +32,7 @@ class AuthService:
     async def register(
         self,
         email: str,
-        password: Optional[str],
+        password: str | None,
         name: str,
         role: str = "author",
     ) -> Entity:
@@ -160,7 +157,7 @@ class AuthService:
         await self.db.commit()
         return True
 
-    async def get_current_user(self, session_token: str) -> Optional[Entity]:
+    async def get_current_user(self, session_token: str) -> Entity | None:
         """Get current user from session token."""
         if not session_token:
             return None
@@ -205,13 +202,13 @@ class AuthService:
         await self.db.commit()
         return True
 
-    async def _get_user_auth_by_email(self, email: str) -> Optional[UserAuth]:
+    async def _get_user_auth_by_email(self, email: str) -> UserAuth | None:
         """Get user auth by email."""
         query = select(UserAuth).where(UserAuth.email == email)
         result = await self.db.execute(query)
         return result.scalar_one_or_none()
 
-    async def _get_user_auth(self, user_id: str) -> Optional[UserAuth]:
+    async def _get_user_auth(self, user_id: str) -> UserAuth | None:
         """Get user auth by user ID."""
         query = select(UserAuth).where(UserAuth.entity_id == user_id)
         result = await self.db.execute(query)
@@ -226,7 +223,7 @@ class AuthService:
         """Verify password against hash."""
         return bcrypt.checkpw(password.encode(), password_hash.encode())
 
-    async def request_password_reset(self, email: str) -> Optional[str]:
+    async def request_password_reset(self, email: str) -> str | None:
         """
         Request a password reset.
 

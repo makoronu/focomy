@@ -77,7 +77,7 @@ def cmd_validate(args):
 def cmd_build(args):
     """Build static site."""
     async def run():
-        from core.database import get_db, init_db
+        from core.database import init_db
         from core.services.entity import EntityService
         from core.services.seo import SEOService
         from core.services.theme import theme_service

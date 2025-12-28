@@ -7,12 +7,11 @@ Integrates:
 - Content analysis
 """
 
-import re
 import hashlib
-from datetime import datetime, timedelta
-from typing import Optional
-from dataclasses import dataclass
+import re
 from collections import defaultdict
+from dataclasses import dataclass
+from datetime import datetime, timedelta
 
 import httpx
 
@@ -32,10 +31,10 @@ class CommentData:
     content: str
     author_name: str
     author_email: str
-    author_url: Optional[str]
+    author_url: str | None
     author_ip: str
     user_agent: str
-    referrer: Optional[str]
+    referrer: str | None
     post_id: str
     post_url: str
 
@@ -133,7 +132,7 @@ class SpamFilterService:
         self,
         ip_address: str,
         max_per_minute: int = 5,
-    ) -> tuple[float, Optional[str]]:
+    ) -> tuple[float, str | None]:
         """Check for rate limit violations."""
         now = datetime.utcnow()
         minute_ago = now - timedelta(minutes=1)
@@ -213,7 +212,7 @@ class SpamFilterService:
 
         return score, reasons
 
-    def _check_urls(self, comment: CommentData) -> tuple[float, Optional[str]]:
+    def _check_urls(self, comment: CommentData) -> tuple[float, str | None]:
         """Check URLs for spam indicators."""
         if not comment.author_url:
             return 0.0, None

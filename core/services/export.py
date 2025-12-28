@@ -3,20 +3,19 @@
 Exports content in various formats for migration to other systems.
 """
 
-import json
 import csv
 import io
+import json
 import zipfile
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
-from typing import Any, Optional, Literal
-from dataclasses import dataclass, asdict
+from typing import Any, Literal
 
-from sqlalchemy import select, and_
+from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, EntityValue, Relation
-
 
 ExportFormat = Literal["json", "csv", "wordpress", "markdown"]
 
@@ -29,8 +28,8 @@ class ExportOptions:
     include_media: bool = True
     include_relations: bool = True
     include_metadata: bool = True
-    date_from: Optional[datetime] = None
-    date_to: Optional[datetime] = None
+    date_from: datetime | None = None
+    date_to: datetime | None = None
 
 
 @dataclass

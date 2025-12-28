@@ -1,14 +1,12 @@
 """Revision model - version history for entities."""
 
-from datetime import datetime
-from typing import Optional
 import uuid
+from datetime import datetime
 
-from sqlalchemy import String, DateTime, Index, ForeignKey, JSON
+from sqlalchemy import JSON, DateTime, ForeignKey, Index, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..database import Base
-
 
 # リビジョンタイプ定数（ENUMではなく文字列定数で管理）
 REVISION_TYPE_AUTOSAVE = "autosave"
@@ -54,7 +52,7 @@ class Revision(Base):
         JSON,
         nullable=False,
     )
-    title: Mapped[Optional[str]] = mapped_column(
+    title: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,
     )
@@ -63,7 +61,7 @@ class Revision(Base):
         nullable=False,
         default=datetime.utcnow,
     )
-    created_by: Mapped[Optional[str]] = mapped_column(
+    created_by: Mapped[str | None] = mapped_column(
         String(36),
         nullable=True,
     )
