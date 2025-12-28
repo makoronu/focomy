@@ -47,9 +47,11 @@ def generate_breadcrumbs(items: list[dict], site_url: str) -> dict:
                 "@type": "ListItem",
                 "position": i + 1,
                 "name": item["name"],
-                "item": f"{site_url}{item['url']}"
-                if not item["url"].startswith("http")
-                else item["url"],
+                "item": (
+                    f"{site_url}{item['url']}"
+                    if not item["url"].startswith("http")
+                    else item["url"]
+                ),
             }
             for i, item in enumerate(breadcrumb_items)
         ],

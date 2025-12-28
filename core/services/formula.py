@@ -48,9 +48,9 @@ class FormulaEngine:
         "trim": lambda s: str(s).strip() if s else "",
         "left": lambda s, n: str(s)[:n] if s else "",
         "right": lambda s, n: str(s)[-n:] if s else "",
-        "substr": lambda s, start, length=None: str(s)[start : start + length]
-        if length
-        else str(s)[start:],
+        "substr": lambda s, start, length=None: (
+            str(s)[start : start + length] if length else str(s)[start:]
+        ),
         "replace": lambda s, old, new: str(s).replace(old, new) if s else "",
         # Date functions
         "now": datetime.utcnow,
@@ -60,9 +60,11 @@ class FormulaEngine:
         "day": lambda d: d.day if isinstance(d, (date, datetime)) else None,
         "hour": lambda d: d.hour if isinstance(d, datetime) else None,
         "minute": lambda d: d.minute if isinstance(d, datetime) else None,
-        "date_diff": lambda d1, d2: (d2 - d1).days
-        if isinstance(d1, (date, datetime)) and isinstance(d2, (date, datetime))
-        else None,
+        "date_diff": lambda d1, d2: (
+            (d2 - d1).days
+            if isinstance(d1, (date, datetime)) and isinstance(d2, (date, datetime))
+            else None
+        ),
         # Type conversion
         "int": lambda x: int(float(x)) if x else 0,
         "float": lambda x: float(x) if x else 0.0,

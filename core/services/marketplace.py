@@ -1,6 +1,5 @@
 """Plugin Marketplace Service."""
 
-
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -118,13 +117,19 @@ class MarketplaceService:
             if price is None or price < 0:
                 return False, "価格を入力してください"
             if price > MAX_ONE_TIME_PRICE:
-                return False, f"価格は${MAX_ONE_TIME_PRICE / 100:.2f}以下にしてください（ぼったくり防止）"
+                return (
+                    False,
+                    f"価格は${MAX_ONE_TIME_PRICE / 100:.2f}以下にしてください（ぼったくり防止）",
+                )
 
         if pricing_type == "subscription":
             if subscription_price is None or subscription_price < 0:
                 return False, "月額を入力してください"
             if subscription_price > MAX_SUBSCRIPTION_PRICE:
-                return False, f"月額は${MAX_SUBSCRIPTION_PRICE / 100:.2f}以下にしてください（ぼったくり防止）"
+                return (
+                    False,
+                    f"月額は${MAX_SUBSCRIPTION_PRICE / 100:.2f}以下にしてください（ぼったくり防止）",
+                )
 
         return True, None
 

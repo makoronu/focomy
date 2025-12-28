@@ -3,7 +3,6 @@
 Tests content type loading and validation.
 """
 
-
 import pytest
 
 from core.services.field import ContentType, FieldDefinition, FieldService, ValidationResult

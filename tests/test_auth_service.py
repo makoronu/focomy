@@ -3,7 +3,6 @@
 Tests user registration, login, password reset, and TOTP.
 """
 
-
 import pytest
 
 from core.services.auth import AuthService

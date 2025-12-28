@@ -183,9 +183,11 @@ class ThemeManager:
                 customizer_sections=data.get("customizer", []),
                 templates=data.get("templates", {}),
                 path=path,
-                state=ThemeState.ACTIVE
-                if data["id"] == self._active_theme_id
-                else ThemeState.INACTIVE,
+                state=(
+                    ThemeState.ACTIVE
+                    if data["id"] == self._active_theme_id
+                    else ThemeState.INACTIVE
+                ),
             )
 
             return meta

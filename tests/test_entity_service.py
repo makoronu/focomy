@@ -3,7 +3,6 @@
 Tests entity CRUD operations, soft delete, and unique constraints.
 """
 
-
 import pytest
 
 from core.services.entity import EntityService, QueryParams

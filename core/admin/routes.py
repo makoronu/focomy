@@ -1,6 +1,5 @@
 """Admin routes - HTMX-powered admin interface."""
 
-
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -793,7 +792,12 @@ async def settings_page(
             {"key": "timezone", "label": "タイムゾーン", "type": "text"},
         ],
         "seo": [
-            {"key": "title_separator", "label": "タイトル区切り", "type": "text", "placeholder": " | "},
+            {
+                "key": "title_separator",
+                "label": "タイトル区切り",
+                "type": "text",
+                "placeholder": " | ",
+            },
             {"key": "default_description", "label": "デフォルト説明文", "type": "textarea"},
             {"key": "default_og_image", "label": "デフォルトOG画像URL", "type": "url"},
             {"key": "og_site_name", "label": "OGサイト名", "type": "text"},
@@ -1588,9 +1592,11 @@ async def comment_moderate(
     }.get(action, "更新しました")
 
     return RedirectResponse(
-        url=f"/admin/comments?message=コメントを{action_msg}"
-        if success
-        else "/admin/comments?message=操作に失敗しました",
+        url=(
+            f"/admin/comments?message=コメントを{action_msg}"
+            if success
+            else "/admin/comments?message=操作に失敗しました"
+        ),
         status_code=303,
     )
 

@@ -423,9 +423,11 @@ class WXRParser:
             object_type=postmeta.get("_menu_item_object", ""),
             object_id=int(postmeta.get("_menu_item_object_id", 0)),
             target=postmeta.get("_menu_item_target", ""),
-            classes=postmeta.get("_menu_item_classes", "").split()
-            if postmeta.get("_menu_item_classes")
-            else [],
+            classes=(
+                postmeta.get("_menu_item_classes", "").split()
+                if postmeta.get("_menu_item_classes")
+                else []
+            ),
         )
 
     def _get_menu_name(self, item: ET.Element, terms: list[WXRTerm]) -> str:
