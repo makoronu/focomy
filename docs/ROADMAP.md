@@ -8,22 +8,7 @@
 
 ## 進行中
 
-### 090 PyPIパッケージにテンプレート含める
-
-#### 概要
-PyPIパッケージに`core/templates/`が含まれていないため、500エラーが発生する
-
-#### 報告
-- https://github.com/makoronu/focomy/issues/1#issuecomment-3695116786
-
-#### エラー
-```
-jinja2.exceptions.TemplateNotFound: 'admin/login.html' not found in search path: 'core/templates'
-```
-
-#### 対応
-- pyproject.tomlのビルド設定にtemplatesを追加
-- バージョンを0.1.2に更新
+(なし)
 
 ---
 
@@ -305,3 +290,4 @@ YAML定義の indexed: true からDBインデックスを生成
 | 087 | created_by/updated_by FK制約 | 2025-12-28 |
 | 088 | 設計書更新 | 2025-12-28 |
 | 089 | pip installable対応 | 2025-12-28 |
+| 090 | テンプレートパス解決修正 | 2025-12-29 |
