@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Optional
 
 # Version
-__version__ = "0.1.0"
+__version__ = "0.1.1"
 
 GITHUB_REPO = "focomy/focomy"
 PYPI_PACKAGE = "focomy"

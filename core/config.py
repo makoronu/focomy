@@ -127,8 +127,8 @@ class MenusConfig(BaseModel):
 
 
 class Settings(BaseSettings):
-    # Paths
-    base_dir: Path = Path(__file__).parent.parent
+    # Paths - カレントディレクトリを基準にする（PyPIパッケージとして動作するため）
+    base_dir: Path = Path.cwd()
     database_url: str = "postgresql+asyncpg://focomy:focomy@localhost:5432/focomy"
     debug: bool = False
 
@@ -159,7 +159,8 @@ def load_yaml_config(path: Path) -> dict[str, Any]:
 @lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
-    base_dir = Path(__file__).parent.parent
+    # カレントディレクトリを基準にする（PyPIパッケージとして動作するため）
+    base_dir = Path.cwd()
     config_path = base_dir / "config.yaml"
 
     yaml_config = load_yaml_config(config_path)

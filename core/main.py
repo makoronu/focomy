@@ -352,10 +352,12 @@ if settings.cors.enabled:
         max_age=settings.cors.max_age,
     )
 
-# Static files
+# Static files - ディレクトリが存在する場合のみマウント
+uploads_dir = settings.base_dir / "uploads"
+uploads_dir.mkdir(exist_ok=True)
 app.mount(
     "/uploads",
-    StaticFiles(directory=str(settings.base_dir / "uploads")),
+    StaticFiles(directory=str(uploads_dir)),
     name="uploads",
 )
 
