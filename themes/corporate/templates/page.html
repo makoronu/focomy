@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page.title }} - {{ site_name }}{% endblock %}
+
+{% block meta %}
+{{ seo_meta | safe }}
+{% endblock %}
+
+{% block hero %}
+<section class="page-hero">
+    <div class="container">
+        <h1>{{ page.title }}</h1>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<div class="page-content">
+    {{ page.body | render_blocks | safe }}
+</div>
+{% endblock %}
+
+{% block styles %}
+<style>
+    .page-hero {
+        background: linear-gradient(135deg, var(--color-primary) 0%, #004d99 100%);
+        color: white;
+        padding: 3rem 0;
+        text-align: center;
+    }
+
+    .page-hero h1 {
+        font-size: 2.5rem;
+        font-weight: 700;
+    }
+
+    .page-content {
+        max-width: 800px;
+        margin: 0 auto;
+        font-size: 1.0625rem;
+        line-height: 1.9;
+    }
+
+    .page-content h2 {
+        font-size: 1.75rem;
+        margin-top: 3rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--color-primary);
+    }
+
+    .page-content h3 {
+        font-size: 1.375rem;
+        margin-top: 2rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .page-content p {
+        margin-bottom: 1.5rem;
+    }
+
+    .page-content ul,
+    .page-content ol {
+        margin-bottom: 1.5rem;
+        padding-left: 1.5rem;
+    }
+
+    .page-content li {
+        margin-bottom: 0.5rem;
+    }
+
+    .page-content table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 2rem 0;
+    }
+
+    .page-content th,
+    .page-content td {
+        padding: 1rem;
+        border: 1px solid var(--color-border);
+        text-align: left;
+    }
+
+    .page-content th {
+        background: var(--color-surface);
+        font-weight: 700;
+    }
+
+    @media (max-width: 768px) {
+        .page-hero h1 {
+            font-size: 1.75rem;
+        }
+    }
+</style>
+{% endblock %}

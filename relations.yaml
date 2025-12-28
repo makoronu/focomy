@@ -54,6 +54,7 @@ comment_post:
   type: many_to_one
   required: true
   label: 投稿
+  cascade_delete: true  # Comments are deleted when post is deleted
 
 comment_parent:
   from: comment
@@ -61,3 +62,34 @@ comment_parent:
   type: many_to_one
   label: 返信先
   self_referential: true
+  cascade_delete: true  # Child comments deleted when parent comment is deleted
+
+# Plugin marketplace relations
+plugin_developer:
+  from: plugin
+  to: plugin_developer
+  type: many_to_one
+  required: true
+  label: 開発者
+
+plugin_review_plugin:
+  from: plugin_review
+  to: plugin
+  type: many_to_one
+  required: true
+  label: プラグイン
+  cascade_delete: true  # Reviews deleted when plugin is deleted
+
+plugin_review_user:
+  from: plugin_review
+  to: user
+  type: many_to_one
+  required: true
+  label: レビュアー
+
+plugin_developer_user:
+  from: plugin_developer
+  to: user
+  type: many_to_one
+  required: true
+  label: ユーザーアカウント

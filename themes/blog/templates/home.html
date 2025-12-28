@@ -1,0 +1,64 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="posts-list">
+    {% for post in posts %}
+    <article class="post-card">
+        {% if post.thumbnail %}
+        <div class="post-card-thumbnail">
+            <a href="/{{ post.type }}/{{ post.slug }}">
+                <img src="{{ post.thumbnail | upload_url }}" alt="{{ post.title }}" loading="lazy">
+            </a>
+        </div>
+        {% endif %}
+        <div class="post-card-content">
+            {% if post.category_name %}
+            <div class="post-card-category">{{ post.category_name }}</div>
+            {% endif %}
+            <h2><a href="/{{ post.type }}/{{ post.slug }}">{{ post.title }}</a></h2>
+            <p class="post-card-excerpt">{{ post.excerpt or (post.body | excerpt) }}</p>
+            <div class="post-card-meta">
+                <time datetime="{{ post.created_at }}">{{ post.created_at[:10] }}</time>
+                {% if post.author_name %}
+                <span> / {{ post.author_name }}</span>
+                {% endif %}
+            </div>
+        </div>
+    </article>
+    {% else %}
+    <div class="empty-state">
+        <p>まだ投稿がありません。</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% if pagination %}
+<nav class="pagination">
+    {% if pagination.has_prev %}
+    <a href="?page={{ pagination.page - 1 }}">前へ</a>
+    {% endif %}
+
+    {% for p in range(1, pagination.pages + 1) %}
+        {% if p == pagination.page %}
+        <span class="current">{{ p }}</span>
+        {% else %}
+        <a href="?page={{ p }}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if pagination.has_next %}
+    <a href="?page={{ pagination.page + 1 }}">次へ</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+<style>
+    .empty-state {
+        text-align: center;
+        padding: 4rem 0;
+        color: var(--color-text-muted);
+    }
+</style>
+{% endblock %}

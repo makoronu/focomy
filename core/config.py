@@ -80,6 +80,27 @@ class SecurityConfig(BaseModel):
     headers: SecurityHeadersConfig = SecurityHeadersConfig()
 
 
+class CORSConfig(BaseModel):
+    """CORS configuration."""
+    enabled: bool = True
+    allow_origins: list[str] = ["*"]  # Use ["https://example.com"] in production
+    allow_methods: list[str] = ["*"]
+    allow_headers: list[str] = ["*"]
+    allow_credentials: bool = True
+    max_age: int = 600  # Preflight cache in seconds
+
+
+class RateLimitConfig(BaseModel):
+    """API rate limiting configuration."""
+    enabled: bool = True
+    default_limit: str = "100/minute"  # Default rate limit
+    login_limit: str = "5/minute"  # Stricter for login
+    api_limit: str = "60/minute"  # For API endpoints
+    admin_limit: str = "200/minute"  # More generous for admin
+    storage_backend: str = "memory"  # "memory" or "redis"
+    redis_url: str = ""
+
+
 class OAuthConfig(BaseModel):
     google_client_id: str = ""
     google_client_secret: str = ""
@@ -116,6 +137,8 @@ class Settings(BaseSettings):
     admin: AdminConfig = AdminConfig()
     media: MediaConfig = MediaConfig()
     security: SecurityConfig = SecurityConfig()
+    cors: CORSConfig = CORSConfig()
+    rate_limit: RateLimitConfig = RateLimitConfig()
     seo: SEOConfig = SEOConfig()
     oauth: OAuthConfig = OAuthConfig()
     menus: MenusConfig = MenusConfig()

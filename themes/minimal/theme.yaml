@@ -1,0 +1,73 @@
+name: minimal
+label: Minimal
+description: 余白を活かしたミニマルデザイン。ポートフォリオや個人サイトに最適。
+version: 1.0.0
+author: Focomy Team
+preview: preview.png
+
+# CSS変数
+colors:
+  primary: "#000000"
+  primary-hover: "#333333"
+  background: "#ffffff"
+  surface: "#fafafa"
+  text: "#111111"
+  text-muted: "#666666"
+  border: "#eeeeee"
+  success: "#22c55e"
+  error: "#ef4444"
+  warning: "#f59e0b"
+
+fonts:
+  sans: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif"
+  serif: "'Merriweather', Georgia, serif"
+  mono: "'JetBrains Mono', ui-monospace, monospace"
+
+spacing:
+  xs: "0.5rem"
+  sm: "1rem"
+  md: "1.5rem"
+  lg: "2rem"
+  xl: "3rem"
+  2xl: "4rem"
+
+# カスタマイズ
+config:
+  colors:
+    primary:
+      type: color
+      default: "#000000"
+      label: メインカラー
+    background:
+      type: color
+      default: "#ffffff"
+      label: 背景色
+
+  typography:
+    font_family:
+      type: select
+      options:
+        - { label: Inter, value: "'Inter', sans-serif" }
+        - { label: システムフォント, value: "-apple-system, BlinkMacSystemFont, sans-serif" }
+      default: "'Inter', sans-serif"
+      label: フォント
+
+  layout:
+    content_width:
+      type: number
+      default: 680
+      min: 520
+      max: 800
+      label: コンテンツ幅(px)
+    centered_header:
+      type: boolean
+      default: true
+      label: ヘッダー中央配置
+
+# ウィジェットエリア（最小限）
+widget_areas:
+  - { id: footer, label: フッター }
+
+# メニュー位置
+menu_locations:
+  - { id: header, label: ヘッダーメニュー }

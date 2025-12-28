@@ -1,5 +1,6 @@
 """FieldService - content type definitions and validation."""
 
+import re
 from pathlib import Path
 from functools import lru_cache
 from typing import Any, Optional
@@ -8,6 +9,33 @@ import yaml
 from pydantic import BaseModel, Field
 
 from ..config import settings
+
+
+# Email regex pattern (RFC 5322 simplified)
+EMAIL_PATTERN = re.compile(
+    r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+)
+
+# URL regex pattern
+URL_PATTERN = re.compile(
+    r'^https?://[^\s/$.?#].[^\s]*$',
+    re.IGNORECASE
+)
+
+# Phone number pattern (international format)
+PHONE_PATTERN = re.compile(
+    r'^[\+]?[(]?[0-9]{1,4}[)]?[-\s\./0-9]*$'
+)
+
+# Slug pattern
+SLUG_PATTERN = re.compile(
+    r'^[a-z0-9]+(?:-[a-z0-9]+)*$'
+)
+
+# Color pattern (#RGB, #RRGGBB, #RRGGBBAA)
+COLOR_PATTERN = re.compile(
+    r'^#([A-Fa-f0-9]{3}|[A-Fa-f0-9]{6}|[A-Fa-f0-9]{8})$'
+)
 
 
 class FieldDefinition(BaseModel):
@@ -19,6 +47,7 @@ class FieldDefinition(BaseModel):
     unique: bool = False
     indexed: bool = False
     max_length: Optional[int] = None
+    min_length: Optional[int] = None
     default: Any = None
     options: list[dict[str, str]] = Field(default_factory=list)
     auto_generate: Optional[str] = None
@@ -26,6 +55,54 @@ class FieldDefinition(BaseModel):
     multiple: bool = False
     auth_field: bool = False
     suffix: Optional[str] = None
+    # Extended properties for Content Builder
+    description: Optional[str] = None
+    hint: Optional[str] = None
+    placeholder: Optional[str] = None
+    help: Optional[str] = None
+    pattern: Optional[str] = None  # Regex pattern validation
+    min: Optional[float] = None  # Min value for numbers
+    max: Optional[float] = None  # Max value for numbers
+    step: Optional[float] = None  # Step for number input
+    decimal_places: Optional[int] = None  # For decimal/money fields
+    max_items: Optional[int] = None  # For arrays/galleries
+    min_items: Optional[int] = None  # For arrays/galleries
+    # Admin UI options
+    admin_hidden: bool = False
+    admin_only: bool = False
+    admin_readonly: bool = False
+    show_in_list: bool = False  # Show in admin list view
+    searchable: bool = False  # Include in search
+    # Conditional logic
+    conditions: Optional[dict] = None  # {show: [...], required: [...]}
+    # Permissions
+    permissions: Optional[dict] = None  # {read: [...], write: [...]}
+    # Calculated/lookup fields
+    formula: Optional[str] = None  # For calculated fields
+    formula_timing: str = "save"  # When to calculate: "save" or "display"
+    source: Optional[str] = None  # For lookup fields (relation name)
+    source_field: Optional[str] = None  # Field to lookup from related entity
+    format: Optional[str] = None  # Display format (currency, percent, etc.)
+    # Repeater/flexible content
+    fields: list["FieldDefinition"] = Field(default_factory=list)  # Sub-fields
+    layouts: list[dict] = Field(default_factory=list)  # For flexible content
+    # Validation rules
+    validation: list[dict] = Field(default_factory=list)  # Custom validation rules
+    # Status field transitions (for select fields with status-like behavior)
+    # Format: {"draft": ["published"], "published": ["draft", "archived"]}
+    transitions: Optional[dict[str, list[str]]] = None
+
+    def is_transition_allowed(self, from_value: str, to_value: str) -> bool:
+        """Check if a status transition is allowed.
+
+        If transitions is not defined, all transitions are allowed.
+        """
+        if self.transitions is None:
+            return True
+        if from_value == to_value:
+            return True
+        allowed = self.transitions.get(from_value, [])
+        return to_value in allowed
 
 
 class RelationDefinition(BaseModel):
@@ -66,6 +143,7 @@ class RelationTypeDefinition(BaseModel):
     label: str = ""
     required: bool = False
     self_referential: bool = False
+    cascade_delete: bool = False  # If true, soft-delete from_entity when to_entity is deleted
 
 
 class ValidationError(BaseModel):
@@ -177,8 +255,34 @@ class FieldService:
         self._load_all()
         return self._relation_types.copy()
 
-    def validate(self, type_name: str, data: dict[str, Any]) -> ValidationResult:
-        """Validate data against content type definition."""
+    def get_cascade_relations_for_type(self, to_type: str) -> list[tuple[str, RelationTypeDefinition]]:
+        """Get relations that cascade delete when the target type is deleted.
+
+        Args:
+            to_type: The entity type being deleted
+
+        Returns:
+            List of (relation_name, relation_def) tuples for relations
+            that have cascade_delete=True and point TO this type
+        """
+        self._load_all()
+        result = []
+        for name, rel_def in self._relation_types.items():
+            if rel_def.to_type == to_type and rel_def.cascade_delete:
+                result.append((name, rel_def))
+        return result
+
+    def validate(self, type_name: str, data: dict[str, Any], context: dict = None) -> ValidationResult:
+        """Validate data against content type definition.
+
+        Args:
+            type_name: Content type name
+            data: Data to validate
+            context: Optional context for conditional validation
+
+        Returns:
+            ValidationResult with valid flag and errors list
+        """
         self._load_all()
 
         ct = self._content_types.get(type_name)
@@ -189,74 +293,452 @@ class FieldService:
             )
 
         errors = []
+        context = context or data
 
         for field in ct.fields:
-            value = data.get(field.name)
+            field_errors = self._validate_field(field, data.get(field.name), context)
+            errors.extend(field_errors)
 
-            # Required check
-            if field.required and (value is None or value == ""):
+        return ValidationResult(valid=len(errors) == 0, errors=errors)
+
+    def _validate_field(self, field: FieldDefinition, value: Any, context: dict) -> list[ValidationError]:
+        """Validate a single field value."""
+        errors = []
+        label = field.label or field.name
+
+        # Check conditional required
+        is_required = field.required
+        if field.conditions and "required" in field.conditions:
+            is_required = self._evaluate_conditions(field.conditions["required"], context)
+
+        # Check conditional show (if not shown, skip validation)
+        if field.conditions and "show" in field.conditions:
+            if not self._evaluate_conditions(field.conditions["show"], context):
+                return []  # Field is hidden, skip validation
+
+        # Required check
+        if is_required and (value is None or value == "" or value == []):
+            errors.append(ValidationError(
+                field=field.name,
+                message=f"{label} is required"
+            ))
+            return errors
+
+        if value is None or value == "":
+            return errors
+
+        # String length validation
+        if isinstance(value, str):
+            if field.min_length and len(value) < field.min_length:
                 errors.append(ValidationError(
                     field=field.name,
-                    message=f"{field.label or field.name} is required"
+                    message=f"{label} must be at least {field.min_length} characters"
+                ))
+            if field.max_length and len(value) > field.max_length:
+                errors.append(ValidationError(
+                    field=field.name,
+                    message=f"{label} must be {field.max_length} characters or less"
+                ))
+
+        # Pattern validation
+        if field.pattern and isinstance(value, str):
+            try:
+                if not re.match(field.pattern, value):
+                    errors.append(ValidationError(
+                        field=field.name,
+                        message=f"{label} format is invalid"
+                    ))
+            except re.error:
+                pass  # Invalid pattern, skip
+
+        # Type-specific validation
+        type_validators = {
+            "email": self._validate_email,
+            "url": self._validate_url,
+            "phone": self._validate_phone,
+            "slug": self._validate_slug,
+            "color": self._validate_color,
+            "integer": self._validate_integer,
+            "number": self._validate_integer,
+            "float": self._validate_float,
+            "decimal": self._validate_float,
+            "money": self._validate_float,
+            "range": self._validate_float,
+            "select": self._validate_select,
+            "radio": self._validate_select,
+            "button_group": self._validate_select,
+            "multiselect": self._validate_multiselect,
+            "checkbox": self._validate_multiselect,
+            "tags": self._validate_array,
+            "gallery": self._validate_array,
+            "repeater": self._validate_repeater,
+            "group": self._validate_group,
+        }
+
+        validator = type_validators.get(field.type)
+        if validator:
+            type_errors = validator(field, value)
+            errors.extend(type_errors)
+
+        # Min/max validation for numbers
+        if field.type in ("integer", "number", "float", "decimal", "money", "range"):
+            num_value = self._to_number(value)
+            if num_value is not None:
+                if field.min is not None and num_value < field.min:
+                    errors.append(ValidationError(
+                        field=field.name,
+                        message=f"{label} must be at least {field.min}"
+                    ))
+                if field.max is not None and num_value > field.max:
+                    errors.append(ValidationError(
+                        field=field.name,
+                        message=f"{label} must be at most {field.max}"
+                    ))
+
+        # Array length validation
+        if isinstance(value, list):
+            if field.min_items is not None and len(value) < field.min_items:
+                errors.append(ValidationError(
+                    field=field.name,
+                    message=f"{label} must have at least {field.min_items} items"
+                ))
+            if field.max_items is not None and len(value) > field.max_items:
+                errors.append(ValidationError(
+                    field=field.name,
+                    message=f"{label} must have at most {field.max_items} items"
+                ))
+
+        # Custom validation rules
+        for rule in field.validation:
+            rule_error = self._apply_validation_rule(field, value, rule, context)
+            if rule_error:
+                errors.append(rule_error)
+
+        return errors
+
+    def _evaluate_conditions(self, conditions: list[dict], context: dict) -> bool:
+        """Evaluate conditional logic rules."""
+        if not conditions:
+            return True
+
+        for condition in conditions:
+            field_name = condition.get("field")
+            operator = condition.get("operator", "equals")
+            expected = condition.get("value")
+            actual = context.get(field_name)
+
+            result = self._evaluate_operator(actual, operator, expected)
+            if not result:
+                return False
+
+        return True
+
+    def _evaluate_operator(self, actual: Any, operator: str, expected: Any) -> bool:
+        """Evaluate a single condition operator."""
+        operators = {
+            "equals": lambda a, b: a == b,
+            "not_equals": lambda a, b: a != b,
+            "contains": lambda a, b: b in str(a) if a else False,
+            "not_contains": lambda a, b: b not in str(a) if a else True,
+            "starts_with": lambda a, b: str(a).startswith(str(b)) if a else False,
+            "ends_with": lambda a, b: str(a).endswith(str(b)) if a else False,
+            "greater_than": lambda a, b: float(a) > float(b) if a else False,
+            "less_than": lambda a, b: float(a) < float(b) if a else False,
+            "greater_equal": lambda a, b: float(a) >= float(b) if a else False,
+            "less_equal": lambda a, b: float(a) <= float(b) if a else False,
+            "is_empty": lambda a, _: not a,
+            "is_not_empty": lambda a, _: bool(a),
+            "in": lambda a, b: a in b if isinstance(b, (list, tuple)) else False,
+            "not_in": lambda a, b: a not in b if isinstance(b, (list, tuple)) else True,
+        }
+
+        op_func = operators.get(operator, lambda a, b: a == b)
+        try:
+            return op_func(actual, expected)
+        except (ValueError, TypeError):
+            return False
+
+    def _validate_email(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate email format."""
+        if isinstance(value, str) and value:
+            if not EMAIL_PATTERN.match(value):
+                return [ValidationError(
+                    field=field.name,
+                    message=f"{field.label or field.name} must be a valid email address"
+                )]
+        return []
+
+    def _validate_url(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate URL format."""
+        if isinstance(value, str) and value:
+            if not URL_PATTERN.match(value):
+                return [ValidationError(
+                    field=field.name,
+                    message=f"{field.label or field.name} must be a valid URL"
+                )]
+        return []
+
+    def _validate_phone(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate phone number format."""
+        if isinstance(value, str) and value:
+            if not PHONE_PATTERN.match(value):
+                return [ValidationError(
+                    field=field.name,
+                    message=f"{field.label or field.name} must be a valid phone number"
+                )]
+        return []
+
+    def _validate_slug(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate slug format."""
+        if isinstance(value, str) and value:
+            if not SLUG_PATTERN.match(value):
+                return [ValidationError(
+                    field=field.name,
+                    message=f"{field.label or field.name} must contain only lowercase letters, numbers, and hyphens"
+                )]
+        return []
+
+    def _validate_color(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate color format."""
+        if isinstance(value, str) and value:
+            if not COLOR_PATTERN.match(value):
+                return [ValidationError(
+                    field=field.name,
+                    message=f"{field.label or field.name} must be a valid color code (e.g., #FF0000)"
+                )]
+        return []
+
+    def _validate_integer(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate integer type."""
+        if not isinstance(value, int):
+            try:
+                int(value)
+            except (ValueError, TypeError):
+                return [ValidationError(
+                    field=field.name,
+                    message=f"{field.label or field.name} must be an integer"
+                )]
+        return []
+
+    def _validate_float(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate float type."""
+        if not isinstance(value, (int, float)):
+            try:
+                float(value)
+            except (ValueError, TypeError):
+                return [ValidationError(
+                    field=field.name,
+                    message=f"{field.label or field.name} must be a number"
+                )]
+        return []
+
+    def _validate_select(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate select field."""
+        if not field.options:
+            return []
+        valid_values = [opt.get("value") for opt in field.options]
+        if value not in valid_values:
+            return [ValidationError(
+                field=field.name,
+                message=f"{field.label or field.name} must be one of: {', '.join(str(v) for v in valid_values)}"
+            )]
+        return []
+
+    def _validate_multiselect(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate multiselect field."""
+        if not isinstance(value, list):
+            return [ValidationError(
+                field=field.name,
+                message=f"{field.label or field.name} must be a list"
+            )]
+        if not field.options:
+            return []
+        valid_values = [opt.get("value") for opt in field.options]
+        for v in value:
+            if v not in valid_values:
+                return [ValidationError(
+                    field=field.name,
+                    message=f"{field.label or field.name} contains invalid value: {v}"
+                )]
+        return []
+
+    def _validate_array(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate array field."""
+        if not isinstance(value, list):
+            return [ValidationError(
+                field=field.name,
+                message=f"{field.label or field.name} must be a list"
+            )]
+        return []
+
+    def _validate_repeater(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate repeater field with nested fields."""
+        errors = []
+        if not isinstance(value, list):
+            return [ValidationError(
+                field=field.name,
+                message=f"{field.label or field.name} must be a list"
+            )]
+
+        if not field.fields:
+            return []
+
+        for i, row in enumerate(value):
+            if not isinstance(row, dict):
+                errors.append(ValidationError(
+                    field=f"{field.name}[{i}]",
+                    message="Row must be an object"
                 ))
                 continue
 
-            if value is None:
-                continue
-
-            # Type-specific validation
-            if field.type == "string" and field.max_length:
-                if isinstance(value, str) and len(value) > field.max_length:
+            for sub_field in field.fields:
+                sub_errors = self._validate_field(sub_field, row.get(sub_field.name), row)
+                for err in sub_errors:
                     errors.append(ValidationError(
-                        field=field.name,
-                        message=f"{field.label or field.name} must be {field.max_length} characters or less"
+                        field=f"{field.name}[{i}].{err.field}",
+                        message=err.message
                     ))
 
-            elif field.type == "email":
-                if isinstance(value, str) and "@" not in value:
-                    errors.append(ValidationError(
-                        field=field.name,
-                        message=f"{field.label or field.name} must be a valid email"
-                    ))
+        return errors
 
-            elif field.type == "select":
-                valid_values = [opt.get("value") for opt in field.options]
-                if value not in valid_values:
-                    errors.append(ValidationError(
-                        field=field.name,
-                        message=f"{field.label or field.name} must be one of: {', '.join(valid_values)}"
-                    ))
+    def _validate_group(self, field: FieldDefinition, value: Any) -> list[ValidationError]:
+        """Validate group field with nested fields."""
+        errors = []
+        if not isinstance(value, dict):
+            return [ValidationError(
+                field=field.name,
+                message=f"{field.label or field.name} must be an object"
+            )]
 
-            elif field.type == "integer":
-                if not isinstance(value, int):
-                    try:
-                        int(value)
-                    except (ValueError, TypeError):
-                        errors.append(ValidationError(
-                            field=field.name,
-                            message=f"{field.label or field.name} must be an integer"
-                        ))
+        if not field.fields:
+            return []
 
-        return ValidationResult(valid=len(errors) == 0, errors=errors)
+        for sub_field in field.fields:
+            sub_errors = self._validate_field(sub_field, value.get(sub_field.name), value)
+            for err in sub_errors:
+                errors.append(ValidationError(
+                    field=f"{field.name}.{err.field}",
+                    message=err.message
+                ))
+
+        return errors
+
+    def _apply_validation_rule(
+        self, field: FieldDefinition, value: Any, rule: dict, context: dict
+    ) -> Optional[ValidationError]:
+        """Apply a custom validation rule."""
+        rule_type = rule.get("rule")
+        rule_value = rule.get("value")
+        message = rule.get("message", f"{field.label or field.name} validation failed")
+
+        if rule_type == "unique":
+            # Unique validation is handled at the service level
+            pass
+        elif rule_type == "before":
+            # Date before another field
+            compare_field = rule.get("field")
+            compare_value = context.get(compare_field)
+            if value and compare_value and str(value) >= str(compare_value):
+                return ValidationError(field=field.name, message=message)
+        elif rule_type == "after":
+            # Date after another field
+            compare_field = rule.get("field")
+            compare_value = context.get(compare_field)
+            if value and compare_value and str(value) <= str(compare_value):
+                return ValidationError(field=field.name, message=message)
+        elif rule_type == "pattern":
+            # Custom regex pattern
+            if isinstance(value, str) and rule_value:
+                try:
+                    if not re.match(rule_value, value):
+                        return ValidationError(field=field.name, message=message)
+                except re.error:
+                    pass
+        elif rule_type == "min":
+            num_value = self._to_number(value)
+            if num_value is not None and num_value < float(rule_value):
+                return ValidationError(field=field.name, message=message)
+        elif rule_type == "max":
+            num_value = self._to_number(value)
+            if num_value is not None and num_value > float(rule_value):
+                return ValidationError(field=field.name, message=message)
+
+        return None
+
+    def _to_number(self, value: Any) -> Optional[float]:
+        """Convert value to number."""
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                return None
+        return None
 
     def get_field_type(self, field_def: FieldDefinition) -> str:
         """Get the storage column type for a field."""
         type_mapping = {
+            # Basic text fields
             "string": "text",
             "text": "text",
             "slug": "text",
             "email": "text",
             "url": "text",
+            "phone": "text",
+            "color": "text",
+            "password": "text",
+            # Numbers
             "integer": "int",
+            "number": "int",
             "float": "float",
+            "decimal": "float",
+            "money": "float",
+            "range": "float",
+            # Boolean
             "boolean": "int",
+            # Date/time
             "datetime": "datetime",
             "date": "datetime",
+            "time": "text",
+            # Select
             "select": "text",
+            "radio": "text",
+            "button_group": "text",
             "multiselect": "json",
+            "checkbox": "json",
+            "tags": "json",
+            # Rich content
             "blocks": "json",
+            "markdown": "text",
+            "wysiwyg": "text",
+            "code": "text",
+            # Media
             "media": "text",
+            "image": "text",
+            "file": "text",
+            "video": "text",
+            "audio": "text",
+            "svg": "text",
+            "gallery": "json",
+            # Relations
+            "relation": "text",
+            "relations": "json",
+            "taxonomy": "json",
+            "user": "text",
+            # Structure
+            "repeater": "json",
+            "flexible": "json",
+            "group": "json",
+            # Special
             "json": "json",
+            "map": "json",
+            "address": "json",
+            "link": "json",
+            "oembed": "text",
+            "hidden": "text",
+            "calculated": "text",  # Stored as computed value
+            "lookup": "text",  # Stored as cached value
         }
         return type_mapping.get(field_def.type, "text")
 

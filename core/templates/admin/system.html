@@ -1,0 +1,129 @@
+{% extends "admin/base.html" %}
+
+{% block title %}システム情報{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>システム情報</h1>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>Focomy バージョン</h3>
+    </div>
+    <div class="card-body">
+        <div class="row">
+            <div class="col-md-6">
+                <p><strong>現在のバージョン:</strong> {{ system.focomy_version }}</p>
+                <p><strong>最新バージョン:</strong> {{ system.latest_version }}</p>
+            </div>
+            <div class="col-md-6">
+                {% if system.has_update %}
+                <div class="alert alert-warning">
+                    <strong>新しいバージョンが利用可能です!</strong>
+                    <p class="mb-2">バージョン {{ system.latest_version }} にアップデートできます。</p>
+                    {% if system.release_url %}
+                    <a href="{{ system.release_url }}" target="_blank" class="btn btn-primary btn-sm">
+                        リリースノートを見る
+                    </a>
+                    {% endif %}
+                    <div class="mt-3">
+                        <p class="mb-1">アップデート方法:</p>
+                        <code>pip install --upgrade focomy</code>
+                    </div>
+                </div>
+                {% else %}
+                <div class="alert alert-success">
+                    <strong>最新バージョンを使用中です</strong>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        <div class="mt-3">
+            <button class="btn btn-outline-secondary btn-sm"
+                    hx-get="/admin/api/update-check?force=true"
+                    hx-target="#update-status"
+                    hx-indicator="#update-spinner">
+                <span id="update-spinner" class="htmx-indicator spinner-border spinner-border-sm me-1"></span>
+                更新をチェック
+            </button>
+            <span id="update-status"></span>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>環境情報</h3>
+    </div>
+    <div class="card-body">
+        <table class="table">
+            <tbody>
+                <tr>
+                    <th style="width: 200px;">Python バージョン</th>
+                    <td><code>{{ system.python_version }}</code></td>
+                </tr>
+                <tr>
+                    <th>プラットフォーム</th>
+                    <td><code>{{ system.platform }}</code></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>CLI コマンド</h3>
+    </div>
+    <div class="card-body">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>コマンド</th>
+                    <th>説明</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><code>focomy init &lt;name&gt;</code></td>
+                    <td>新しいFocomyサイトを初期化</td>
+                </tr>
+                <tr>
+                    <td><code>focomy serve</code></td>
+                    <td>開発サーバーを起動</td>
+                </tr>
+                <tr>
+                    <td><code>focomy migrate</code></td>
+                    <td>データベースマイグレーションを実行</td>
+                </tr>
+                <tr>
+                    <td><code>focomy validate</code></td>
+                    <td>コンテンツタイプ定義を検証</td>
+                </tr>
+                <tr>
+                    <td><code>focomy update</code></td>
+                    <td>Focomyを最新版に更新</td>
+                </tr>
+                <tr>
+                    <td><code>focomy backup</code></td>
+                    <td>データベースとアップロードをバックアップ</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>ドキュメント</h3>
+    </div>
+    <div class="card-body">
+        <ul>
+            <li><a href="https://focomy.dev/docs" target="_blank">公式ドキュメント</a></li>
+            <li><a href="https://github.com/focomy/focomy" target="_blank">GitHub リポジトリ</a></li>
+            <li><a href="https://github.com/focomy/focomy/issues" target="_blank">Issue Tracker</a></li>
+        </ul>
+    </div>
+</div>
+{% endblock %}

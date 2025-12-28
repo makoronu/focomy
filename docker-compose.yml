@@ -1,0 +1,83 @@
+# Focomy - Docker Compose Configuration
+# Usage: docker-compose up -d
+
+version: '3.8'
+
+services:
+  app:
+    build: .
+    container_name: focomy-app
+    restart: unless-stopped
+    ports:
+      - "${FOCOMY_PORT:-8000}:8000"
+    environment:
+      - FOCOMY_DATABASE_URL=postgresql+asyncpg://focomy:${POSTGRES_PASSWORD:-focomy}@db:5432/focomy
+      - FOCOMY_DEBUG=${FOCOMY_DEBUG:-false}
+      - FOCOMY_SECRET_KEY=${FOCOMY_SECRET_KEY:-change-this-in-production}
+    volumes:
+      - ./uploads:/app/uploads
+      - ./config.yaml:/app/config.yaml:ro
+      - ./content_types:/app/content_types:ro
+      - ./themes:/app/themes:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - focomy-network
+
+  db:
+    image: postgres:15-alpine
+    container_name: focomy-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=focomy
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-focomy}
+      - POSTGRES_DB=focomy
+    volumes:
+      - focomy-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U focomy"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - focomy-network
+
+  # Optional: Nginx reverse proxy
+  nginx:
+    image: nginx:alpine
+    container_name: focomy-nginx
+    restart: unless-stopped
+    ports:
+      - "${NGINX_PORT:-80}:80"
+      - "${NGINX_SSL_PORT:-443}:443"
+    volumes:
+      - ./docker/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./uploads:/app/uploads:ro
+      - ./static:/app/static:ro
+    depends_on:
+      - app
+    networks:
+      - focomy-network
+    profiles:
+      - production
+
+  # Optional: Redis cache
+  redis:
+    image: redis:7-alpine
+    container_name: focomy-redis
+    restart: unless-stopped
+    volumes:
+      - focomy-redis-data:/data
+    networks:
+      - focomy-network
+    profiles:
+      - production
+
+volumes:
+  focomy-db-data:
+  focomy-redis-data:
+
+networks:
+  focomy-network:
+    driver: bridge

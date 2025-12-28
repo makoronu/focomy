@@ -23,6 +23,7 @@
 | エディタ | Editor.js |
 | CSS | CSS Variables + テーマシステム |
 | 認証 | bcrypt + セッション + OAuth |
+| デプロイ | Docker / Fly.io / Render |
 
 ---
 
@@ -258,28 +259,6 @@ CREATE TABLE login_log (
 
 ### リダイレクト管理
 
-```yaml
-# content_types/redirect.yaml
-name: redirect
-fields:
-  - name: from_path
-    type: string
-    required: true
-  - name: to_path
-    type: string
-    required: true
-  - name: status_code
-    type: select
-    options: [301, 302, 307, 308]
-  - name: match_type
-    type: select
-    options: [exact, prefix, regex]
-  - name: is_active
-    type: boolean
-  - name: preserve_query
-    type: boolean
-```
-
 **機能:**
 - 完全一致/前方一致/正規表現マッチング
 - キャッシュ付き高速リダイレクト
@@ -288,23 +267,6 @@ fields:
 
 ### メニュー管理
 
-```yaml
-# content_types/menu_item.yaml
-name: menu_item
-hierarchical: true
-fields:
-  - name: label
-    type: string
-  - name: url
-    type: string
-  - name: location
-    type: select
-    options: [header, footer, sidebar]
-  - name: link_type
-    type: select
-    options: [custom, page, category, post]
-```
-
 **機能:**
 - ヘッダー/フッター/サイドバー別メニュー
 - 階層構造（ドロップダウン）対応
@@ -312,22 +274,6 @@ fields:
 - YAML設定との併用
 
 ### ウィジェット
-
-```yaml
-# content_types/widget.yaml
-name: widget
-fields:
-  - name: title
-    type: string
-  - name: widget_type
-    type: select
-    options: [recent_posts, categories, search, custom_html, archives, tag_cloud]
-  - name: area
-    type: select
-    options: [sidebar, footer_1, footer_2, footer_3]
-  - name: config
-    type: json
-```
 
 **ウィジェットタイプ:**
 - 最近の投稿
@@ -339,29 +285,197 @@ fields:
 
 ### コメント
 
-```yaml
-# content_types/comment.yaml
-name: comment
-fields:
-  - name: author_name
-    type: string
-  - name: author_email
-    type: email
-  - name: content
-    type: text
-  - name: status
-    type: select
-    options: [pending, approved, rejected, spam]
-  - name: ip_address
-    type: string
-```
-
 **機能:**
 - 承認制コメント
 - ハニーポットスパム対策
 - レート制限（5回/分）
 - 管理画面から一括承認/拒否
 - ネスト返信対応
+
+### Content Builder（ACF的機能）
+
+WordPress の Advanced Custom Fields に相当する機能。
+
+**高度なフィールドタイプ:**
+
+| タイプ | 説明 |
+|--------|------|
+| repeater | 繰り返しフィールド（無限ネスト対応） |
+| flexible_content | 柔軟なレイアウトブロック |
+| group | フィールドグループ |
+| gallery | 画像ギャラリー |
+| link | リンク（URL + テキスト + target） |
+| google_map | Google Maps 座標 |
+| date_range | 日付範囲 |
+| color | カラーピッカー |
+| oembed | 埋め込みコンテンツ |
+| taxonomy | カテゴリ/タグ選択 |
+| user | ユーザー選択 |
+| post_object | 投稿選択 |
+| page_link | ページリンク |
+
+**計算フィールド（Formula）:**
+
+```yaml
+- name: total_price
+  type: formula
+  expression: "price * quantity * (1 + tax_rate)"
+  dependencies: [price, quantity, tax_rate]
+```
+
+**ワークフロー:**
+
+```yaml
+workflows:
+  review_flow:
+    states: [draft, pending_review, approved, published]
+    transitions:
+      - from: draft
+        to: pending_review
+        roles: [author, editor]
+      - from: pending_review
+        to: approved
+        roles: [editor, admin]
+```
+
+**スケジュール公開:**
+- 予約投稿/非公開
+- 公開期間設定（開始日〜終了日）
+- バックグラウンドワーカーで自動実行
+
+**編集ロック:**
+- 他ユーザーが編集中の場合は警告表示
+- 5分間のロック期限
+- 強制ロック解除機能
+
+### WordPress インポート
+
+WordPress からの完全移行をサポート。
+
+**機能:**
+
+| 機能 | 説明 |
+|------|------|
+| WXR Parser | WordPress eXtended RSS 形式の解析 |
+| コンテンツ移行 | 投稿、固定ページ、カテゴリ、タグ |
+| メディア移行 | 画像ダウンロード + WebP変換 |
+| ACF変換 | Advanced Custom Fields → Focomy フィールド |
+| リダイレクト生成 | 旧URL → 新URL の301リダイレクト |
+
+**使用方法:**
+
+```python
+from core.wordpress import WordPressImporter
+
+importer = WordPressImporter(db, entity_service, media_service)
+result = await importer.import_from_file(
+    "export.xml",
+    download_media=True,
+    generate_redirects=True,
+    convert_acf=True
+)
+```
+
+### プラグインシステム
+
+WordPress ライクなプラグイン機構。
+
+**プラグイン構造:**
+
+```
+plugins/
+└── my-plugin/
+    ├── plugin.yaml      # メタデータ
+    ├── __init__.py      # エントリーポイント
+    └── ...
+```
+
+**plugin.yaml:**
+
+```yaml
+name: my-plugin
+version: 1.0.0
+description: My awesome plugin
+author: Your Name
+requires_focomy: ">=1.0.0"
+```
+
+**フック/フィルターシステム:**
+
+```python
+from core.plugins import hooks
+
+# アクション（副作用）
+@hooks.action("post_saved")
+async def on_post_saved(entity, is_new):
+    # 投稿保存時の処理
+
+# フィルター（値の変換）
+@hooks.filter("post_content")
+async def modify_content(content):
+    return content.replace("foo", "bar")
+
+# 手動呼び出し
+await hooks.do_action("post_saved", entity, True)
+result = await hooks.apply_filters("post_content", original)
+```
+
+**ビルトインフック:**
+
+| フック | タイプ | 説明 |
+|--------|--------|------|
+| entity_created | action | エンティティ作成時 |
+| entity_updated | action | エンティティ更新時 |
+| entity_deleted | action | エンティティ削除時 |
+| before_render | filter | テンプレートレンダリング前 |
+| admin_menu | filter | 管理メニュー構築時 |
+| seo_meta | filter | SEOメタタグ生成時 |
+
+### テーマシステム
+
+**ローカルテーマ管理:**
+
+```python
+from core.themes import ThemeManager
+
+manager = ThemeManager(themes_dir)
+manager.activate("my-theme")
+theme = manager.get_active_theme()
+```
+
+**テーママーケットプレイス:**
+
+```python
+from core.themes import ThemeMarketplace
+
+marketplace = ThemeMarketplace(theme_manager)
+
+# 検索
+results = await marketplace.search("blog", category="business")
+
+# インストール
+result = await marketplace.install("theme-id", license_key="...")
+
+# アップデートチェック
+updates = await marketplace.check_updates(installed_themes)
+```
+
+**テーマカスタマイザー:**
+
+```python
+from core.themes import ThemeCustomizer
+
+customizer = ThemeCustomizer(theme_manager, settings_service)
+
+# ライブプレビュー
+preview_css = await customizer.generate_preview_css({
+    "primary_color": "#3b82f6",
+    "font_family": "Noto Sans JP"
+})
+
+# 設定保存
+await customizer.save_customization(theme_id, settings)
+```
 
 ### パフォーマンス最適化
 
@@ -404,7 +518,11 @@ focomy/
 │   │   ├── __init__.py
 │   │   ├── entity.py           # EntityService
 │   │   ├── relation.py         # RelationService
-│   │   ├── field.py            # FieldService
+│   │   ├── field.py            # FieldService（高度なフィールド対応）
+│   │   ├── formula.py          # FormulaService（計算フィールド）
+│   │   ├── workflow.py         # WorkflowService
+│   │   ├── schedule.py         # ScheduleService（予約投稿）
+│   │   ├── edit_lock.py        # EditLockService
 │   │   ├── media.py            # MediaService
 │   │   ├── auth.py             # AuthService
 │   │   ├── seo.py              # SEOService
@@ -434,6 +552,25 @@ focomy/
 │   ├── engine/
 │   │   ├── __init__.py
 │   │   └── routes.py           # フロントエンドルート
+│   ├── plugins/
+│   │   ├── __init__.py
+│   │   ├── base.py             # Plugin基底クラス
+│   │   ├── hooks.py            # フック/フィルターシステム
+│   │   ├── loader.py           # プラグインローダー
+│   │   └── manager.py          # プラグインマネージャー
+│   ├── themes/
+│   │   ├── __init__.py
+│   │   ├── manager.py          # テーマ管理
+│   │   ├── marketplace.py      # マーケットプレイス連携
+│   │   └── customizer.py       # テーマカスタマイザー
+│   ├── wordpress/
+│   │   ├── __init__.py
+│   │   ├── wxr_parser.py       # WXR形式パーサー
+│   │   ├── analyzer.py         # コンテンツ分析
+│   │   ├── media.py            # メディアインポート
+│   │   ├── acf.py              # ACFコンバーター
+│   │   ├── redirects.py        # リダイレクト生成
+│   │   └── importer.py         # メインインポーター
 │   └── templates/
 │       └── admin/
 │           ├── base.html
@@ -449,6 +586,8 @@ focomy/
 │           ├── link_validator.html
 │           ├── sitemap.html
 │           └── login.html
+├── plugins/                     # ユーザープラグイン
+│   └── hello-world/            # サンプルプラグイン
 ├── content_types/
 │   ├── post.yaml
 │   ├── page.yaml
@@ -480,9 +619,41 @@ focomy/
 ├── uploads/
 ├── config.yaml
 ├── requirements.txt
+├── Dockerfile
+├── docker-compose.yml
+├── fly.toml
+├── render.yaml
 └── docs/
     └── ROADMAP.md
 ```
+
+---
+
+## デプロイ
+
+### Docker
+
+```bash
+docker-compose up -d
+```
+
+### Fly.io
+
+```bash
+fly launch
+fly postgres create --name focomy-db
+fly postgres attach focomy-db
+fly secrets set FOCOMY_SECRET_KEY="your-secret-key"
+fly deploy
+```
+
+### 環境変数
+
+| 変数 | 説明 |
+|------|------|
+| FOCOMY_DATABASE_URL | PostgreSQL接続URL |
+| FOCOMY_SECRET_KEY | セッション暗号化キー |
+| FOCOMY_DEBUG | デバッグモード（true/false） |
 
 ---
 
@@ -638,8 +809,8 @@ menus:
 | 指標 | 目標 | 現状 |
 |------|------|------|
 | コアテーブル数 | 7以下 | 7 |
-| サービスクラス数 | 15以下 | 14 |
-| APIエンドポイント | 30以下 | 25 |
+| サービスクラス数 | 20以下 | 18 |
+| APIエンドポイント | 35以下 | 28 |
 | 重複コード | 0 | 0 |
 | 新コンテンツタイプ追加 | YAML 1ファイルのみ | 達成 |
 
@@ -647,34 +818,54 @@ menus:
 
 ## 完了タスク
 
-| ID | タスク |
-|----|--------|
-| 001 | プロジェクト基盤構築 |
-| 002 | EntityService実装 |
-| 003 | RelationService実装 |
-| 004 | FieldService実装 |
-| 005 | 認証基盤構築 |
-| 006 | API実装 |
-| 007 | 管理画面基盤 |
-| 008 | Editor.js統合 |
-| 009 | メディア管理 |
-| 010 | SEO自動生成 |
-| 011 | テーマシステム |
-| 012 | CLI実装 |
-| 013 | robots.txt実装 |
-| 014 | フィード実装 |
-| 015 | ファビコン対応 |
-| 016 | SEO設定UI構築 |
-| 017 | 構造化データ拡充 |
-| 018 | ページ別SEO制御 |
-| 019 | パンくず実装 |
-| 020 | OGP/Twitter補完 |
-| 021 | 外部CSS分離 |
-| 022 | パフォーマンス最適化 |
-| 023 | リダイレクト管理 |
-| 024 | セキュリティヘッダー |
-| 025 | リンク検証機能 |
-| 026 | サイトマップUI |
+| ID | タスク | 完了日 |
+|----|--------|--------|
+| 001 | プロジェクト基盤構築 | 2025-12-26 |
+| 002 | EntityService実装 | 2025-12-26 |
+| 003 | RelationService実装 | 2025-12-26 |
+| 004 | FieldService実装 | 2025-12-26 |
+| 005 | 認証基盤構築 | 2025-12-26 |
+| 006 | API実装 | 2025-12-26 |
+| 007 | 管理画面基盤 | 2025-12-26 |
+| 008 | Editor.js統合 | 2025-12-26 |
+| 009 | メディア管理 | 2025-12-26 |
+| 010 | SEO自動生成 | 2025-12-26 |
+| 011 | テーマシステム | 2025-12-26 |
+| 012 | CLI実装 | 2025-12-26 |
+| 013 | robots.txt実装 | 2025-12-27 |
+| 014 | フィード実装 | 2025-12-27 |
+| 015 | ファビコン対応 | 2025-12-27 |
+| 016 | SEO設定UI構築 | 2025-12-27 |
+| 017 | 構造化データ拡充 | 2025-12-27 |
+| 018 | ページ別SEO制御 | 2025-12-27 |
+| 019 | パンくず実装 | 2025-12-27 |
+| 020 | OGP/Twitter補完 | 2025-12-27 |
+| 021 | 外部CSS分離 | 2025-12-27 |
+| 022 | パフォーマンス最適化 | 2025-12-27 |
+| 023 | リダイレクト管理 | 2025-12-27 |
+| 024 | セキュリティヘッダー | 2025-12-27 |
+| 025 | リンク検証機能 | 2025-12-27 |
+| 026 | サイトマップUI | 2025-12-27 |
+| 027 | メニュー管理システム | 2025-12-28 |
+| 028 | 柔軟なブログルーティング | 2025-12-28 |
+| 029 | 設定管理UI | 2025-12-28 |
+| 030 | ウィジェット/サイドバー | 2025-12-28 |
+| 031 | コメント機能 | 2025-12-28 |
+| 032 | Content Builder（ACF的機能） | 2025-12-28 |
+| 033 | WordPress インポート | 2025-12-28 |
+| 034 | プラグインシステム | 2025-12-28 |
+| 035 | テーママーケットプレイス | 2025-12-28 |
+
+---
+
+## 本番環境
+
+| 項目 | 値 |
+|------|-----|
+| URL | https://focomy-cms.fly.dev |
+| プラットフォーム | Fly.io |
+| リージョン | nrt（東京） |
+| データベース | PostgreSQL（Fly Postgres） |
 
 ---
 

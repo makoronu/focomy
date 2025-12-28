@@ -1,0 +1,92 @@
+name: blog
+label: Blog
+description: ブログに最適化されたテーマ。サイドバー、カテゴリ、アーカイブ対応。
+version: 1.0.0
+author: Focomy Team
+preview: preview.png
+
+# CSS変数
+colors:
+  primary: "#6366f1"
+  primary-hover: "#4f46e5"
+  background: "#ffffff"
+  surface: "#f9fafb"
+  text: "#111827"
+  text-muted: "#6b7280"
+  border: "#e5e7eb"
+  success: "#10b981"
+  error: "#ef4444"
+  warning: "#f59e0b"
+  accent: "#ec4899"
+
+fonts:
+  sans: "'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif"
+  serif: "'Noto Serif JP', Georgia, serif"
+  mono: "ui-monospace, SFMono-Regular, monospace"
+
+spacing:
+  xs: "0.25rem"
+  sm: "0.5rem"
+  md: "1rem"
+  lg: "1.5rem"
+  xl: "2rem"
+  2xl: "3rem"
+
+# カスタマイズ
+config:
+  colors:
+    primary:
+      type: color
+      default: "#6366f1"
+      label: メインカラー
+    accent:
+      type: color
+      default: "#ec4899"
+      label: アクセントカラー
+
+  layout:
+    sidebar_position:
+      type: select
+      options:
+        - { label: 右, value: right }
+        - { label: 左, value: left }
+      default: right
+      label: サイドバー位置
+    posts_per_page:
+      type: number
+      default: 10
+      min: 5
+      max: 30
+      label: 1ページあたりの記事数
+    show_thumbnail:
+      type: boolean
+      default: true
+      label: サムネイル表示
+    card_layout:
+      type: select
+      options:
+        - { label: リスト, value: list }
+        - { label: グリッド, value: grid }
+      default: list
+      label: 記事一覧レイアウト
+
+  header:
+    show_categories:
+      type: boolean
+      default: true
+      label: カテゴリをヘッダーに表示
+
+# ウィジェットエリア
+widget_areas:
+  - { id: sidebar, label: サイドバー }
+  - { id: before_content, label: コンテンツ上 }
+  - { id: after_content, label: コンテンツ下 }
+  - { id: footer_1, label: フッター1 }
+  - { id: footer_2, label: フッター2 }
+  - { id: footer_3, label: フッター3 }
+
+# メニュー位置
+menu_locations:
+  - { id: header, label: ヘッダーメニュー }
+  - { id: category_bar, label: カテゴリバー }
+  - { id: footer, label: フッターメニュー }

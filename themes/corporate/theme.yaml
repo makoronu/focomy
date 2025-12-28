@@ -1,0 +1,101 @@
+name: corporate
+label: Corporate
+description: 企業サイト向けテーマ。CTA重視、ヒーローセクション、信頼感のあるデザイン。
+version: 1.0.0
+author: Focomy Team
+preview: preview.png
+
+# CSS変数
+colors:
+  primary: "#0066cc"
+  primary-hover: "#0052a3"
+  secondary: "#ff6b35"
+  secondary-hover: "#e55a2b"
+  background: "#ffffff"
+  surface: "#f8f9fa"
+  text: "#212529"
+  text-muted: "#6c757d"
+  border: "#dee2e6"
+  success: "#28a745"
+  error: "#dc3545"
+  warning: "#ffc107"
+
+fonts:
+  sans: "'Noto Sans JP', -apple-system, BlinkMacSystemFont, sans-serif"
+  serif: "'Noto Serif JP', Georgia, serif"
+  mono: "ui-monospace, monospace"
+
+spacing:
+  xs: "0.25rem"
+  sm: "0.5rem"
+  md: "1rem"
+  lg: "1.5rem"
+  xl: "2rem"
+  2xl: "3rem"
+  3xl: "4rem"
+
+# カスタマイズ
+config:
+  colors:
+    primary:
+      type: color
+      default: "#0066cc"
+      label: メインカラー（信頼感）
+    secondary:
+      type: color
+      default: "#ff6b35"
+      label: CTAカラー（アクション）
+
+  cta:
+    header_cta_text:
+      type: string
+      default: "お問い合わせ"
+      label: ヘッダーCTAテキスト
+    header_cta_url:
+      type: string
+      default: "/contact"
+      label: ヘッダーCTA URL
+    show_header_cta:
+      type: boolean
+      default: true
+      label: ヘッダーにCTA表示
+
+  hero:
+    show_hero:
+      type: boolean
+      default: true
+      label: ヒーローセクション表示
+    hero_height:
+      type: select
+      options:
+        - { label: 大, value: large }
+        - { label: 中, value: medium }
+        - { label: 小, value: small }
+      default: large
+      label: ヒーロー高さ
+
+  layout:
+    show_features:
+      type: boolean
+      default: true
+      label: 特徴セクション表示
+    show_news:
+      type: boolean
+      default: true
+      label: お知らせセクション表示
+
+# ウィジェットエリア
+widget_areas:
+  - { id: hero, label: ヒーローセクション }
+  - { id: features, label: 特徴セクション }
+  - { id: cta_banner, label: CTAバナー }
+  - { id: sidebar, label: サイドバー }
+  - { id: footer_1, label: フッター1（会社情報） }
+  - { id: footer_2, label: フッター2（リンク） }
+  - { id: footer_3, label: フッター3（お問い合わせ） }
+
+# メニュー位置
+menu_locations:
+  - { id: header, label: ヘッダーメニュー }
+  - { id: footer, label: フッターメニュー }
+  - { id: footer_links, label: フッターリンク }

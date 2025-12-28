@@ -1,0 +1,134 @@
+{% extends "admin/base.html" %}
+
+{% block title %}テーマ{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>テーマ</h1>
+</div>
+
+{% if message %}
+<div class="alert alert-success" style="margin-bottom: 1rem; padding: 0.75rem 1rem; background: var(--success); color: white; border-radius: 0.5rem;">
+    {{ message }}
+</div>
+{% endif %}
+
+<div class="themes-grid">
+    {% for theme in themes %}
+    <div class="theme-card {% if theme.name == active_theme %}active{% endif %}">
+        <div class="theme-preview">
+            {% if theme.preview %}
+            <img src="/static/themes/{{ theme.name }}/{{ theme.preview }}" alt="{{ theme.label }}">
+            {% else %}
+            <div class="theme-preview-placeholder">
+                <span>{{ theme.label }}</span>
+            </div>
+            {% endif %}
+        </div>
+        <div class="theme-info">
+            <h3>{{ theme.label }}</h3>
+            <p>{{ theme.description }}</p>
+            <div class="theme-meta">
+                <span>v{{ theme.version }}</span>
+                {% if theme.author %}
+                <span>by {{ theme.author }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="theme-actions">
+            {% if theme.name == active_theme %}
+            <span class="badge badge-success">有効</span>
+            <a href="/admin/themes/{{ theme.name }}/customize" class="btn btn-primary btn-sm">カスタマイズ</a>
+            {% else %}
+            <form method="POST" action="/admin/themes/{{ theme.name }}/activate" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+                <button type="submit" class="btn btn-outline-primary btn-sm">有効化</button>
+            </form>
+            {% endif %}
+        </div>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+    .themes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+    }
+
+    .theme-card {
+        background: var(--card);
+        border: 2px solid var(--border);
+        border-radius: 0.75rem;
+        overflow: hidden;
+        transition: border-color 0.2s;
+    }
+
+    .theme-card.active {
+        border-color: var(--primary);
+    }
+
+    .theme-preview {
+        height: 180px;
+        background: var(--bg);
+        overflow: hidden;
+    }
+
+    .theme-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .theme-preview-placeholder {
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-muted);
+        font-size: 1.25rem;
+        font-weight: 500;
+    }
+
+    .theme-info {
+        padding: 1rem;
+    }
+
+    .theme-info h3 {
+        font-size: 1.125rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .theme-info p {
+        color: var(--text-muted);
+        font-size: 0.875rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .theme-meta {
+        font-size: 0.75rem;
+        color: var(--text-muted);
+    }
+
+    .theme-meta span {
+        margin-right: 0.75rem;
+    }
+
+    .theme-actions {
+        padding: 1rem;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .badge-success {
+        background: var(--success);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+    }
+</style>
+{% endblock %}

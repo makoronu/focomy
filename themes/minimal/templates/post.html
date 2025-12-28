@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}{{ post.title }} - {{ site_name }}{% endblock %}
+
+{% block meta %}
+{{ seo_meta | safe }}
+{% endblock %}
+
+{% block content %}
+<article class="post">
+    <header class="post-header">
+        <h1>{{ post.title }}</h1>
+        <div class="post-meta">
+            <time datetime="{{ post.created_at }}">{{ post.created_at[:10] }}</time>
+            {% if post.author_name %}
+            <span class="post-author"> / {{ post.author_name }}</span>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="post-content">
+        {{ post.body | render_blocks | safe }}
+    </div>
+
+    {% if post.categories %}
+    <footer class="post-footer">
+        <div class="post-categories">
+            {% for cat in post.categories %}
+            <a href="/category/{{ cat.slug }}">{{ cat.name }}</a>
+            {% endfor %}
+        </div>
+    </footer>
+    {% endif %}
+</article>
+
+<style>
+    .post-footer {
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .post-categories {
+        display: flex;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+
+    .post-categories a {
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        text-decoration: none;
+    }
+
+    .post-categories a:hover {
+        color: var(--color-text);
+    }
+</style>
+{% endblock %}

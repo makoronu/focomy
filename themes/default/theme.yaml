@@ -1,25 +1,82 @@
-colors:
-  background: '#ffffff'
-  border: '#e2e8f0'
-  error: '#ef4444'
-  primary: '#2563eb'
-  primary-hover: '#1d4ed8'
-  success: '#22c55e'
-  surface: '#f8fafc'
-  text: '#1e293b'
-  text-muted: '#64748b'
-  warning: '#f59e0b'
-fonts:
-  mono: ui-monospace, SFMono-Regular, Menlo, monospace
-  sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif
-  serif: Georgia, 'Times New Roman', serif
-label: Default Theme
 name: default
-spacing:
-  2xl: 3rem
-  lg: 1.5rem
-  md: 1rem
-  sm: 0.5rem
-  xl: 2rem
-  xs: 0.25rem
+label: Default
+description: 標準的な2カラムレイアウト。汎用的に使えるデフォルトテーマ。
 version: 1.0.0
+author: Focomy Team
+preview: preview.png
+
+# 現在の値（CSS変数として出力）
+colors:
+  primary: "#2563eb"
+  primary-hover: "#1d4ed8"
+  background: "#ffffff"
+  surface: "#f8fafc"
+  text: "#1e293b"
+  text-muted: "#64748b"
+  border: "#e2e8f0"
+  success: "#22c55e"
+  error: "#ef4444"
+  warning: "#f59e0b"
+
+fonts:
+  sans: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+  serif: "Georgia, 'Times New Roman', serif"
+  mono: "ui-monospace, SFMono-Regular, Menlo, monospace"
+
+spacing:
+  xs: "0.25rem"
+  sm: "0.5rem"
+  md: "1rem"
+  lg: "1.5rem"
+  xl: "2rem"
+  2xl: "3rem"
+
+# カスタマイズ可能な設定（Admin UIで編集）
+config:
+  colors:
+    primary:
+      type: color
+      default: "#2563eb"
+      label: メインカラー
+    background:
+      type: color
+      default: "#ffffff"
+      label: 背景色
+    text:
+      type: color
+      default: "#1e293b"
+      label: 文字色
+
+  layout:
+    max_width:
+      type: number
+      default: 1200
+      min: 960
+      max: 1600
+      label: 最大幅(px)
+    sidebar_position:
+      type: select
+      options:
+        - { label: 右, value: right }
+        - { label: 左, value: left }
+        - { label: なし, value: none }
+      default: right
+      label: サイドバー位置
+
+  header:
+    sticky:
+      type: boolean
+      default: false
+      label: 固定ヘッダー
+
+# ウィジェットエリア
+widget_areas:
+  - { id: sidebar, label: サイドバー }
+  - { id: footer_1, label: フッター1 }
+  - { id: footer_2, label: フッター2 }
+  - { id: footer_3, label: フッター3 }
+
+# メニュー位置
+menu_locations:
+  - { id: header, label: ヘッダーメニュー }
+  - { id: footer, label: フッターメニュー }

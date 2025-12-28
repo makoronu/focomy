@@ -22,11 +22,19 @@ class ThemeConfig:
         self.version = data.get("version", "1.0.0")
         self.author = data.get("author", "")
         self.description = data.get("description", "")
+        self.preview = data.get("preview", "")
 
         # CSS variables
         self.colors = data.get("colors", {})
         self.fonts = data.get("fonts", {})
         self.spacing = data.get("spacing", {})
+
+        # Customization config
+        self.config = data.get("config", {})
+
+        # Widget areas and menu locations
+        self.widget_areas = data.get("widget_areas", [])
+        self.menu_locations = data.get("menu_locations", [])
 
         # Templates
         self.templates = data.get("templates", {})
@@ -633,7 +641,10 @@ body {
                 html_parts.append(f'<table>{"".join(rows)}</table>')
 
             elif block_type == "raw":
-                html_parts.append(block_data.get("html", ""))
+                # Sanitize raw HTML to prevent XSS
+                from .sanitizer import sanitizer_service
+                raw_html = block_data.get("html", "")
+                html_parts.append(sanitizer_service.sanitize(raw_html))
 
             elif block_type == "embed":
                 service = escape(block_data.get("service", ""))

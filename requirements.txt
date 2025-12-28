@@ -34,6 +34,19 @@ markupsafe==2.1.3
 
 # Security
 slowapi==0.1.9
+itsdangerous==2.1.2
 
 # OAuth
 authlib==1.3.0
+
+# Async HTTP
+aiohttp==3.9.1
+
+# Logging
+structlog==24.1.0
+
+# Migrations
+alembic==1.13.1
+
+# Cache
+redis==5.0.1

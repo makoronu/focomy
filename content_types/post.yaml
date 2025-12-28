@@ -48,6 +48,11 @@ fields:
       - value: private
         label: 非公開
     default: draft
+    # Define allowed transitions: from_state -> [allowed_to_states]
+    transitions:
+      draft: [published, private]
+      published: [draft, private]
+      private: [draft, published]
 
   - name: published_at
     type: datetime

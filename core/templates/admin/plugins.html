@@ -1,0 +1,146 @@
+{% extends "admin/base.html" %}
+
+{% block title %}プラグイン管理{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>プラグイン管理</h1>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>価格ポリシー（ぼったくり防止）</h3>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info">
+            <p><strong>Focomy プラグインマーケットプレイスの価格上限:</strong></p>
+            <ul class="mb-0">
+                <li>買い切り: 最大 <strong>$20.00</strong></li>
+                <li>サブスクリプション: 最大 <strong>$5.00/月</strong></li>
+            </ul>
+            <p class="mt-2 mb-0">
+                この上限は、ユーザーを高額なプラグインから保護するために設けられています。
+                価値のあるプラグインは適正価格で提供されるべきです。
+            </p>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>審査待ちプラグイン</h3>
+        <span class="badge bg-warning">{{ pending_count }}</span>
+    </div>
+    <div class="card-body">
+        {% if pending_plugins %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>名前</th>
+                    <th>開発者</th>
+                    <th>カテゴリ</th>
+                    <th>価格</th>
+                    <th>送信日</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for plugin in pending_plugins %}
+                <tr>
+                    <td>
+                        <strong>{{ plugin.name }}</strong>
+                        <br><small class="text-muted">v{{ plugin.version }}</small>
+                    </td>
+                    <td>{{ plugin.developer_name }}</td>
+                    <td>{{ plugin.category_label }}</td>
+                    <td>{{ plugin.price_display }}</td>
+                    <td>{{ plugin.created_at.strftime('%Y-%m-%d') }}</td>
+                    <td>
+                        <a href="/admin/plugins/{{ plugin.id }}/review" class="btn btn-sm btn-primary">
+                            審査
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">審査待ちのプラグインはありません</p>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h3>承認済みプラグイン</h3>
+        <span class="badge bg-success">{{ approved_count }}</span>
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <input type="text" class="form-control" placeholder="プラグインを検索..."
+                   hx-get="/admin/plugins/search"
+                   hx-trigger="keyup changed delay:300ms"
+                   hx-target="#plugins-list"
+                   name="q">
+        </div>
+
+        <div id="plugins-list">
+            {% if approved_plugins %}
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>名前</th>
+                        <th>カテゴリ</th>
+                        <th>価格</th>
+                        <th>DL数</th>
+                        <th>評価</th>
+                        <th>ステータス</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for plugin in approved_plugins %}
+                    <tr>
+                        <td>
+                            <strong>{{ plugin.name }}</strong>
+                            {% if plugin.is_featured %}
+                            <span class="badge bg-warning">おすすめ</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ plugin.category_label }}</td>
+                        <td>{{ plugin.price_display }}</td>
+                        <td>{{ plugin.download_count | default(0) }}</td>
+                        <td>
+                            {% if plugin.rating_average %}
+                            {{ "★" * (plugin.rating_average | int) }}{{ "☆" * (5 - plugin.rating_average | int) }}
+                            <small>({{ plugin.rating_count }})</small>
+                            {% else %}
+                            <small class="text-muted">-</small>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <span class="badge bg-success">承認済み</span>
+                        </td>
+                        <td>
+                            <div class="btn-group btn-group-sm">
+                                <a href="/admin/plugins/{{ plugin.id }}" class="btn btn-outline-secondary">
+                                    編集
+                                </a>
+                                <button class="btn btn-outline-warning"
+                                        hx-post="/admin/plugins/{{ plugin.id }}/toggle-featured"
+                                        hx-swap="none">
+                                    {% if plugin.is_featured %}非おすすめ{% else %}おすすめ{% endif %}
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <p class="text-muted">承認済みのプラグインはありません</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

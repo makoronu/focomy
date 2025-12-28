@@ -43,6 +43,10 @@ fields:
         label: メディア
       - value: security
         label: セキュリティ
+      - value: theme
+        label: テーマ
+      - value: sitemap
+        label: サイトマップ
     default: site
 
   - name: description

@@ -526,6 +526,9 @@
                 </a>
 
                 <div class="nav-section">外観</div>
+                <a href="/admin/themes" class="nav-item {% if current_page == 'themes' %}active{% endif %}">
+                    テーマ
+                </a>
                 <a href="/admin/menus" class="nav-item {% if current_page == 'menus' %}active{% endif %}">
                     メニュー
                 </a>
@@ -551,7 +554,22 @@
                 <a href="/admin/tools/link-validator" class="nav-item {% if current_page == 'tools' and 'link-validator' in request.url.path %}active{% endif %}">
                     リンク検証
                 </a>
+                <a href="/admin/system" class="nav-item {% if current_page == 'system' %}active{% endif %}">
+                    システム情報
+                    <span id="update-badge" class="badge" style="display: none;">NEW</span>
+                </a>
             </nav>
+            <script>
+                // Check for updates on page load
+                fetch('/admin/api/update-check')
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data.has_update) {
+                            document.getElementById('update-badge').style.display = 'inline';
+                        }
+                    })
+                    .catch(() => {});
+            </script>
         </aside>
 
         <main class="main">

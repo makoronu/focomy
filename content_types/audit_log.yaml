@@ -1,0 +1,94 @@
+name: audit_log
+label: 監査ログ
+label_plural: 監査ログ一覧
+icon: shield
+admin_menu: true
+searchable: true
+
+fields:
+  - name: action
+    type: select
+    label: アクション
+    required: true
+    indexed: true
+    options:
+      - value: create
+        label: 作成
+      - value: update
+        label: 更新
+      - value: delete
+        label: 削除
+      - value: login
+        label: ログイン
+      - value: logout
+        label: ログアウト
+      - value: login_failed
+        label: ログイン失敗
+      - value: password_change
+        label: パスワード変更
+      - value: settings_change
+        label: 設定変更
+      - value: bulk_action
+        label: 一括操作
+      - value: export
+        label: エクスポート
+      - value: import
+        label: インポート
+
+  - name: entity_type
+    type: string
+    label: 対象タイプ
+    indexed: true
+    description: 操作対象のコンテンツタイプ
+
+  - name: entity_id
+    type: string
+    label: 対象ID
+    indexed: true
+    description: 操作対象のエンティティID
+
+  - name: entity_title
+    type: string
+    label: 対象名
+    description: 操作対象のタイトルや名前
+
+  - name: user_email
+    type: email
+    label: ユーザーメール
+    indexed: true
+    description: 操作を行ったユーザーのメール
+
+  - name: user_name
+    type: string
+    label: ユーザー名
+    description: 操作を行ったユーザーの名前
+
+  - name: ip_address
+    type: string
+    label: IPアドレス
+    indexed: true
+
+  - name: user_agent
+    type: text
+    label: ユーザーエージェント
+
+  - name: request_id
+    type: string
+    label: リクエストID
+    indexed: true
+    description: リクエスト追跡用ID
+
+  - name: before_data
+    type: json
+    label: 変更前データ
+    description: 更新・削除時の変更前の値
+
+  - name: after_data
+    type: json
+    label: 変更後データ
+    description: 作成・更新時の変更後の値
+
+  - name: metadata
+    type: json
+    label: 追加情報
+    description: その他のコンテキスト情報

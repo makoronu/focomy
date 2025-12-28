@@ -1,0 +1,21 @@
+id: hello-world
+name: Hello World
+version: 1.0.0
+description: Example plugin demonstrating the Focomy plugin system
+author: Focomy Team
+category: example
+license: MIT
+icon: hand-wave
+
+requires_focomy: ">=1.0.0"
+requires_python: ">=3.10"
+
+admin_menu: true
+settings_page: true
+
+provides_hooks:
+  - hello.greet
+
+uses_hooks:
+  - content.before_save
+  - admin.dashboard

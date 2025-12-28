@@ -1,0 +1,61 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="posts-list">
+    {% for post in posts %}
+    <article class="post-card">
+        <h2><a href="/{{ post.type }}/{{ post.slug }}">{{ post.title }}</a></h2>
+        <p>{{ post.excerpt or (post.body | excerpt) }}</p>
+        <time datetime="{{ post.created_at }}">{{ post.created_at[:10] }}</time>
+    </article>
+    {% else %}
+    <p class="empty-state">まだ投稿がありません。</p>
+    {% endfor %}
+</div>
+
+{% if pagination %}
+<nav class="pagination">
+    {% if pagination.has_prev %}
+    <a href="?page={{ pagination.page - 1 }}" class="pagination-prev">前へ</a>
+    {% endif %}
+    <span class="pagination-info">{{ pagination.page }} / {{ pagination.pages }}</span>
+    {% if pagination.has_next %}
+    <a href="?page={{ pagination.page + 1 }}" class="pagination-next">次へ</a>
+    {% endif %}
+</nav>
+{% endif %}
+
+<style>
+    .empty-state {
+        text-align: center;
+        color: var(--color-text-muted);
+        padding: 4rem 0;
+    }
+
+    .pagination {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 2rem;
+        margin-top: 3rem;
+        padding-top: 2rem;
+        border-top: 1px solid var(--color-border);
+    }
+
+    .pagination a {
+        color: var(--color-text);
+        text-decoration: none;
+    }
+
+    .pagination a:hover {
+        text-decoration: underline;
+    }
+
+    .pagination-info {
+        color: var(--color-text-muted);
+        font-size: 0.875rem;
+    }
+</style>
+{% endblock %}

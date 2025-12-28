@@ -1,0 +1,58 @@
+name: scheduled_action
+label: スケジュールアクション
+label_plural: スケジュールアクション
+icon: clock
+admin_menu: false
+searchable: false
+
+fields:
+  - name: entity_id
+    type: string
+    label: エンティティID
+    required: true
+    indexed: true
+
+  - name: action_type
+    type: select
+    label: アクションタイプ
+    required: true
+    indexed: true
+    options:
+      - value: publish
+        label: 公開
+      - value: unpublish_archive
+        label: アーカイブ
+      - value: unpublish_draft
+        label: 下書きに戻す
+      - value: unpublish_delete
+        label: 削除
+
+  - name: scheduled_at
+    type: datetime
+    label: 実行日時
+    required: true
+    indexed: true
+
+  - name: status
+    type: select
+    label: ステータス
+    required: true
+    indexed: true
+    options:
+      - value: pending
+        label: 待機中
+      - value: completed
+        label: 完了
+      - value: cancelled
+        label: キャンセル
+      - value: failed
+        label: 失敗
+    default: pending
+
+  - name: completed_at
+    type: datetime
+    label: 完了日時
+
+  - name: error_message
+    type: text
+    label: エラーメッセージ

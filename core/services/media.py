@@ -187,16 +187,44 @@ class MediaService:
         result = await self.db.execute(query)
         return result.scalar() or 0
 
-    async def delete(self, media_id: str, user_id: str = None) -> bool:
+    async def delete(
+        self,
+        media_id: str,
+        user_id: str = None,
+        force: bool = False,
+    ) -> bool:
         """
         論理削除（Soft Delete）。
 
         物理ファイルは削除せず、deleted_atを設定して非表示にする。
         物理ファイル削除が必要な場合は purge() を使用。
+
+        Args:
+            media_id: Media to delete
+            user_id: User performing the deletion
+            force: If False, check for references and fail if in use.
+                   If True, delete even if referenced (orphans references).
+
+        Returns:
+            True if deleted, False if not found
+
+        Raises:
+            ValueError: If media is in use and force=False
         """
         media = await self.get(media_id)
         if not media:
             return False
+
+        # Check for references unless forced
+        if not force:
+            references = await self.find_references(media_id)
+            if references:
+                ref_count = len(references)
+                entity_types = list(set(r["entity_type"] for r in references))
+                raise ValueError(
+                    f"Cannot delete media: referenced by {ref_count} entities "
+                    f"(types: {', '.join(entity_types)}). Use force=True to delete anyway."
+                )
 
         media.deleted_at = datetime.utcnow()
         if user_id:
@@ -204,6 +232,96 @@ class MediaService:
         await self.db.commit()
 
         return True
+
+    async def find_references(self, media_id: str) -> list[dict]:
+        """Find entities that reference this media.
+
+        Checks:
+        - EntityValues with value_text containing media ID or path
+        - EntityValues with value_json containing media references
+
+        Returns:
+            List of {entity_id, entity_type, field_name} dicts
+        """
+        from ..models import Entity, EntityValue
+        from sqlalchemy import or_
+
+        media = await self.get(media_id, include_deleted=True)
+        if not media:
+            return []
+
+        # Build search patterns
+        media_path = media.stored_path
+        media_url = f"/uploads/{media_path}"
+
+        # Search value_text for media ID or path
+        query = (
+            select(EntityValue.entity_id, EntityValue.field_name, Entity.type)
+            .join(Entity, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.deleted_at.is_(None),
+                or_(
+                    EntityValue.value_text == media_id,
+                    EntityValue.value_text == media_path,
+                    EntityValue.value_text.contains(media_url),
+                )
+            )
+        )
+        result = await self.db.execute(query)
+        rows = result.fetchall()
+
+        references = [
+            {
+                "entity_id": row[0],
+                "field_name": row[1],
+                "entity_type": row[2],
+            }
+            for row in rows
+        ]
+
+        # Also check JSON fields (blocks containing media)
+        # This is more expensive, so we only do basic check
+        json_query = (
+            select(EntityValue.entity_id, EntityValue.field_name, Entity.type)
+            .join(Entity, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.deleted_at.is_(None),
+                EntityValue.value_json.isnot(None),
+            )
+        )
+        json_result = await self.db.execute(json_query)
+        json_rows = json_result.fetchall()
+
+        for row in json_rows:
+            entity_id, field_name, entity_type = row
+            # Get the actual JSON value
+            ev_query = select(EntityValue.value_json).where(
+                EntityValue.entity_id == entity_id,
+                EntityValue.field_name == field_name,
+            )
+            ev_result = await self.db.execute(ev_query)
+            json_value = ev_result.scalar_one_or_none()
+
+            if json_value and self._json_contains_media(json_value, media_id, media_url):
+                references.append({
+                    "entity_id": entity_id,
+                    "field_name": field_name,
+                    "entity_type": entity_type,
+                })
+
+        return references
+
+    def _json_contains_media(self, json_value: any, media_id: str, media_url: str) -> bool:
+        """Check if a JSON value contains a media reference."""
+        import json
+
+        # Convert to string for simple search
+        if isinstance(json_value, (dict, list)):
+            json_str = json.dumps(json_value)
+        else:
+            json_str = str(json_value)
+
+        return media_id in json_str or media_url in json_str
 
     async def purge(self, media_id: str) -> bool:
         """

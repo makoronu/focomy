@@ -4,315 +4,249 @@
 
 - [設計書](../focomy_specification.md)
 
+---
+
 ## 進行中
 
-(なし)
+| ID | タスク | 開始日 |
+|----|--------|--------|
+| 089 | pip installable 対応 | 2025-12-28 |
+
+---
 
 ## 予定
 
-(なし)
+(すべて完了)
 
-### 001 詳細
+---
 
-#### 概要
-ディレクトリ構造、依存関係、DB初期化、コンテンツタイプ定義
+## 詳細
 
-#### 成果物
-```
-focomy/
-├── core/
-│   ├── __init__.py
-│   ├── main.py
-│   ├── config.py
-│   ├── database.py
-│   ├── models/
-│   ├── services/
-│   └── api/
-├── content_types/
-│   ├── post.yaml
-│   ├── page.yaml
-│   ├── category.yaml
-│   └── user.yaml
-├── relations.yaml
-├── themes/default/
-├── config.yaml
-└── requirements.txt
-```
-
-#### DB
-- entities
-- entity_values
-- relations
-- media
-- user_auth
-- sessions
-- login_log
-
-### 002 詳細
+### 089 pip installable 対応
 
 #### 概要
-統一CRUDサービス実装
+`pip install focomy` → `focomy init mysite` → `focomy serve` で動くようにする
 
-#### メソッド
-- create(type, data, user_id)
-- update(id, data, user_id)
-- delete(id, user_id)
-- get(id)
-- find(type, query)
-- count(type, query)
+#### 対応
+- pyproject.toml 依存関係追加（structlog, alembic, pyotp, python-jose, aiohttp, email-validator）
+- Redis をオプショナル依存に（`pip install focomy[redis]`）
+- パッケージデータのバンドル（themes/, content_types/, templates/）
+- CLI 修正（importlib.resources でリソース参照）
+- scaffold/ ディレクトリ作成（init用テンプレート）
+- MANIFEST.in 作成
 
-### 003 詳細
+---
 
-#### 概要
-リレーション操作サービス
+## 詳細
 
-#### メソッド
-- attach(from_id, to_id, relation_type)
-- detach(from_id, to_id, relation_type)
-- sync(from_id, to_ids, relation_type)
-- get_related(entity_id, relation_type)
-
-### 004 詳細
+### 036 トランザクション境界修正
 
 #### 概要
-フィールド定義ロード・バリデーション
+EntityService.create() で flush→値設定→commit が分離しており、途中失敗でゴーストレコードが発生する
 
-#### メソッド
-- get_content_type(type)
-- get_all_content_types()
-- validate(type, data)
-- serialize(entity)
+#### 対応
+- 単一トランザクションで Entity + EntityValue を作成
+- エラー時は全体ロールバック
 
-### 005 詳細
+### 037 many_to_one制約実装
 
 #### 概要
-認証・セッション管理
+RelationService.attach() で many_to_one 時に同一 from_entity_id への重複登録を防止
 
-#### 機能
-- ログイン/ログアウト
-- セッション管理
-- パスワードハッシュ
-- ログイン試行制限
+#### 対応
+- リレーション定義の type を確認
+- many_to_one の場合は既存リレーションを削除してから作成
 
-### 006 詳細
+### 038 unique制約実装
 
 #### 概要
-REST API実装
+slug 等の unique: true フィールドで重複を防止
 
-#### エンドポイント
-- /api/entities/{type}
-- /api/entities/{type}/{id}
-- /api/entities/{type}/{id}/relations/{relation_type}
-- /api/media
-- /api/auth/*
-- /api/schema
+#### 対応
+- EntityService.create/update 時にDB検索
+- 同一type内でのユニーク検証
 
-### 007 詳細
+### 039 初期管理者作成CLI
 
 #### 概要
-HTMX + Jinja2管理画面
-
-#### 画面
-- ダッシュボード
-- エンティティ一覧（動的生成）
-- エンティティ編集（動的フォーム）
-- メディア管理
-
-### 008 詳細
-
-#### 概要
-ブロックエディタ統合
-
-#### ブロック
-- paragraph, header, list
-- image, quote, table
-- code, raw, embed
-
-### 009 詳細
-
-#### 概要
-画像アップロード・変換
-
-#### 処理
-- WebP変換
-- リサイズ（長辺1920px）
-- 日付フォルダ保存
-- SHA256ファイル名
-
-### 010 詳細
-
-#### 概要
-SEOメタデータ自動生成
-
-#### 自動生成
-- title, description
-- OGP
-- JSON-LD
-- sitemap.xml
-
-### 011 詳細
-
-#### 概要
-テーマ・テンプレート
-
-#### 機能
-- CSS変数
-- テンプレート継承
-- カスタムCSS
-
-### 012 詳細
-
-#### 概要
-CLIツール
+インストール直後に管理者ユーザーを作成するCLIコマンド
 
 #### コマンド
-- focomy serve
-- focomy migrate
-- focomy validate
-- focomy build
+```bash
+focomy createuser --email admin@example.com --role admin
+```
 
-### 013 詳細
-
-#### 概要
-robots.txt動的生成
-
-#### 成果物
-- /robots.txt ルート
-- sitemap参照
-- Disallow設定
-
-### 014 詳細
+### 040 パスワードリセット機能
 
 #### 概要
-RSS/Atom/JSONフィード
+パスワードを忘れた場合のリセットフロー
 
-#### 成果物
-- /feed.xml (RSS 2.0)
-- /atom.xml
-- /feed.json
+#### フロー
+1. /forgot-password でメールアドレス入力
+2. リセットトークン生成・メール送信
+3. /reset-password?token=xxx で新パスワード設定
 
-### 015 詳細
-
-#### 概要
-ファビコン複数サイズ
-
-#### 成果物
-- favicon.ico
-- apple-touch-icon
-- manifest.json
-- theme-color
-
-### 016 詳細
+### 041 DBバックアップCLI改善
 
 #### 概要
-SEO設定管理画面
+pg_dump/pg_restore を連携したDBバックアップ
 
-#### 成果物
-- サイトタイトル
-- デフォルト説明
-- OGP画像
-- GA4/Search Console
+#### コマンド
+```bash
+focomy backup --include-db  # DB + uploads
+focomy restore backup.zip
+```
 
-### 017 詳細
-
-#### 概要
-JSON-LD拡充
-
-#### 成果物
-- Organization
-- WebSite+SearchAction
-- Person (著者)
-- FAQPage
-
-### 018 詳細
+### 042 Editor.js XSSサニタイズ
 
 #### 概要
-ページ別SEO設定
+blocks フィールドの rawHTML ブロック等でのXSS防止
 
-#### 成果物
-- noindex/nofollow
-- canonical上書き
-- OGP個別設定
+#### 対応
+- 出力時に許可タグ/属性のホワイトリスト適用
+- bleach または DOMPurify 相当の処理
 
-### 019 詳細
-
-#### 概要
-パンくずナビ
-
-#### 成果物
-- BreadcrumbList JSON-LD
-- テンプレートヘルパー
-
-### 020 詳細
+### 043 循環参照検出
 
 #### 概要
-OGP/Twitter完全対応
+self_referential: true のリレーションで A→B→C→A の循環を防止
 
-#### 成果物
-- og:site_name/locale
-- article:published_time
-- twitter:site/creator
+#### 対応
+- attach 時に祖先チェック
+- 深さ制限（デフォルト10）
 
-### 021 詳細
-
-#### 概要
-CSS外部ファイル化
-
-#### 成果物
-- /static/css/theme.css
-- キャッシュヘッダー
-
-### 022 詳細
+### 044 楽観的ロック実装
 
 #### 概要
-パフォーマンス最適化
+同時編集時のデータ競合を検出
 
-#### 成果物
-- lazy loading
-- preload/prefetch
-- CSS/JS minify
+#### 対応
+- Entity.version カラム追加
+- 更新時にversion比較、不一致でエラー
 
-### 023 詳細
-
-#### 概要
-リダイレクト管理
-
-#### 成果物
-- 301管理UI
-- リダイレクトルール
-
-### 024 詳細
+### 045 indexed: true インデックス作成
 
 #### 概要
-セキュリティヘッダー
+YAML定義の indexed: true からDBインデックスを生成
 
-#### 成果物
-- HSTS
-- CSP
-- X-Frame-Options
+#### 対応
+- entity_values に (entity_id, field_name, value_text) の部分インデックス
+- migrate 時に自動作成
 
-### 025 詳細
-
-#### 概要
-リンク検証機能
-
-#### 成果物
-- 壊れたリンク検出
-- 孤立ページ検出
-
-### 026 詳細
+### 046 検索エンジン実装
 
 #### 概要
-サイトマップ管理
+日本語対応の全文検索
 
-#### 成果物
-- 再生成ボタン
-- 除外設定
+#### 選択肢
+- PostgreSQL tsvector + pg_trgm
+- Meilisearch 外部サービス
+
+### 047 ロギング基盤
+
+#### 概要
+構造化ログ出力
+
+#### 対応
+- structlog 導入
+- JSON形式ログ
+- リクエストID追跡
+
+### 048 DBマイグレーション戦略
+
+#### 概要
+バージョンアップ時のスキーマ変更管理
+
+#### 対応
+- Alembic 導入
+- focomy migrate でマイグレーション実行
+
+### 049 論理削除の波及
+
+#### 概要
+削除されたEntityを参照するRelationの処理
+
+#### 対応
+- 削除時にRelationを自動削除、または
+- 取得時に削除Entity参照を除外
+
+### 050 メディア削除時の参照整合性
+
+#### 概要
+メディア削除時に参照しているEntityの値を処理
+
+#### 対応
+- 参照チェック→警告表示
+- 強制削除時はnull化
+
+### 051 ワークフロー状態遷移の強制
+
+#### 概要
+ワークフロー定義に従った状態遷移のみ許可
+
+#### 対応
+- status 変更時に transitions をチェック
+- 許可されていない遷移はエラー
+
+### 052 管理者操作の監査ログ
+
+#### 概要
+誰が・いつ・何を変更したかの記録
+
+#### 対応
+- audit_logs テーブル追加
+- Entity 変更時に before/after 記録
+
+---
 
 ## 完了
 
 | ID | タスク | 完了日 |
 |----|--------|--------|
+| 036 | トランザクション境界修正 | 2025-12-28 |
+| 037 | many_to_one制約実装 | 2025-12-28 |
+| 038 | unique制約実装 | 2025-12-28 |
+| 039 | 初期管理者作成CLI | 2025-12-28 |
+| 040 | パスワードリセット機能 | 2025-12-28 |
+| 041 | DBバックアップCLI改善 | 2025-12-28 |
+| 042 | Editor.js XSSサニタイズ | 2025-12-28 |
+| 043 | 循環参照検出 | 2025-12-28 |
+| 044 | 楽観的ロック実装 | 2025-12-28 |
+| 045 | indexed: true インデックス作成 | 2025-12-28 |
+| 046 | 検索エンジン実装 | 2025-12-28 |
+| 047 | ロギング基盤 | 2025-12-28 |
+| 048 | DBマイグレーション戦略 | 2025-12-28 |
+| 049 | 論理削除の波及 | 2025-12-28 |
+| 050 | メディア削除時の参照整合性 | 2025-12-28 |
+| 051 | ワークフロー状態遷移の強制 | 2025-12-28 |
+| 052 | 管理者操作の監査ログ | 2025-12-28 |
+| 053 | RBAC権限マトリクス | 2025-12-28 |
+| 054 | キャッシュRedis対応 | 2025-12-28 |
+| 055 | TOTPバックアップコード | 2025-12-28 |
+| 056 | プレビュー機能 | 2025-12-28 |
+| 057 | ゴミ箱UI | 2025-12-28 |
+| 058 | S3ストレージ実装 | 2025-12-28 |
+| 059 | メディアサムネイル生成 | 2025-12-28 |
+| 060 | セッション管理強化 | 2025-12-28 |
+| 061 | Formulaフィールド計算タイミング | 2025-12-28 |
+| 062 | 孤立データクリーンアップ | 2025-12-28 |
+| 063 | ページネーション標準化 | 2025-12-28 |
+| 064 | バルク操作 | 2025-12-28 |
+| 065 | CORS詳細設定 | 2025-12-28 |
+| 066 | API全体のレート制限 | 2025-12-28 |
+| 067 | 大量データ時の管理画面最適化 | 2025-12-28 |
+| 068 | ユーザー招待フロー | 2025-12-28 |
+| 069 | API認証（JWT/APIキー） | 2025-12-28 |
+| 072 | Sentry統合 | 2025-12-28 |
+| 032 | Content Builder（ACF的機能） | 2025-12-28 |
+| 033 | WordPress インポート | 2025-12-28 |
+| 034 | プラグインシステム | 2025-12-28 |
+| 035 | テーママーケットプレイス | 2025-12-28 |
+| 027 | メニュー管理システム | 2025-12-28 |
+| 028 | 柔軟なブログルーティング | 2025-12-28 |
+| 029 | 設定管理UI | 2025-12-28 |
+| 030 | ウィジェット/サイドバー | 2025-12-28 |
+| 031 | コメント機能 | 2025-12-28 |
 | 001 | プロジェクト基盤構築 | 2025-12-26 |
 | 002 | EntityService実装 | 2025-12-26 |
 | 003 | RelationService実装 | 2025-12-26 |
@@ -339,3 +273,21 @@ CSS外部ファイル化
 | 024 | セキュリティヘッダー | 2025-12-27 |
 | 025 | リンク検証機能 | 2025-12-27 |
 | 026 | サイトマップUI | 2025-12-27 |
+| 070 | 多言語対応（i18n） | 2025-12-28 |
+| 071 | テスト戦略 | 2025-12-28 |
+| 073 | メディア整理 | 2025-12-28 |
+| 074 | エクスポート機能 | 2025-12-28 |
+| 075 | OAuth連携解除・ユーザーマージ | 2025-12-28 |
+| 076 | path_prefix衝突検出 | 2025-12-28 |
+| 077 | カスタムルーティング | 2025-12-28 |
+| 078 | プラグイン依存関係解決 | 2025-12-28 |
+| 079 | プラグイン権限分離 | 2025-12-28 |
+| 080 | テーマ継承・子テーマ | 2025-12-28 |
+| 081 | マーケットプレイス署名検証 | 2025-12-28 |
+| 082 | 設定優先順位明確化 | 2025-12-28 |
+| 083 | ゼロダウンタイムデプロイ | 2025-12-28 |
+| 084 | コメントスパム高度対策 | 2025-12-28 |
+| 085 | 用語統一 | 2025-12-28 |
+| 086 | site_setting位置づけ明確化 | 2025-12-28 |
+| 087 | created_by/updated_by FK制約 | 2025-12-28 |
+| 088 | 設計書更新 | 2025-12-28 |

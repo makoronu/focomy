@@ -100,12 +100,36 @@ async def get_seo_settings(db: AsyncSession, site_url: str = "") -> dict:
     }
 
 
+async def get_active_theme(db: AsyncSession) -> str:
+    """Get active theme name from settings."""
+    settings_svc = SettingsService(db)
+    theme_settings = await settings_svc.get_by_category("theme")
+    return theme_settings.get("active", "default")
+
+
+async def render_theme(
+    db: AsyncSession,
+    template_name: str,
+    context: dict,
+) -> str:
+    """Render template with active theme."""
+    active_theme = await get_active_theme(db)
+    theme_service.set_current_theme(active_theme)
+
+    try:
+        return theme_service.render(template_name, context, active_theme)
+    except Exception:
+        # Fallback to default theme
+        return theme_service.render(template_name, context, "default")
+
+
 # === Static Assets ===
 
 @router.get("/css/theme.css", response_class=Response)
-async def theme_css():
+async def theme_css(db: AsyncSession = Depends(get_db)):
     """Serve theme CSS with caching headers."""
-    css_content = theme_service.get_css_variables()
+    active_theme = await get_active_theme(db)
+    css_content = theme_service.get_css_variables(active_theme)
 
     return Response(
         content=css_content,
@@ -245,7 +269,7 @@ async def home(
     widgets_ctx = await get_widgets_context(db)
     seo_ctx = await get_seo_settings(db, site_url)
 
-    html = theme_service.render("index.html", {
+    html = await render_theme(db, "home.html", {
         "posts": posts_data,
         **menus_ctx,
         **widgets_ctx,
@@ -253,70 +277,6 @@ async def home(
     })
 
     cache_service.set(cache_key, html, LIST_CACHE_TTL)
-    return HTMLResponse(content=html)
-
-
-@router.get("/post/{slug}", response_class=HTMLResponse)
-async def view_post(
-    slug: str,
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-):
-    """View a single post."""
-    cache_key = f"page:post:{slug}"
-    cached_html = cache_service.get(cache_key)
-    if cached_html:
-        return HTMLResponse(content=cached_html)
-
-    entity_svc = EntityService(db)
-
-    # Find post by slug
-    posts = await entity_svc.find(
-        "post",
-        limit=1,
-        filters={"slug": slug},
-    )
-
-    if not posts:
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    post = posts[0]
-    post_data = entity_svc.serialize(post)
-
-    # Check if post is published and not scheduled for future
-    if post_data.get("status") != "published":
-        raise HTTPException(status_code=404, detail="Post not found")
-
-    published_at = post_data.get("published_at")
-    if published_at:
-        pub_date = datetime.fromisoformat(published_at.replace("Z", ""))
-        if pub_date > datetime.utcnow():
-            raise HTTPException(status_code=404, detail="Post not found")
-
-    # Get menus and SEO settings first
-    site_url = str(request.base_url).rstrip("/")
-    menus_ctx = await get_menus_context(db)
-    seo_ctx = await get_seo_settings(db, site_url)
-
-    # Generate SEO meta with site settings
-    seo_svc = SEOService(entity_svc, site_url, seo_ctx.get("_seo_service_settings", {}))
-    meta = seo_svc.generate_meta(post)
-    seo_meta = seo_svc.render_meta_tags(meta)
-
-    # Generate breadcrumbs
-    breadcrumb_ctx = generate_breadcrumbs([
-        {"name": post_data.get("title", "投稿"), "url": f"/post/{slug}"}
-    ], site_url)
-
-    html = theme_service.render("post.html", {
-        "post": post_data,
-        "seo_meta": seo_meta,
-        **menus_ctx,
-        **seo_ctx,
-        **breadcrumb_ctx,
-    })
-
-    cache_service.set(cache_key, html, PAGE_CACHE_TTL)
     return HTMLResponse(content=html)
 
 
@@ -356,7 +316,7 @@ async def view_page(
         {"name": page_data.get("title", "ページ"), "url": f"/page/{slug}"}
     ], site_url)
 
-    html = theme_service.render("post.html", {
+    html = await render_theme(db, "post.html", {
         "post": page_data,
         "seo_meta": seo_meta,
         **menus_ctx,
@@ -413,7 +373,7 @@ async def view_category(
     # Get menus
     menus_ctx = await get_menus_context(db)
 
-    html = theme_service.render("category.html", {
+    html = await render_theme(db, "category.html", {
         "category": category_data,
         "posts": posts,
         "page": page,
@@ -468,7 +428,7 @@ async def view_archive(
     # Get menus
     menus_ctx = await get_menus_context(db)
 
-    html = theme_service.render("archive.html", {
+    html = await render_theme(db, "archive.html", {
         "year": year,
         "month": month,
         "posts": posts,
@@ -524,7 +484,7 @@ async def search(
     # Get menus
     menus_ctx = await get_menus_context(db)
 
-    html = theme_service.render("search.html", {
+    html = await render_theme(db, "search.html", {
         "query": q,
         "posts": posts,
         "total": total,
@@ -772,7 +732,7 @@ async def content_type_archive(
     # Get menus
     menus_ctx = await get_menus_context(db)
 
-    html = theme_service.render("archive.html", {
+    html = await render_theme(db, "archive.html", {
         "year": year,
         "month": month,
         "posts": posts,
@@ -794,12 +754,18 @@ async def content_type_listing(
     db: AsyncSession = Depends(get_db),
 ):
     """Listing page for content types with path_prefix."""
+    # Check cache (only first page)
+    cache_key = f"page:{path_prefix}:list:{page}"
+    cached_html = cache_service.get(cache_key)
+    if cached_html:
+        return HTMLResponse(content=cached_html)
+
     # Find content type by path prefix
     content_types = field_service.get_all_content_types()
     target_ct = None
 
     for ct_name, ct in content_types.items():
-        prefix = ct.path_prefix.strip("/")
+        prefix = ct.path_prefix.strip("/") if ct.path_prefix else ""
         if prefix and prefix == path_prefix:
             target_ct = ct
             break
@@ -832,17 +798,23 @@ async def content_type_listing(
     total = await entity_svc.count(target_ct.name, QueryParams(filters={"status": "published"}))
     total_pages = (total + per_page - 1) // per_page
 
-    # Get menus
+    # Get all contexts
+    site_url = str(request.base_url).rstrip("/")
     menus_ctx = await get_menus_context(db)
+    widgets_ctx = await get_widgets_context(db)
+    seo_ctx = await get_seo_settings(db, site_url)
 
-    html = theme_service.render("index.html", {
+    html = await render_theme(db, "home.html", {
         "posts": posts_data,
         "content_type": target_ct,
         "page": page,
         "total_pages": total_pages,
         **menus_ctx,
+        **widgets_ctx,
+        **seo_ctx,
     })
 
+    cache_service.set(cache_key, html, LIST_CACHE_TTL)
     return HTMLResponse(content=html)
 
 
@@ -856,12 +828,18 @@ async def view_content_by_path(
     db: AsyncSession = Depends(get_db),
 ):
     """Dynamic route for content types with path_prefix."""
+    # Check cache first
+    cache_key = f"page:{path_prefix}:{slug}"
+    cached_html = cache_service.get(cache_key)
+    if cached_html:
+        return HTMLResponse(content=cached_html)
+
     # Find content type by path prefix
     content_types = field_service.get_all_content_types()
 
     target_ct = None
     for ct_name, ct in content_types.items():
-        prefix = ct.path_prefix.strip("/")
+        prefix = ct.path_prefix.strip("/") if ct.path_prefix else ""
         if prefix and prefix == path_prefix:
             target_ct = ct
             break
@@ -885,31 +863,54 @@ async def view_content_by_path(
     entity = entities[0]
     entity_data = entity_svc.serialize(entity)
 
-    # Generate SEO meta
+    # Check for scheduled publish (published_at)
+    published_at = entity_data.get("published_at")
+    if published_at:
+        pub_date = datetime.fromisoformat(published_at.replace("Z", ""))
+        if pub_date > datetime.utcnow():
+            raise HTTPException(status_code=404, detail="Content not found")
+
+    # Get site URL and contexts
     site_url = str(request.base_url).rstrip("/")
-    seo_svc = SEOService(entity_svc, site_url)
+    menus_ctx = await get_menus_context(db)
+    widgets_ctx = await get_widgets_context(db)
+    seo_ctx = await get_seo_settings(db, site_url)
+
+    # Generate SEO meta with site settings
+    seo_svc = SEOService(entity_svc, site_url, seo_ctx.get("_seo_service_settings", {}))
     meta = seo_svc.generate_meta(entity)
     seo_meta = seo_svc.render_meta_tags(meta)
 
-    # Get menus
-    menus_ctx = await get_menus_context(db)
+    # Generate breadcrumbs
+    content_url = f"/{path_prefix}/{slug}"
+    breadcrumb_ctx = generate_breadcrumbs([
+        {"name": entity_data.get("title", target_ct.label), "url": content_url}
+    ], site_url)
 
     # Determine template
     template = target_ct.template or f"{target_ct.name}.html"
     try:
-        html = theme_service.render(template, {
+        html = await render_theme(db, template, {
             "post": entity_data,
             "content": entity_data,
             "seo_meta": seo_meta,
             "content_type": target_ct,
             **menus_ctx,
+            **widgets_ctx,
+            **seo_ctx,
+            **breadcrumb_ctx,
         })
     except Exception:
         # Fallback to post.html
-        html = theme_service.render("post.html", {
+        html = await render_theme(db, "post.html", {
             "post": entity_data,
             "seo_meta": seo_meta,
             **menus_ctx,
+            **widgets_ctx,
+            **seo_ctx,
+            **breadcrumb_ctx,
         })
 
+    # Cache the rendered HTML
+    cache_service.set(cache_key, html, PAGE_CACHE_TTL)
     return HTMLResponse(content=html)

@@ -111,7 +111,7 @@ class SettingsService:
             # Update existing
             await self.entity_svc.update(
                 entities[0].id,
-                {"value": value, "value_type": value_type, "category": category},
+                {"key": key, "value": value, "value_type": value_type, "category": category},
                 user_id=user_id,
                 create_revision=False,
             )

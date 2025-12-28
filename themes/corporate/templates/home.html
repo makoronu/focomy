@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }} - {{ site_tagline or "ビジネスを成功に導くパートナー" }}{% endblock %}
+
+{% block hero %}
+<section class="hero hero--large">
+    <div class="container">
+        <h1>{{ site_tagline or "あなたのビジネスを次のステージへ" }}</h1>
+        <p>
+            {{ site_description or "最高品質のサービスで、お客様のビジネス成長をサポートします。まずはお気軽にご相談ください。" }}
+        </p>
+        <div class="hero-cta">
+            <a href="/contact" class="cta-button cta-button--large">無料相談はこちら</a>
+            <a href="/about" class="cta-button cta-button--outline cta-button--large" style="color: white; border-color: white;">サービス詳細</a>
+        </div>
+    </div>
+</section>
+{% endblock %}
+
+{% block content %}
+<!-- Features -->
+<section class="features">
+    <div class="container">
+        <h2 class="section-title">選ばれる3つの理由</h2>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon">01</div>
+                <h3>確かな実績</h3>
+                <p>創業以来、多くのお客様にご満足いただいております。豊富な経験と実績で、お客様の課題を解決します。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">02</div>
+                <h3>専門チーム</h3>
+                <p>各分野のプロフェッショナルが連携し、最適なソリューションをご提案。ワンストップでサポートします。</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">03</div>
+                <h3>サポート体制</h3>
+                <p>導入後も安心のサポート体制。お困りの際はいつでもお気軽にご相談ください。</p>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- News -->
+<section class="news-section">
+    <div class="container">
+        <h2 class="section-title">お知らせ</h2>
+        <div class="news-list">
+            {% for post in posts[:5] %}
+            <div class="news-item">
+                <span class="news-date">{{ post.created_at[:10] }}</span>
+                <a href="/{{ post.type }}/{{ post.slug }}">{{ post.title }}</a>
+            </div>
+            {% else %}
+            <p style="text-align: center; color: var(--color-text-muted);">お知らせはありません</p>
+            {% endfor %}
+        </div>
+        {% if posts|length > 5 %}
+        <div style="text-align: center; margin-top: 2rem;">
+            <a href="/news" class="cta-button cta-button--outline">お知らせ一覧</a>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}
+
+{% block cta_banner %}
+<section class="cta-banner">
+    <div class="container">
+        <h2>まずはお気軽にご相談ください</h2>
+        <p>専門スタッフが丁寧にご対応いたします。お見積りは無料です。</p>
+        <a href="/contact" class="cta-button cta-button--large">無料相談・お見積り</a>
+    </div>
+</section>
+{% endblock %}

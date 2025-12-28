@@ -1,0 +1,30 @@
+# Render Blueprint
+# https://render.com/docs/blueprint-spec
+
+services:
+  - type: web
+    name: focomy
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    healthCheckPath: /health
+    envVars:
+      - key: FOCOMY_DATABASE_URL
+        fromDatabase:
+          name: focomy-db
+          property: connectionString
+      - key: FOCOMY_SECRET_KEY
+        generateValue: true
+      - key: FOCOMY_DEBUG
+        value: "false"
+      - key: FOCOMY_SITE_URL
+        sync: false
+    disk:
+      name: uploads
+      mountPath: /app/uploads
+      sizeGB: 1
+
+databases:
+  - name: focomy-db
+    databaseName: focomy
+    plan: starter
+    postgresMajorVersion: 15

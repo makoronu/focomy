@@ -54,6 +54,24 @@ class UserAuth(Base):
         DateTime,
         nullable=True,
     )
+    # Password reset
+    reset_token: Mapped[Optional[str]] = mapped_column(
+        String(64),
+        nullable=True,
+    )
+    reset_token_expires: Mapped[Optional[datetime]] = mapped_column(
+        DateTime,
+        nullable=True,
+    )
+    # TOTP backup codes (comma-separated hashed codes)
+    totp_backup_codes: Mapped[Optional[str]] = mapped_column(
+        String(500),
+        nullable=True,
+    )
+    totp_enabled: Mapped[bool] = mapped_column(
+        Boolean,
+        default=False,
+    )
 
     def __repr__(self) -> str:
         return f"<UserAuth(entity_id={self.entity_id}, email={self.email})>"

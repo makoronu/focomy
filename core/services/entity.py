@@ -41,36 +41,49 @@ class EntityService:
         data: dict[str, Any],
         user_id: str = None,
     ) -> Entity:
-        """Create a new entity."""
-        # Validate
+        """Create a new entity.
+
+        All operations are performed in a single transaction.
+        On error, the entire transaction is rolled back.
+        """
+        # Validate before starting transaction
         validation = self.field_svc.validate(type_name, data)
         if not validation.valid:
             raise ValueError(f"Validation failed: {validation.errors}")
 
-        # Create entity
-        entity = Entity(
-            type=type_name,
-            created_by=user_id,
-            updated_by=user_id,
-        )
-        self.db.add(entity)
-        await self.db.flush()
-
-        # Create values
+        # Check unique constraints before creating
         ct = self.field_svc.get_content_type(type_name)
         if ct:
-            for field_def in ct.fields:
-                value = data.get(field_def.name, field_def.default)
-                if value is not None:
-                    await self._set_value(entity.id, field_def.name, value, field_def.type)
+            await self._check_unique_constraints(type_name, data, ct, entity_id=None)
 
-        await self.db.commit()
-        await self.db.refresh(entity)
+        try:
+            # Create entity
+            entity = Entity(
+                type=type_name,
+                created_by=user_id,
+                updated_by=user_id,
+            )
+            self.db.add(entity)
+            await self.db.flush()
 
-        # Invalidate cache for this content type
-        self._invalidate_cache(type_name)
+            # Create values
+            if ct:
+                for field_def in ct.fields:
+                    value = data.get(field_def.name, field_def.default)
+                    if value is not None:
+                        await self._set_value(entity.id, field_def.name, value, field_def.type)
 
-        return entity
+            await self.db.commit()
+            await self.db.refresh(entity)
+
+            # Invalidate cache for this content type
+            self._invalidate_cache(type_name)
+
+            return entity
+
+        except Exception as e:
+            await self.db.rollback()
+            raise
 
     async def update(
         self,
@@ -79,79 +92,284 @@ class EntityService:
         user_id: str = None,
         create_revision: bool = True,
         revision_type: str = "manual",
+        expected_version: int = None,
     ) -> Optional[Entity]:
-        """Update an existing entity."""
+        """Update an existing entity.
+
+        All operations are performed in a single transaction.
+        On error, the entire transaction is rolled back.
+
+        Args:
+            expected_version: If provided, checks for concurrent modification.
+                              Raises ValueError if versions don't match.
+        """
         entity = await self.get(entity_id)
         if not entity:
             return None
 
-        # Validate
+        # Optimistic locking: check version if expected_version is provided
+        if expected_version is not None and entity.version != expected_version:
+            raise ValueError(
+                f"Concurrent modification detected. Expected version {expected_version}, "
+                f"but current version is {entity.version}. Please reload and try again."
+            )
+
+        # Validate before starting transaction
         validation = self.field_svc.validate(entity.type, data)
         if not validation.valid:
             raise ValueError(f"Validation failed: {validation.errors}")
 
-        # Create revision before updating
-        if create_revision:
-            from .revision import RevisionService
-            revision_svc = RevisionService(self.db)
-            current_data = self.serialize(entity)
-            await revision_svc.create(
-                entity_id=entity_id,
-                data=current_data,
-                revision_type=revision_type,
-                title=current_data.get("title") or current_data.get("name"),
-                user_id=user_id,
-            )
-
-        # Update entity
-        entity.updated_at = datetime.utcnow()
-        entity.updated_by = user_id
-
-        # Update values
+        # Check unique constraints and transitions before updating
         ct = self.field_svc.get_content_type(entity.type)
         if ct:
-            for field_def in ct.fields:
-                if field_def.name in data:
-                    await self._set_value(
-                        entity_id,
-                        field_def.name,
-                        data[field_def.name],
-                        field_def.type,
-                    )
+            await self._check_unique_constraints(entity.type, data, ct, entity_id=entity_id)
+            await self._check_status_transitions(entity, data, ct)
 
-        await self.db.commit()
-        await self.db.refresh(entity)
+        try:
+            # Create revision before updating
+            if create_revision:
+                from .revision import RevisionService
+                revision_svc = RevisionService(self.db)
+                current_data = self.serialize(entity)
+                await revision_svc.create(
+                    entity_id=entity_id,
+                    data=current_data,
+                    revision_type=revision_type,
+                    title=current_data.get("title") or current_data.get("name"),
+                    user_id=user_id,
+                )
 
-        # Invalidate cache for this content type
-        self._invalidate_cache(entity.type)
+            # Update entity
+            entity.updated_at = datetime.utcnow()
+            entity.updated_by = user_id
+            entity.version += 1  # Increment version for optimistic locking
 
-        return entity
+            # Update values
+            if ct:
+                for field_def in ct.fields:
+                    if field_def.name in data:
+                        await self._set_value(
+                            entity_id,
+                            field_def.name,
+                            data[field_def.name],
+                            field_def.type,
+                        )
+
+            await self.db.commit()
+            await self.db.refresh(entity)
+
+            # Invalidate cache for this content type
+            self._invalidate_cache(entity.type)
+
+            return entity
+
+        except Exception as e:
+            await self.db.rollback()
+            raise
 
     async def delete(
         self,
         entity_id: str,
         user_id: str = None,
         hard: bool = False,
+        cascade: bool = True,
     ) -> bool:
-        """Delete an entity (soft delete by default)."""
+        """Delete an entity (soft delete by default).
+
+        Args:
+            entity_id: Entity to delete
+            user_id: User performing the delete
+            hard: If True, permanently delete (not recommended)
+            cascade: If True, also soft-delete related entities marked with cascade_delete
+
+        Returns:
+            True if deleted, False if entity not found
+        """
         entity = await self.get(entity_id, include_deleted=True)
         if not entity:
             return False
 
         entity_type = entity.type
+        deleted_at = datetime.utcnow()
 
-        if hard:
-            await self.db.delete(entity)
-        else:
-            entity.deleted_at = datetime.utcnow()
-            entity.updated_by = user_id
+        try:
+            if hard:
+                await self.db.delete(entity)
+            else:
+                entity.deleted_at = deleted_at
+                entity.updated_by = user_id
+
+                # Handle cascade deletes
+                if cascade:
+                    await self._cascade_soft_delete(
+                        entity_id=entity_id,
+                        entity_type=entity_type,
+                        user_id=user_id,
+                        deleted_at=deleted_at,
+                    )
+
+            await self.db.commit()
+
+            # Invalidate cache for this content type
+            self._invalidate_cache(entity_type)
+
+            return True
+
+        except Exception as e:
+            await self.db.rollback()
+            raise
+
+    async def _cascade_soft_delete(
+        self,
+        entity_id: str,
+        entity_type: str,
+        user_id: str,
+        deleted_at: datetime,
+    ) -> int:
+        """Cascade soft delete to related entities.
+
+        Finds all relations with cascade_delete=True that point TO this entity
+        and soft-deletes the from_entities.
+
+        Returns:
+            Count of entities that were cascade-deleted
+        """
+        from ..models import Relation
+
+        cascade_relations = self.field_svc.get_cascade_relations_for_type(entity_type)
+        if not cascade_relations:
+            return 0
+
+        count = 0
+        for relation_name, rel_def in cascade_relations:
+            # Find all entities that have a relation TO the deleted entity
+            query = select(Relation).where(
+                and_(
+                    Relation.to_entity_id == entity_id,
+                    Relation.relation_type == relation_name,
+                )
+            )
+            result = await self.db.execute(query)
+            relations = result.scalars().all()
+
+            for relation in relations:
+                # Get the from_entity and soft delete it
+                from_entity = await self.get(relation.from_entity_id)
+                if from_entity and from_entity.deleted_at is None:
+                    from_entity.deleted_at = deleted_at
+                    from_entity.updated_by = user_id
+                    count += 1
+
+                    # Recursively cascade (with depth limit handled by DB)
+                    count += await self._cascade_soft_delete(
+                        entity_id=from_entity.id,
+                        entity_type=from_entity.type,
+                        user_id=user_id,
+                        deleted_at=deleted_at,
+                    )
+
+        return count
+
+    async def restore(
+        self,
+        entity_id: str,
+        user_id: str = None,
+    ) -> Optional[Entity]:
+        """
+        Restore a soft-deleted entity.
+
+        Args:
+            entity_id: Entity to restore
+            user_id: User performing the restore
+
+        Returns:
+            Restored entity, or None if not found
+        """
+        entity = await self.get(entity_id, include_deleted=True)
+        if not entity or entity.deleted_at is None:
+            return None
+
+        entity.deleted_at = None
+        entity.updated_at = datetime.utcnow()
+        entity.updated_by = user_id
 
         await self.db.commit()
 
-        # Invalidate cache for this content type
-        self._invalidate_cache(entity_type)
+        self._invalidate_cache(entity.type)
+        return entity
 
-        return True
+    async def list_deleted(
+        self,
+        type_name: str = None,
+        limit: int = 50,
+        offset: int = 0,
+    ) -> tuple[list[Entity], int]:
+        """
+        List soft-deleted entities (trash).
+
+        Args:
+            type_name: Optional filter by type
+            limit: Max results
+            offset: Pagination offset
+
+        Returns:
+            Tuple of (entities, total_count)
+        """
+        query = select(Entity).where(Entity.deleted_at.isnot(None))
+
+        if type_name:
+            query = query.where(Entity.type == type_name)
+
+        # Order by deletion date (most recent first)
+        query = query.order_by(Entity.deleted_at.desc())
+
+        # Get total count
+        from sqlalchemy import func
+        count_query = select(func.count(Entity.id)).where(Entity.deleted_at.isnot(None))
+        if type_name:
+            count_query = count_query.where(Entity.type == type_name)
+        count_result = await self.db.execute(count_query)
+        total = count_result.scalar() or 0
+
+        # Get entities with pagination
+        query = query.limit(limit).offset(offset)
+        result = await self.db.execute(query)
+        entities = result.scalars().all()
+
+        return list(entities), total
+
+    async def empty_trash(
+        self,
+        type_name: str = None,
+        older_than_days: int = 30,
+    ) -> int:
+        """
+        Permanently delete old soft-deleted entities.
+
+        Args:
+            type_name: Optional filter by type
+            older_than_days: Only delete items deleted more than X days ago
+
+        Returns:
+            Count of permanently deleted entities
+        """
+        from sqlalchemy import delete as sql_delete
+
+        cutoff = datetime.utcnow() - timedelta(days=older_than_days)
+
+        conditions = [
+            Entity.deleted_at.isnot(None),
+            Entity.deleted_at < cutoff,
+        ]
+        if type_name:
+            conditions.append(Entity.type == type_name)
+
+        result = await self.db.execute(
+            sql_delete(Entity).where(and_(*conditions))
+        )
+        await self.db.commit()
+
+        return result.rowcount
 
     def _invalidate_cache(self, type_name: str) -> None:
         """Invalidate page cache for a content type."""
@@ -433,6 +651,113 @@ class EntityService:
             return query
 
         return query.where(Entity.id.in_(subq))
+
+    async def _check_unique_constraints(
+        self,
+        type_name: str,
+        data: dict[str, Any],
+        content_type,
+        entity_id: str = None,
+    ) -> None:
+        """Check unique constraints for fields.
+
+        Args:
+            type_name: Content type name
+            data: Data to check
+            content_type: ContentType definition
+            entity_id: Current entity ID (for updates, to exclude self)
+
+        Raises:
+            ValueError: If a unique constraint is violated
+        """
+        for field_def in content_type.fields:
+            if not field_def.unique:
+                continue
+
+            value = data.get(field_def.name)
+            if value is None:
+                continue
+
+            # Check if another entity has this value
+            storage_type = self._get_storage_type(field_def.type)
+            if storage_type == "text":
+                value_col = EntityValue.value_text
+                compare_value = str(value)
+            elif storage_type == "int":
+                value_col = EntityValue.value_int
+                compare_value = int(value)
+            else:
+                continue  # Skip non-text/int unique checks for now
+
+            # Build query to find existing entity with same value
+            subq = select(EntityValue.entity_id).where(
+                and_(
+                    EntityValue.field_name == field_def.name,
+                    value_col == compare_value,
+                )
+            )
+
+            query = select(Entity).where(
+                and_(
+                    Entity.type == type_name,
+                    Entity.deleted_at.is_(None),
+                    Entity.id.in_(subq),
+                )
+            )
+
+            # Exclude current entity for updates
+            if entity_id:
+                query = query.where(Entity.id != entity_id)
+
+            result = await self.db.execute(query)
+            existing = result.scalar_one_or_none()
+
+            if existing:
+                raise ValueError(
+                    f"Unique constraint violation: {field_def.label or field_def.name} "
+                    f"'{value}' already exists"
+                )
+
+    async def _check_status_transitions(
+        self,
+        entity: Entity,
+        data: dict[str, Any],
+        content_type,
+    ) -> None:
+        """Check if status field transitions are valid.
+
+        Args:
+            entity: Entity being updated
+            data: New data
+            content_type: ContentType definition
+
+        Raises:
+            ValueError: If a status transition is not allowed
+        """
+        # Get current field values for comparison
+        current_data = self.serialize(entity)
+
+        for field_def in content_type.fields:
+            # Only check select fields with transitions defined
+            if field_def.type != "select" or field_def.transitions is None:
+                continue
+
+            if field_def.name not in data:
+                continue
+
+            current_value = current_data.get(field_def.name)
+            new_value = data[field_def.name]
+
+            # Skip if value not changing
+            if current_value == new_value:
+                continue
+
+            # Check if transition is allowed
+            if not field_def.is_transition_allowed(current_value or "", new_value or ""):
+                raise ValueError(
+                    f"Invalid status transition: cannot change {field_def.label or field_def.name} "
+                    f"from '{current_value}' to '{new_value}'"
+                )
 
     def serialize(self, entity: Entity) -> dict[str, Any]:
         """Serialize entity to dict."""

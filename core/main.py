@@ -2,6 +2,8 @@
 
 from contextlib import asynccontextmanager
 import secrets
+import time
+import uuid
 
 from fastapi import FastAPI, Request, HTTPException
 from fastapi.staticfiles import StaticFiles
@@ -16,6 +18,7 @@ from slowapi.errors import RateLimitExceeded
 from .config import settings
 from .database import init_db, close_db
 from .rate_limit import limiter
+from .services.logging import configure_logging, get_logger, bind_context, clear_context
 
 
 class RedirectMiddleware(BaseHTTPMiddleware):
@@ -211,6 +214,77 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         return response
 
 
+class RequestLoggingMiddleware(BaseHTTPMiddleware):
+    """Structured request/response logging middleware.
+
+    Logs every request with timing, status, and context.
+    Assigns a unique request ID for tracing.
+    """
+
+    # Skip logging for these paths to reduce noise
+    SKIP_PATHS = {"/health", "/favicon.ico"}
+
+    async def dispatch(self, request: Request, call_next):
+        # Skip health checks and favicon
+        if request.url.path in self.SKIP_PATHS:
+            return await call_next(request)
+
+        # Generate request ID
+        request_id = str(uuid.uuid4())[:8]
+        request.state.request_id = request_id
+
+        # Bind context for all logs in this request
+        bind_context(
+            request_id=request_id,
+            method=request.method,
+            path=request.url.path,
+        )
+
+        # Get client IP (handle proxies)
+        client_ip = request.headers.get("x-forwarded-for", "").split(",")[0].strip()
+        if not client_ip:
+            client_ip = request.client.host if request.client else "unknown"
+
+        logger = get_logger("focomy.http")
+        start_time = time.perf_counter()
+
+        try:
+            response = await call_next(request)
+            duration_ms = (time.perf_counter() - start_time) * 1000
+
+            # Log based on status code
+            log_data = {
+                "client_ip": client_ip,
+                "status": response.status_code,
+                "duration_ms": round(duration_ms, 2),
+                "user_agent": request.headers.get("user-agent", "")[:100],
+            }
+
+            if response.status_code >= 500:
+                logger.error("Request failed", **log_data)
+            elif response.status_code >= 400:
+                logger.warning("Request error", **log_data)
+            else:
+                logger.info("Request completed", **log_data)
+
+            # Add request ID to response headers for debugging
+            response.headers["X-Request-ID"] = request_id
+
+            return response
+
+        except Exception as e:
+            duration_ms = (time.perf_counter() - start_time) * 1000
+            logger.exception(
+                "Request exception",
+                client_ip=client_ip,
+                duration_ms=round(duration_ms, 2),
+                error=str(e),
+            )
+            raise
+        finally:
+            clear_context()
+
+
 def validate_csrf_token(request: Request, form_token: str) -> bool:
     """Validate CSRF token from form data against cookie.
 
@@ -225,15 +299,24 @@ def validate_csrf_token(request: Request, form_token: str) -> bool:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application lifespan handler."""
+    # Configure structured logging first
+    configure_logging()
+    logger = get_logger("focomy")
+    logger.info("Starting Focomy CMS", version="0.1.0", debug=settings.debug)
+
     # Startup
     await init_db()
+    logger.info("Database initialized")
 
     # Configure OAuth
     from .services.oauth import oauth_service
     oauth_service.configure(app)
+    logger.info("OAuth configured")
 
     yield
+
     # Shutdown
+    logger.info("Shutting down Focomy CMS")
     await close_db()
 
 
@@ -255,14 +338,19 @@ app.add_middleware(CSRFMiddleware)
 app.add_middleware(SessionMiddleware, secret_key=settings.security.secret_key)
 app.add_middleware(RedirectMiddleware)
 
-# CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Configure in production
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+# Request logging (runs early, logs all requests)
+app.add_middleware(RequestLoggingMiddleware)
+
+# CORS middleware (configurable via settings)
+if settings.cors.enabled:
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=settings.cors.allow_origins,
+        allow_credentials=settings.cors.allow_credentials,
+        allow_methods=settings.cors.allow_methods,
+        allow_headers=settings.cors.allow_headers,
+        max_age=settings.cors.max_age,
+    )
 
 # Static files
 app.mount(
@@ -344,13 +432,14 @@ async def server_error_handler(request: Request, exc: Exception):
 
 
 # Include routers
-from .api import entities, schema, relations, auth, media, seo, forms, revisions, comments
+from .api import entities, schema, relations, auth, media, seo, forms, revisions, comments, search
 from .admin import routes as admin
 from .engine import routes as engine
 
 app.include_router(entities.router, prefix="/api")
 app.include_router(schema.router, prefix="/api")
 app.include_router(relations.router, prefix="/api")
+app.include_router(search.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(media.router, prefix="/api")
 app.include_router(revisions.router, prefix="/api")

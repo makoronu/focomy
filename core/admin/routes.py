@@ -11,6 +11,8 @@ from ..database import get_db
 from ..services.entity import EntityService
 from ..services.auth import AuthService
 from ..services.field import field_service
+from ..services.audit import AuditService, get_client_ip, get_request_id
+from ..services.rbac import RBACService, Permission
 from ..models import Entity
 from ..rate_limit import limiter
 
@@ -36,10 +38,11 @@ async def get_current_admin(
     if not user:
         return None
 
-    # Check if user has admin role
+    # Check if user has any role (author, editor, admin can all access admin panel)
+    # RBAC will control what they can do
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(user)
-    if user_data.get("role") not in ("admin", "editor"):
+    if user_data.get("role") not in ("admin", "editor", "author"):
         return None
 
     return user
@@ -52,6 +55,30 @@ def require_admin(request: Request, user: Optional[Entity] = Depends(get_current
     return user
 
 
+async def check_permission(
+    db: AsyncSession,
+    user: Entity,
+    content_type: str,
+    permission: Permission,
+    entity_id: Optional[str] = None,
+) -> None:
+    """Check if user has permission. Raises HTTPException if denied."""
+    entity_svc = EntityService(db)
+    user_data = entity_svc.serialize(user)
+    user_role = user_data.get("role", "author")
+
+    rbac_svc = RBACService(db)
+    result = await rbac_svc.can_access(
+        user_id=user_data.get("id"),
+        content_type=content_type,
+        permission=permission,
+        entity_id=entity_id,
+    )
+
+    if not result.allowed:
+        raise HTTPException(status_code=403, detail=result.reason or "Permission denied")
+
+
 # Common template context
 async def get_context(
     request: Request,
@@ -60,12 +87,22 @@ async def get_context(
     current_page: str = "dashboard",
 ):
     """Get common template context."""
-    content_types = field_service.get_all_content_types()
+    all_content_types = field_service.get_all_content_types()
 
     entity_svc = EntityService(db)
     user_data = None
+    user_role = "admin"
     if current_user:
         user_data = entity_svc.serialize(current_user)
+        user_role = user_data.get("role", "author")
+
+    # Filter content types based on role
+    rbac_svc = RBACService(db)
+    if user_role == "admin":
+        content_types = all_content_types
+    else:
+        visible_type_names = rbac_svc.get_menu_items(user_role, [ct.name for ct in all_content_types])
+        content_types = [ct for ct in all_content_types if ct.name in visible_type_names]
 
     # Get CSRF token from request state (set by middleware)
     csrf_token = getattr(request.state, "csrf_token", "")
@@ -82,6 +119,7 @@ async def get_context(
         "current_page": current_page,
         "csrf_token": csrf_token,
         "pending_comment_count": pending_comment_count,
+        "user_role": user_role,
     }
 
 
@@ -129,17 +167,41 @@ async def login_submit(
             user_agent=request.headers.get("User-Agent"),
         )
 
-        # Check admin role
+        # Check if user has valid role (author, editor, admin can all access)
         entity_svc = EntityService(db)
         user_data = entity_svc.serialize(user)
-        if user_data.get("role") not in ("admin", "editor"):
+        if user_data.get("role") not in ("admin", "editor", "author"):
+            # Log failed login attempt
+            audit_svc = AuditService(db)
+            await audit_svc.log_login(
+                user_id=user_data.get("id"),
+                user_email=email,
+                user_name=user_data.get("name"),
+                success=False,
+                ip_address=get_client_ip(request),
+                user_agent=request.headers.get("User-Agent"),
+                request_id=get_request_id(request),
+                failure_reason="Valid role required",
+            )
             csrf_token = getattr(request.state, "csrf_token", "")
             return templates.TemplateResponse("admin/login.html", {
                 "request": request,
-                "error": "Access denied. Admin role required.",
+                "error": "Access denied. No valid role assigned.",
                 "email": email,
                 "csrf_token": csrf_token,
             })
+
+        # Log successful login
+        audit_svc = AuditService(db)
+        await audit_svc.log_login(
+            user_id=user_data.get("id"),
+            user_email=email,
+            user_name=user_data.get("name"),
+            success=True,
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            request_id=get_request_id(request),
+        )
 
         # Set cookie and redirect
         response = RedirectResponse(url="/admin", status_code=303)
@@ -154,6 +216,17 @@ async def login_submit(
         return response
 
     except ValueError as e:
+        # Log failed login attempt
+        audit_svc = AuditService(db)
+        await audit_svc.log_login(
+            user_id=None,
+            user_email=email,
+            success=False,
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            request_id=get_request_id(request),
+            failure_reason=str(e),
+        )
         csrf_token = getattr(request.state, "csrf_token", "")
         return templates.TemplateResponse("admin/login.html", {
             "request": request,
@@ -172,11 +245,177 @@ async def logout(
     token = request.cookies.get("session")
     if token:
         auth_svc = AuthService(db)
+        user = await auth_svc.get_current_user(token)
+
+        # Log logout
+        if user:
+            entity_svc = EntityService(db)
+            user_data = entity_svc.serialize(user)
+            audit_svc = AuditService(db)
+            await audit_svc.log_logout(
+                user_id=user_data.get("id"),
+                user_email=user_data.get("email"),
+                user_name=user_data.get("name"),
+                ip_address=get_client_ip(request),
+                user_agent=request.headers.get("User-Agent"),
+                request_id=get_request_id(request),
+            )
+
         await auth_svc.logout(token)
 
     response = RedirectResponse(url="/admin/login", status_code=303)
     response.delete_cookie("session")
     return response
+
+
+# === Password Reset ===
+
+@router.get("/forgot-password", response_class=HTMLResponse)
+async def forgot_password_page(request: Request):
+    """Forgot password page."""
+    csrf_token = getattr(request.state, "csrf_token", "")
+    return templates.TemplateResponse("admin/forgot_password.html", {
+        "request": request,
+        "csrf_token": csrf_token,
+        "message": None,
+        "error": None,
+    })
+
+
+@router.post("/forgot-password", response_class=HTMLResponse)
+@limiter.limit("3/minute")
+async def forgot_password_submit(
+    request: Request,
+    email: str = Form(...),
+    csrf_token: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    """Process forgot password request."""
+    from ..main import validate_csrf_token
+    from ..services.mail import mail_service, EmailMessage
+    from ..config import settings
+
+    if not validate_csrf_token(request, csrf_token):
+        return templates.TemplateResponse("admin/forgot_password.html", {
+            "request": request,
+            "error": "CSRFトークンが無効です。ページを再読み込みしてください。",
+            "message": None,
+            "csrf_token": getattr(request.state, "csrf_token", ""),
+        }, status_code=403)
+
+    auth_svc = AuthService(db)
+    reset_token = await auth_svc.request_password_reset(email)
+
+    # Always show success message (security: don't reveal if email exists)
+    message = "パスワードリセットのメールを送信しました。メールをご確認ください。"
+
+    # Send email if token was generated (email exists)
+    if reset_token:
+        reset_url = f"{settings.site.url}/admin/reset-password?token={reset_token}"
+
+        mail_service.send(EmailMessage(
+            to=email,
+            subject="[Focomy] パスワードリセット",
+            body=f"""パスワードリセットのリクエストを受け付けました。
+
+以下のリンクをクリックして、新しいパスワードを設定してください。
+このリンクは1時間有効です。
+
+{reset_url}
+
+このリクエストに心当たりがない場合は、このメールを無視してください。
+""",
+            html=f"""
+<p>パスワードリセットのリクエストを受け付けました。</p>
+<p>以下のボタンをクリックして、新しいパスワードを設定してください。<br>
+このリンクは1時間有効です。</p>
+<p><a href="{reset_url}" style="display: inline-block; padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">パスワードをリセット</a></p>
+<p>このリクエストに心当たりがない場合は、このメールを無視してください。</p>
+""",
+        ))
+
+    return templates.TemplateResponse("admin/forgot_password.html", {
+        "request": request,
+        "message": message,
+        "error": None,
+        "csrf_token": getattr(request.state, "csrf_token", ""),
+    })
+
+
+@router.get("/reset-password", response_class=HTMLResponse)
+async def reset_password_page(
+    request: Request,
+    token: str = "",
+):
+    """Reset password page."""
+    if not token:
+        return RedirectResponse(url="/admin/forgot-password", status_code=303)
+
+    csrf_token = getattr(request.state, "csrf_token", "")
+    return templates.TemplateResponse("admin/reset_password.html", {
+        "request": request,
+        "token": token,
+        "csrf_token": csrf_token,
+        "error": None,
+    })
+
+
+@router.post("/reset-password", response_class=HTMLResponse)
+async def reset_password_submit(
+    request: Request,
+    token: str = Form(...),
+    password: str = Form(...),
+    password_confirm: str = Form(...),
+    csrf_token: str = Form(""),
+    db: AsyncSession = Depends(get_db),
+):
+    """Process password reset."""
+    from ..main import validate_csrf_token
+
+    if not validate_csrf_token(request, csrf_token):
+        return templates.TemplateResponse("admin/reset_password.html", {
+            "request": request,
+            "token": token,
+            "error": "CSRFトークンが無効です。ページを再読み込みしてください。",
+            "csrf_token": getattr(request.state, "csrf_token", ""),
+        }, status_code=403)
+
+    if password != password_confirm:
+        return templates.TemplateResponse("admin/reset_password.html", {
+            "request": request,
+            "token": token,
+            "error": "パスワードが一致しません。",
+            "csrf_token": getattr(request.state, "csrf_token", ""),
+        })
+
+    auth_svc = AuthService(db)
+
+    try:
+        success = await auth_svc.reset_password(token, password)
+
+        if success:
+            return templates.TemplateResponse("admin/login.html", {
+                "request": request,
+                "error": None,
+                "message": "パスワードをリセットしました。新しいパスワードでログインしてください。",
+                "csrf_token": getattr(request.state, "csrf_token", ""),
+                "google_oauth_enabled": False,
+            })
+        else:
+            return templates.TemplateResponse("admin/reset_password.html", {
+                "request": request,
+                "token": token,
+                "error": "リセットトークンが無効または期限切れです。",
+                "csrf_token": getattr(request.state, "csrf_token", ""),
+            })
+
+    except ValueError as e:
+        return templates.TemplateResponse("admin/reset_password.html", {
+            "request": request,
+            "token": token,
+            "error": str(e),
+            "csrf_token": getattr(request.state, "csrf_token", ""),
+        })
 
 
 # === Dashboard ===
@@ -387,6 +626,72 @@ async def widgets_reorder(
 
     await widget_svc.reorder_widgets(area, items, user_id=user_data.get("id"))
     return {"status": "ok"}
+
+
+# === Theme Management ===
+
+@router.get("/themes", response_class=HTMLResponse)
+async def themes_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Theme management page."""
+    from ..services.theme import theme_service
+    from ..services.settings import SettingsService
+
+    themes_data = []
+    for name, theme in theme_service.get_all_themes().items():
+        themes_data.append({
+            "name": theme.name,
+            "label": theme.label,
+            "description": theme.description,
+            "version": theme.version,
+            "author": theme.author,
+            "preview": getattr(theme, 'preview', None),
+        })
+
+    # Get active theme from database settings
+    settings_svc = SettingsService(db)
+    theme_settings = await settings_svc.get_by_category("theme")
+    active_theme = theme_settings.get("active", "default")
+
+    context = await get_context(request, db, current_user, "themes")
+    context.update({
+        "themes": themes_data,
+        "active_theme": active_theme,
+        "message": request.query_params.get("message"),
+    })
+
+    return templates.TemplateResponse("admin/themes.html", context)
+
+
+@router.post("/themes/{theme_name}/activate", response_class=HTMLResponse)
+async def activate_theme(
+    request: Request,
+    theme_name: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Activate a theme."""
+    from ..services.theme import theme_service
+    from ..services.settings import SettingsService
+
+    # Validate theme exists
+    themes = theme_service.get_all_themes()
+    if theme_name not in themes:
+        raise HTTPException(status_code=404, detail="Theme not found")
+
+    # Save to settings
+    settings_svc = SettingsService(db)
+    entity_svc = EntityService(db)
+    user_data = entity_svc.serialize(current_user)
+    await settings_svc.set("theme.active", theme_name, category="theme", user_id=user_data.get("id"))
+
+    # Update theme service
+    theme_service.set_current_theme(theme_name)
+
+    return RedirectResponse(url="/admin/themes?message=テーマを変更しました", status_code=303)
 
 
 # === Settings Management ===
@@ -1290,6 +1595,9 @@ async def entity_create(
     if not content_type:
         raise HTTPException(status_code=404, detail="Content type not found")
 
+    # RBAC permission check
+    await check_permission(db, current_user, type_name, Permission.CREATE)
+
     entity_svc = EntityService(db)
     form_data = await request.form()
 
@@ -1317,6 +1625,7 @@ async def entity_create(
     try:
         user_data = entity_svc.serialize(current_user)
         entity = await entity_svc.create(type_name, data, user_id=user_data.get("id"))
+        entity_data = entity_svc.serialize(entity)
 
         # Handle relations
         from ..services.relation import RelationService
@@ -1329,6 +1638,21 @@ async def entity_create(
             rel_ids = [v for v in rel_values if v]
             if rel_ids:
                 await relation_svc.sync(entity.id, rel_ids, rel.type)
+
+        # Log create action
+        audit_svc = AuditService(db)
+        await audit_svc.log_create(
+            entity_type=type_name,
+            entity_id=entity.id,
+            entity_title=entity_data.get("title") or entity_data.get("name") or entity.id,
+            data=data,
+            user_id=user_data.get("id"),
+            user_email=user_data.get("email"),
+            user_name=user_data.get("name"),
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            request_id=get_request_id(request),
+        )
 
         return RedirectResponse(
             url=f"/admin/{type_name}?message=Created+successfully",
@@ -1401,6 +1725,9 @@ async def entity_update(
     if not entity_raw or entity_raw.type != type_name:
         raise HTTPException(status_code=404, detail="Entity not found")
 
+    # RBAC permission check (includes ownership check for authors)
+    await check_permission(db, current_user, type_name, Permission.UPDATE, entity_id)
+
     form_data = await request.form()
 
     # Build entity data from form
@@ -1427,6 +1754,9 @@ async def entity_update(
             # Unchecked checkbox
             data[field.name] = False
 
+    # Save before state for audit
+    before_data = entity_svc.serialize(entity_raw)
+
     try:
         user_data = entity_svc.serialize(current_user)
         await entity_svc.update(entity_id, data, user_id=user_data.get("id"))
@@ -1442,6 +1772,24 @@ async def entity_update(
             rel_ids = [v for v in rel_values if v]
             # Sync relations (empty list = remove all)
             await relation_svc.sync(entity_id, rel_ids, rel.type)
+
+        # Log update action
+        entity_after = await entity_svc.get(entity_id)
+        after_data = entity_svc.serialize(entity_after) if entity_after else data
+        audit_svc = AuditService(db)
+        await audit_svc.log_update(
+            entity_type=type_name,
+            entity_id=entity_id,
+            entity_title=after_data.get("title") or after_data.get("name") or entity_id,
+            before_data=before_data,
+            after_data=after_data,
+            user_id=user_data.get("id"),
+            user_email=user_data.get("email"),
+            user_name=user_data.get("name"),
+            ip_address=get_client_ip(request),
+            user_agent=request.headers.get("User-Agent"),
+            request_id=get_request_id(request),
+        )
 
         return RedirectResponse(
             url=f"/admin/{type_name}/{entity_id}/edit?message=Updated+successfully",
@@ -1468,6 +1816,7 @@ async def entity_update(
 
 @router.delete("/{type_name}/{entity_id}")
 async def entity_delete(
+    request: Request,
     type_name: str,
     entity_id: str,
     db: AsyncSession = Depends(get_db),
@@ -1479,8 +1828,29 @@ async def entity_delete(
     if not entity or entity.type != type_name:
         raise HTTPException(status_code=404, detail="Entity not found")
 
+    # RBAC permission check (includes ownership check for authors)
+    await check_permission(db, current_user, type_name, Permission.DELETE, entity_id)
+
+    # Save entity data for audit before deletion
+    entity_data = entity_svc.serialize(entity)
     user_data = entity_svc.serialize(current_user)
+
     await entity_svc.delete(entity_id, user_id=user_data.get("id"))
+
+    # Log delete action
+    audit_svc = AuditService(db)
+    await audit_svc.log_delete(
+        entity_type=type_name,
+        entity_id=entity_id,
+        entity_title=entity_data.get("title") or entity_data.get("name") or entity_id,
+        data=entity_data,
+        user_id=user_data.get("id"),
+        user_email=user_data.get("email"),
+        user_name=user_data.get("name"),
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+        request_id=get_request_id(request),
+    )
 
     # Return empty response for HTMX to remove the row
     return HTMLResponse(content="", status_code=200)
@@ -1591,3 +1961,50 @@ async def _get_relation_options(
         })
 
     return relations
+
+
+# === Update Check ===
+
+@router.get("/api/update-check")
+async def check_for_updates(
+    request: Request,
+    current_user: Entity = Depends(require_admin),
+    force: bool = False,
+):
+    """Check for Focomy updates."""
+    from ..services.update import update_service
+
+    update_info = await update_service.check_for_updates(force=force)
+
+    return {
+        "current_version": update_info.current_version,
+        "latest_version": update_info.latest_version,
+        "has_update": update_info.has_update,
+        "release_url": update_info.release_url,
+    }
+
+
+@router.get("/system", response_class=HTMLResponse)
+async def system_info(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """System information page."""
+    from ..services.update import update_service
+    import platform
+    import sys
+
+    context = await get_context(request, db, current_user, "system")
+    update_info = await update_service.check_for_updates()
+
+    context["system"] = {
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "focomy_version": update_info.current_version,
+        "latest_version": update_info.latest_version,
+        "has_update": update_info.has_update,
+        "release_url": update_info.release_url,
+    }
+
+    return templates.TemplateResponse("admin/system.html", context)

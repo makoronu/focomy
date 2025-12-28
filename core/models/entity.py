@@ -58,6 +58,12 @@ class Entity(Base):
         String(36),
         nullable=True,
     )
+    # Optimistic locking
+    version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=1,
+    )
 
     # Relationships
     values: Mapped[list["EntityValue"]] = relationship(

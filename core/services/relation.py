@@ -30,7 +30,11 @@ class RelationService:
         sort_order: int = 0,
         metadata: dict[str, Any] = None,
     ) -> Relation:
-        """Create a relation between two entities."""
+        """Create a relation between two entities.
+
+        For many_to_one relations, any existing relation from the same
+        from_entity is automatically removed (enforcing the constraint).
+        """
         # Validate relation type exists
         rel_def = self.field_svc.get_relation_type(relation_type)
         if not rel_def:
@@ -46,6 +50,17 @@ class RelationService:
             await self.db.commit()
             return existing
 
+        # For many_to_one, remove any existing relation from this from_entity
+        # This enforces the "one" constraint
+        if rel_def.type == "many_to_one":
+            existing_relations = await self.get_relations(from_id, relation_type, direction="from")
+            for old_rel in existing_relations:
+                await self.db.delete(old_rel)
+
+        # For self_referential relations, check for circular references
+        if rel_def.self_referential:
+            await self._check_circular_reference(from_id, to_id, relation_type)
+
         # Create new relation
         relation = Relation(
             from_entity_id=from_id,
@@ -58,6 +73,44 @@ class RelationService:
         await self.db.commit()
         await self.db.refresh(relation)
         return relation
+
+    async def _check_circular_reference(
+        self,
+        from_id: str,
+        to_id: str,
+        relation_type: str,
+        max_depth: int = 10,
+    ) -> None:
+        """Check for circular references in self-referential relations.
+
+        Raises:
+            ValueError: If adding this relation would create a cycle
+        """
+        if from_id == to_id:
+            raise ValueError("Cannot create self-referential relation to itself")
+
+        # Walk up the tree from to_id to check if we reach from_id
+        visited = {to_id}
+        current_ids = [to_id]
+        depth = 0
+
+        while current_ids and depth < max_depth:
+            # Get all parents of current nodes
+            parent_ids = []
+            for current_id in current_ids:
+                relations = await self.get_relations(current_id, relation_type, direction="from")
+                for rel in relations:
+                    parent_id = rel.to_entity_id
+                    if parent_id == from_id:
+                        raise ValueError(
+                            f"Circular reference detected: adding this relation would create a cycle"
+                        )
+                    if parent_id not in visited:
+                        visited.add(parent_id)
+                        parent_ids.append(parent_id)
+
+            current_ids = parent_ids
+            depth += 1
 
     async def detach(
         self,
