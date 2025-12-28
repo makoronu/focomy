@@ -82,6 +82,14 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 
 ---
 
+## リリース
+
+| バージョン | 日付 | リンク |
+|-----------|------|--------|
+| v0.1.0 | 2025-12-28 | [PyPI](https://pypi.org/project/focomy/0.1.0/) / [Fly.io](https://focomy.fly.dev) |
+
+---
+
 ## 参照
 
 - [設計書](focomy_specification.md)
