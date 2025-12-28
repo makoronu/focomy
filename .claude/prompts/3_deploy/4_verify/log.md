@@ -1,24 +1,17 @@
-# ログ確認・記録
+# 完了ログ
 
 ## やること
-1. 本番ログにエラーがないか確認
-2. デプロイログ出力
+1. CLAUDE.md 更新
+2. git tag 作成
+3. git push --tags
 
-## ログ確認
+## コマンド
 ```bash
-ssh -i ~/.ssh/REA.pem root@sas.realestateautomation.net "journalctl -u sas-backend --since '5 minutes ago'"
-```
-
-## CLAUDE.md更新
-```
-| 作業中 | なし |
-| 完了 | [デプロイ内容を追加] |
-| 最終更新 | YYYY-MM-DD |
+git tag vx.x.x
+git push --tags
 ```
 
 ## 完了条件
-- [ ] エラーなし
-- [ ] CLAUDE.md更新済み
+- [ ] タグ作成・プッシュ
 
-## 次の工程
-→ 終了（大プロンプト完了報告へ）
+## 次 → 終了（_main.md 完了報告）
