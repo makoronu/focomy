@@ -21,9 +21,10 @@
 ## 必須ルール
 
 1. **セッション開始時**: CLAUDE.md → 該当プロンプト読め
-2. **作業中**: 「現在: ○○.md」と工程位置を明示
-3. **遷移前**: 「次の工程」を読み上げてから移動
+2. **作業中**: 工程位置を明示（例: `現在: 3_deploy/fly.md`）
+3. **遷移時**: 「次 → ○○.md」と読み上げてから移動
 4. **勝手にデプロイ禁止**
+5. **プロンプト先読み**: 実行前に完了条件を確認
 
 ---
 
@@ -86,7 +87,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 
 | バージョン | 日付 | リンク |
 |-----------|------|--------|
-| v0.1.0 | 2025-12-28 | [PyPI](https://pypi.org/project/focomy/0.1.0/) / [Fly.io](https://focomy.fly.dev) |
+| v0.1.0 | 2025-12-28 | [PyPI](https://pypi.org/project/focomy/0.1.0/) / [Fly.io](https://focomy.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
 
 ---
 
