@@ -1,0 +1,11 @@
+post_categories:
+  from: post
+  to: category
+  type: many_to_many
+  label: カテゴリ
+
+post_author:
+  from: post
+  to: user
+  type: many_to_one
+  label: 著者

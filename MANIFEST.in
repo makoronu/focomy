@@ -1,0 +1,13 @@
+include LICENSE
+include README.md
+include pyproject.toml
+
+recursive-include core/scaffold *
+recursive-include core/templates *
+recursive-include themes *
+recursive-include content_types *
+recursive-include static *
+
+global-exclude __pycache__
+global-exclude *.py[cod]
+global-exclude .DS_Store

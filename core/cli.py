@@ -6,7 +6,9 @@ import os
 import shutil
 import subprocess
 import sys
+from importlib import resources
 from pathlib import Path
+from typing import Optional
 
 # Version
 __version__ = "0.1.0"
@@ -107,6 +109,48 @@ def main():
         parser.print_help()
 
 
+def _get_scaffold_path() -> Path:
+    """Get the path to scaffold directory from package resources."""
+    try:
+        # Python 3.9+
+        scaffold_files = resources.files("core.scaffold")
+        return Path(str(scaffold_files))
+    except (TypeError, AttributeError):
+        # Fallback for older Python or when running from source
+        return Path(__file__).parent / "scaffold"
+
+
+def _copy_scaffold_file(
+    scaffold_path: Path,
+    target: Path,
+    src_name: str,
+    dst_name: Optional[str] = None,
+    replacements: Optional[dict] = None,
+) -> None:
+    """Copy a file from scaffold to target, with optional replacements."""
+    dst_name = dst_name or src_name
+    src_file = scaffold_path / src_name
+    dst_file = target / dst_name
+
+    dst_file.parent.mkdir(parents=True, exist_ok=True)
+
+    if src_file.exists():
+        content = src_file.read_text()
+        if replacements:
+            for key, value in replacements.items():
+                content = content.replace(f"{{{key}}}", value)
+        dst_file.write_text(content)
+
+
+def _copy_scaffold_dir(scaffold_path: Path, target: Path, src_dir: str) -> None:
+    """Copy a directory from scaffold to target."""
+    src = scaffold_path / src_dir
+    dst = target / src_dir
+
+    if src.exists() and src.is_dir():
+        shutil.copytree(src, dst, dirs_exist_ok=True)
+
+
 def cmd_init(args):
     """Initialize a new Focomy site."""
     name = args.name
@@ -118,124 +162,52 @@ def cmd_init(args):
 
     print(f"Creating new Focomy site: {name}")
 
+    # Get scaffold path
+    scaffold_path = _get_scaffold_path()
+
     # Create directory structure
     target.mkdir(parents=True)
-    (target / "content_types").mkdir()
-    (target / "themes" / "default" / "templates").mkdir(parents=True)
     (target / "uploads").mkdir()
     (target / "static").mkdir()
 
-    # Create default config.yaml
-    config_content = f"""site:
-  name: "{name}"
-  tagline: "A beautiful CMS site"
-  url: "http://localhost:8000"
-  language: "ja"
-  timezone: "Asia/Tokyo"
+    # Replacements for templates
+    secret_key = os.urandom(32).hex()
+    replacements = {
+        "site_name": name,
+        "secret_key": secret_key,
+        "db_name": name,
+    }
 
-admin:
-  path: "/admin"
-  per_page: 20
+    # Copy config.yaml from template
+    _copy_scaffold_file(
+        scaffold_path, target,
+        "config.yaml.template", "config.yaml",
+        replacements
+    )
 
-security:
-  secret_key: "{os.urandom(32).hex()}"
-  session_expire: 86400
+    # Copy content_types
+    _copy_scaffold_dir(scaffold_path, target, "content_types")
 
-media:
-  upload_dir: "uploads"
-  max_size: 10485760
-  image:
-    max_width: 1920
-    quality: 85
-    format: webp
-"""
-    (target / "config.yaml").write_text(config_content)
+    # Copy themes
+    _copy_scaffold_dir(scaffold_path, target, "themes")
 
-    # Create default content types
-    post_yaml = """name: post
-label: 投稿
-label_plural: 投稿一覧
-admin_menu: true
-searchable: true
+    # Copy relations.yaml
+    _copy_scaffold_file(scaffold_path, target, "relations.yaml")
 
-fields:
-  - name: title
-    type: string
-    label: タイトル
-    required: true
-  - name: slug
-    type: slug
-    label: スラッグ
-    unique: true
-    auto_generate: title
-  - name: body
-    type: blocks
-    label: 本文
-  - name: status
-    type: select
-    label: ステータス
-    options:
-      - value: draft
-        label: 下書き
-      - value: published
-        label: 公開
-    default: draft
-"""
-    (target / "content_types" / "post.yaml").write_text(post_yaml)
+    # Copy .env from template
+    _copy_scaffold_file(
+        scaffold_path, target,
+        ".env.template", ".env",
+        replacements
+    )
 
-    page_yaml = """name: page
-label: 固定ページ
-label_plural: 固定ページ一覧
-admin_menu: true
+    # Copy .gitignore from template
+    _copy_scaffold_file(
+        scaffold_path, target,
+        ".gitignore.template", ".gitignore"
+    )
 
-fields:
-  - name: title
-    type: string
-    label: タイトル
-    required: true
-  - name: slug
-    type: slug
-    label: スラッグ
-    unique: true
-    auto_generate: title
-  - name: body
-    type: blocks
-    label: 本文
-"""
-    (target / "content_types" / "page.yaml").write_text(page_yaml)
-
-    # Create relations.yaml
-    relations_yaml = """post_categories:
-  from: post
-  to: category
-  type: many_to_many
-  label: カテゴリ
-
-post_author:
-  from: post
-  to: user
-  type: many_to_one
-  label: 著者
-"""
-    (target / "relations.yaml").write_text(relations_yaml)
-
-    # Create .env
-    env_content = f"""FOCOMY_DATABASE_URL=postgresql+asyncpg://focomy:focomy@localhost:5432/{name}
-FOCOMY_DEBUG=true
-"""
-    (target / ".env").write_text(env_content)
-
-    # Create .gitignore
-    gitignore = """__pycache__/
-*.py[cod]
-.env
-.venv/
-uploads/*
-!uploads/.gitkeep
-*.db
-.DS_Store
-"""
-    (target / ".gitignore").write_text(gitignore)
+    # Create .gitkeep in uploads
     (target / "uploads" / ".gitkeep").touch()
 
     print(f"""

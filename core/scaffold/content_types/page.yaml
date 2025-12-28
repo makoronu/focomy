@@ -1,0 +1,18 @@
+name: page
+label: 固定ページ
+label_plural: 固定ページ一覧
+admin_menu: true
+
+fields:
+  - name: title
+    type: string
+    label: タイトル
+    required: true
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: title
+  - name: body
+    type: blocks
+    label: 本文

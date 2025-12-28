@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site.name }} - {{ site.tagline }}{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <section>
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Welcome to {{ site.name }}</h2>
+        <p class="text-gray-600">Your new Focomy site is ready. Start creating content!</p>
+    </section>
+
+    {% if posts %}
+    <section>
+        <h2 class="text-xl font-semibold text-gray-800 mb-4">Recent Posts</h2>
+        <div class="space-y-4">
+            {% for post in posts %}
+            <article class="bg-white p-6 rounded-lg shadow">
+                <h3 class="text-lg font-medium text-gray-900">
+                    <a href="/posts/{{ post.slug }}" class="hover:text-blue-600">
+                        {{ post.title }}
+                    </a>
+                </h3>
+                <time class="text-sm text-gray-500">{{ post.created_at | date }}</time>
+            </article>
+            {% endfor %}
+        </div>
+    </section>
+    {% endif %}
+</div>
+{% endblock %}

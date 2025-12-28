@@ -1,0 +1,22 @@
+site:
+  name: "{site_name}"
+  tagline: "A beautiful CMS site"
+  url: "http://localhost:8000"
+  language: "ja"
+  timezone: "Asia/Tokyo"
+
+admin:
+  path: "/admin"
+  per_page: 20
+
+security:
+  secret_key: "{secret_key}"
+  session_expire: 86400
+
+media:
+  upload_dir: "uploads"
+  max_size: 10485760
+  image:
+    max_width: 1920
+    quality: 85
+    format: webp

@@ -43,6 +43,9 @@ Open http://localhost:8000/admin
 
 ```bash
 pip install focomy
+
+# With Redis support (for caching/sessions)
+pip install focomy[redis]
 ```
 
 ### From Source

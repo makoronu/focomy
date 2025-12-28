@@ -1,0 +1,28 @@
+name: post
+label: 投稿
+label_plural: 投稿一覧
+admin_menu: true
+searchable: true
+
+fields:
+  - name: title
+    type: string
+    label: タイトル
+    required: true
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: title
+  - name: body
+    type: blocks
+    label: 本文
+  - name: status
+    type: select
+    label: ステータス
+    options:
+      - value: draft
+        label: 下書き
+      - value: published
+        label: 公開
+    default: draft
