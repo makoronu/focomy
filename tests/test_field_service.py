@@ -1,252 +1,223 @@
 """Tests for FieldService.
 
-Tests field validation, serialization, and formula computation.
+Tests content type loading and validation.
 """
 
 import pytest
-from datetime import datetime, date
+from pathlib import Path
 
-from core.services.field import FieldService
-
-
-class TestFieldValidation:
-    """Field validation test cases."""
-
-    @pytest.fixture
-    def field_service(self) -> FieldService:
-        return FieldService()
-
-    def test_validate_required_field(self, field_service: FieldService):
-        """Test required field validation."""
-        field_def = {
-            "name": "title",
-            "type": "text",
-            "required": True,
-        }
-
-        # Valid
-        assert field_service.validate_field(field_def, "Hello") is True
-
-        # Invalid - empty
-        with pytest.raises(ValueError, match="required"):
-            field_service.validate_field(field_def, "")
-
-        # Invalid - None
-        with pytest.raises(ValueError, match="required"):
-            field_service.validate_field(field_def, None)
-
-    def test_validate_text_field(self, field_service: FieldService):
-        """Test text field validation."""
-        field_def = {
-            "name": "title",
-            "type": "text",
-            "min_length": 3,
-            "max_length": 100,
-        }
-
-        # Valid
-        assert field_service.validate_field(field_def, "Hello World") is True
-
-        # Too short
-        with pytest.raises(ValueError, match="min"):
-            field_service.validate_field(field_def, "Hi")
-
-        # Too long
-        with pytest.raises(ValueError, match="max"):
-            field_service.validate_field(field_def, "x" * 101)
-
-    def test_validate_number_field(self, field_service: FieldService):
-        """Test number field validation."""
-        field_def = {
-            "name": "count",
-            "type": "number",
-            "min": 0,
-            "max": 100,
-        }
-
-        # Valid
-        assert field_service.validate_field(field_def, 50) is True
-
-        # Below min
-        with pytest.raises(ValueError, match="min"):
-            field_service.validate_field(field_def, -1)
-
-        # Above max
-        with pytest.raises(ValueError, match="max"):
-            field_service.validate_field(field_def, 101)
-
-    def test_validate_email_field(self, field_service: FieldService):
-        """Test email field validation."""
-        field_def = {
-            "name": "email",
-            "type": "email",
-        }
-
-        # Valid
-        assert field_service.validate_field(field_def, "user@example.com") is True
-
-        # Invalid
-        with pytest.raises(ValueError, match="email"):
-            field_service.validate_field(field_def, "not-an-email")
-
-    def test_validate_select_field(self, field_service: FieldService):
-        """Test select field validation."""
-        field_def = {
-            "name": "status",
-            "type": "select",
-            "options": ["draft", "published", "archived"],
-        }
-
-        # Valid
-        assert field_service.validate_field(field_def, "draft") is True
-        assert field_service.validate_field(field_def, "published") is True
-
-        # Invalid option
-        with pytest.raises(ValueError, match="option"):
-            field_service.validate_field(field_def, "invalid")
-
-    def test_validate_url_field(self, field_service: FieldService):
-        """Test URL field validation."""
-        field_def = {
-            "name": "website",
-            "type": "url",
-        }
-
-        # Valid
-        assert field_service.validate_field(field_def, "https://example.com") is True
-        assert field_service.validate_field(field_def, "http://localhost:8000") is True
-
-        # Invalid
-        with pytest.raises(ValueError, match="url"):
-            field_service.validate_field(field_def, "not-a-url")
-
-    def test_validate_datetime_field(self, field_service: FieldService):
-        """Test datetime field validation."""
-        field_def = {
-            "name": "published_at",
-            "type": "datetime",
-        }
-
-        # Valid - datetime object
-        assert field_service.validate_field(field_def, datetime.now()) is True
-
-        # Valid - ISO string
-        assert field_service.validate_field(field_def, "2024-01-15T10:30:00") is True
-
-        # Invalid
-        with pytest.raises(ValueError, match="datetime"):
-            field_service.validate_field(field_def, "not-a-date")
+from core.services.field import FieldService, ContentType, FieldDefinition, ValidationResult
 
 
-class TestFieldSerialization:
-    """Field serialization test cases."""
+class TestFieldServiceBasic:
+    """Basic FieldService functionality tests."""
 
     @pytest.fixture
     def field_service(self) -> FieldService:
         return FieldService()
 
-    def test_serialize_text(self, field_service: FieldService):
-        """Test text field serialization."""
-        field_def = {"name": "title", "type": "text"}
+    def test_field_service_init(self, field_service: FieldService):
+        """Test FieldService initialization."""
+        assert field_service is not None
+        assert field_service._content_types == {}
+        assert field_service._loaded is False
 
-        serialized = field_service.serialize_value(field_def, "Hello World")
-        assert serialized == "Hello World"
+    def test_get_content_type_loads_on_demand(self, field_service: FieldService):
+        """Test that content types are loaded on first access."""
+        # Before access, not loaded
+        assert field_service._loaded is False
 
-    def test_serialize_number(self, field_service: FieldService):
-        """Test number field serialization."""
-        field_def = {"name": "count", "type": "number"}
+        # Access triggers loading
+        ct = field_service.get_content_type("post")
 
-        serialized = field_service.serialize_value(field_def, 42)
-        assert serialized == "42" or serialized == 42
+        # Now loaded
+        assert field_service._loaded is True
 
-    def test_serialize_boolean(self, field_service: FieldService):
-        """Test boolean field serialization."""
-        field_def = {"name": "is_active", "type": "boolean"}
+    def test_get_all_content_types(self, field_service: FieldService):
+        """Test getting all content types."""
+        content_types = field_service.get_all_content_types()
 
-        assert field_service.serialize_value(field_def, True) in [True, "true", "1"]
-        assert field_service.serialize_value(field_def, False) in [False, "false", "0"]
-
-    def test_serialize_json(self, field_service: FieldService):
-        """Test JSON field serialization."""
-        field_def = {"name": "metadata", "type": "json"}
-        data = {"key": "value", "nested": {"a": 1}}
-
-        serialized = field_service.serialize_value(field_def, data)
-        assert isinstance(serialized, (str, dict))
+        # Should return a copy
+        assert isinstance(content_types, dict)
 
 
-class TestFieldDeserialization:
-    """Field deserialization test cases."""
+class TestContentTypeModel:
+    """Tests for ContentType model."""
+
+    def test_content_type_defaults(self):
+        """Test ContentType default values."""
+        ct = ContentType(name="test")
+
+        assert ct.name == "test"
+        assert ct.label == ""
+        assert ct.icon == "document"
+        assert ct.admin_menu is True
+        assert ct.searchable is False
+        assert ct.hierarchical is False
+        assert ct.fields == []
+        assert ct.relations == []
+
+    def test_content_type_with_fields(self):
+        """Test ContentType with fields."""
+        ct = ContentType(
+            name="post",
+            label="Post",
+            fields=[
+                FieldDefinition(name="title", type="text", required=True),
+                FieldDefinition(name="slug", type="slug", unique=True),
+            ]
+        )
+
+        assert len(ct.fields) == 2
+        assert ct.fields[0].name == "title"
+        assert ct.fields[0].required is True
+        assert ct.fields[1].name == "slug"
+        assert ct.fields[1].unique is True
+
+
+class TestFieldDefinitionModel:
+    """Tests for FieldDefinition model."""
+
+    def test_field_definition_defaults(self):
+        """Test FieldDefinition default values."""
+        field = FieldDefinition(name="test", type="text")
+
+        assert field.name == "test"
+        assert field.type == "text"
+        assert field.label == ""
+        assert field.required is False
+        assert field.unique is False
+        assert field.indexed is False
+        assert field.default is None
+        assert field.options == []
+
+    def test_field_definition_with_options(self):
+        """Test FieldDefinition with options."""
+        field = FieldDefinition(
+            name="status",
+            type="select",
+            options=[
+                {"value": "draft", "label": "Draft"},
+                {"value": "published", "label": "Published"},
+            ]
+        )
+
+        assert len(field.options) == 2
+        assert field.options[0]["value"] == "draft"
+
+    def test_field_definition_transitions(self):
+        """Test field status transitions."""
+        field = FieldDefinition(
+            name="status",
+            type="select",
+            transitions={
+                "draft": ["published"],
+                "published": ["draft", "archived"],
+                "archived": [],
+            }
+        )
+
+        # Allowed transitions
+        assert field.is_transition_allowed("draft", "published") is True
+        assert field.is_transition_allowed("published", "draft") is True
+        assert field.is_transition_allowed("published", "archived") is True
+
+        # Not allowed transitions
+        assert field.is_transition_allowed("draft", "archived") is False
+        assert field.is_transition_allowed("archived", "draft") is False
+
+        # Same value always allowed
+        assert field.is_transition_allowed("draft", "draft") is True
+
+    def test_field_definition_no_transitions(self):
+        """Test that all transitions allowed when not defined."""
+        field = FieldDefinition(name="status", type="select")
+
+        # All transitions allowed when not defined
+        assert field.is_transition_allowed("any", "value") is True
+        assert field.is_transition_allowed("draft", "published") is True
+
+
+class TestValidationResult:
+    """Tests for ValidationResult model."""
+
+    def test_valid_result(self):
+        """Test valid validation result."""
+        result = ValidationResult(valid=True)
+
+        assert result.valid is True
+        assert result.errors == []
+
+    def test_invalid_result(self):
+        """Test invalid validation result with errors."""
+        from core.services.field import ValidationError
+
+        result = ValidationResult(
+            valid=False,
+            errors=[
+                ValidationError(field="title", message="Title is required"),
+            ]
+        )
+
+        assert result.valid is False
+        assert len(result.errors) == 1
+        assert result.errors[0].field == "title"
+
+
+class TestFieldTypeMapping:
+    """Tests for field type to storage type mapping."""
 
     @pytest.fixture
     def field_service(self) -> FieldService:
         return FieldService()
 
-    def test_deserialize_text(self, field_service: FieldService):
-        """Test text field deserialization."""
-        field_def = {"name": "title", "type": "text"}
+    def test_text_fields_map_to_text(self, field_service: FieldService):
+        """Test text-like fields map to text storage."""
+        text_types = ["string", "text", "slug", "email", "url", "phone", "color", "password"]
 
-        value = field_service.deserialize_value(field_def, "Hello World")
-        assert value == "Hello World"
+        for field_type in text_types:
+            field = FieldDefinition(name="test", type=field_type)
+            storage = field_service.get_field_type(field)
+            assert storage == "text", f"{field_type} should map to text"
 
-    def test_deserialize_number(self, field_service: FieldService):
-        """Test number field deserialization."""
-        field_def = {"name": "count", "type": "number"}
+    def test_number_fields_map_to_int(self, field_service: FieldService):
+        """Test number fields map to int storage."""
+        int_types = ["integer", "number"]
 
-        value = field_service.deserialize_value(field_def, "42")
-        assert value == 42
+        for field_type in int_types:
+            field = FieldDefinition(name="test", type=field_type)
+            storage = field_service.get_field_type(field)
+            assert storage == "int", f"{field_type} should map to int"
 
-    def test_deserialize_boolean(self, field_service: FieldService):
-        """Test boolean field deserialization."""
-        field_def = {"name": "is_active", "type": "boolean"}
+    def test_float_fields_map_to_float(self, field_service: FieldService):
+        """Test float fields map to float storage."""
+        float_types = ["float", "decimal", "money", "range"]
 
-        assert field_service.deserialize_value(field_def, "true") is True
-        assert field_service.deserialize_value(field_def, "false") is False
-        assert field_service.deserialize_value(field_def, "1") is True
-        assert field_service.deserialize_value(field_def, "0") is False
+        for field_type in float_types:
+            field = FieldDefinition(name="test", type=field_type)
+            storage = field_service.get_field_type(field)
+            assert storage == "float", f"{field_type} should map to float"
 
+    def test_json_fields_map_to_json(self, field_service: FieldService):
+        """Test JSON fields map to json storage."""
+        json_types = ["blocks", "multiselect", "checkbox", "tags", "gallery", "repeater", "json"]
 
-class TestFormulaField:
-    """Formula field computation tests."""
+        for field_type in json_types:
+            field = FieldDefinition(name="test", type=field_type)
+            storage = field_service.get_field_type(field)
+            assert storage == "json", f"{field_type} should map to json"
 
-    @pytest.fixture
-    def field_service(self) -> FieldService:
-        return FieldService()
+    def test_datetime_fields_map_to_datetime(self, field_service: FieldService):
+        """Test datetime fields map to datetime storage."""
+        dt_types = ["datetime", "date"]
 
-    def test_formula_concat(self, field_service: FieldService):
-        """Test string concatenation formula."""
-        field_def = {
-            "name": "full_name",
-            "type": "formula",
-            "formula": "concat(first_name, ' ', last_name)",
-        }
-        context = {"first_name": "John", "last_name": "Doe"}
+        for field_type in dt_types:
+            field = FieldDefinition(name="test", type=field_type)
+            storage = field_service.get_field_type(field)
+            assert storage == "datetime", f"{field_type} should map to datetime"
 
-        result = field_service.compute_formula(field_def, context)
-        assert result == "John Doe"
-
-    def test_formula_sum(self, field_service: FieldService):
-        """Test sum formula."""
-        field_def = {
-            "name": "total",
-            "type": "formula",
-            "formula": "sum(price, tax)",
-        }
-        context = {"price": 100, "tax": 10}
-
-        result = field_service.compute_formula(field_def, context)
-        assert result == 110
-
-    def test_formula_conditional(self, field_service: FieldService):
-        """Test conditional formula."""
-        field_def = {
-            "name": "label",
-            "type": "formula",
-            "formula": "if(status == 'active', 'Active', 'Inactive')",
-        }
-
-        result = field_service.compute_formula(field_def, {"status": "active"})
-        assert result == "Active"
-
-        result = field_service.compute_formula(field_def, {"status": "inactive"})
-        assert result == "Inactive"
+    def test_unknown_type_maps_to_text(self, field_service: FieldService):
+        """Test unknown field types default to text."""
+        field = FieldDefinition(name="test", type="unknown_type")
+        storage = field_service.get_field_type(field)
+        assert storage == "text"

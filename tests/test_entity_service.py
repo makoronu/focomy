@@ -7,7 +7,7 @@ import pytest
 import pytest_asyncio
 from datetime import datetime
 
-from core.services.entity import EntityService
+from core.services.entity import EntityService, QueryParams
 from core.models import Entity
 
 
@@ -19,7 +19,7 @@ class TestEntityService:
         """Test creating a new entity."""
         entity = await entity_service.create(
             type_name="post",
-            values=sample_post_data,
+            data=sample_post_data,
             user_id="test_user",
         )
 
@@ -34,7 +34,7 @@ class TestEntityService:
         """Test retrieving an entity by ID."""
         created = await entity_service.create(
             type_name="post",
-            values=sample_post_data,
+            data=sample_post_data,
             user_id="test_user",
         )
 
@@ -49,13 +49,13 @@ class TestEntityService:
         """Test updating an entity."""
         entity = await entity_service.create(
             type_name="post",
-            values=sample_post_data,
+            data=sample_post_data,
             user_id="test_user",
         )
 
         updated = await entity_service.update(
             entity_id=entity.id,
-            values={"title": "Updated Title"},
+            data={"title": "Updated Title"},
             user_id="test_user",
         )
 
@@ -68,7 +68,7 @@ class TestEntityService:
         """Test soft deleting an entity."""
         entity = await entity_service.create(
             type_name="post",
-            values=sample_post_data,
+            data=sample_post_data,
             user_id="test_user",
         )
 
@@ -89,7 +89,7 @@ class TestEntityService:
         """Test restoring a soft-deleted entity."""
         entity = await entity_service.create(
             type_name="post",
-            values=sample_post_data,
+            data=sample_post_data,
             user_id="test_user",
         )
 
@@ -100,19 +100,19 @@ class TestEntityService:
         assert restored.deleted_at is None
 
     @pytest.mark.asyncio
-    async def test_list_entities(self, entity_service: EntityService, sample_post_data: dict):
-        """Test listing entities of a type."""
+    async def test_find_entities(self, entity_service: EntityService, sample_post_data: dict):
+        """Test finding entities of a type."""
         # Create multiple entities
         for i in range(5):
             data = sample_post_data.copy()
             data["slug"] = f"test-post-{i}"
             await entity_service.create(
                 type_name="post",
-                values=data,
+                data=data,
                 user_id="test_user",
             )
 
-        entities = await entity_service.list("post", limit=10)
+        entities = await entity_service.find("post", limit=10)
 
         assert len(entities) == 5
 
@@ -125,7 +125,7 @@ class TestEntityService:
             data["slug"] = f"deleted-post-{i}"
             entity = await entity_service.create(
                 type_name="post",
-                values=data,
+                data=data,
                 user_id="test_user",
             )
             await entity_service.delete(entity.id, user_id="test_user")
@@ -135,20 +135,22 @@ class TestEntityService:
         data["slug"] = "active-post"
         await entity_service.create(
             type_name="post",
-            values=data,
+            data=data,
             user_id="test_user",
         )
 
-        deleted = await entity_service.list_deleted("post")
+        # list_deleted returns (entities, count)
+        deleted, count = await entity_service.list_deleted("post")
 
         assert len(deleted) == 3
+        assert count == 3
 
     @pytest.mark.asyncio
     async def test_entity_version_increment(self, entity_service: EntityService, sample_post_data: dict):
         """Test that entity version increments on update."""
         entity = await entity_service.create(
             type_name="post",
-            values=sample_post_data,
+            data=sample_post_data,
             user_id="test_user",
         )
 
@@ -156,7 +158,7 @@ class TestEntityService:
 
         updated = await entity_service.update(
             entity_id=entity.id,
-            values={"title": "Updated Title"},
+            data={"title": "Updated Title"},
             user_id="test_user",
         )
 
@@ -171,15 +173,15 @@ class TestEntityUniqueness:
         """Test that duplicate slugs are rejected."""
         await entity_service.create(
             type_name="post",
-            values=sample_post_data,
+            data=sample_post_data,
             user_id="test_user",
         )
 
         # Try to create another with same slug
-        with pytest.raises(ValueError, match="unique"):
+        with pytest.raises(ValueError, match="[Uu]nique"):
             await entity_service.create(
                 type_name="post",
-                values=sample_post_data,
+                data=sample_post_data,
                 user_id="test_user",
             )
 
@@ -191,15 +193,64 @@ class TestEntityUniqueness:
 
         post = await entity_service.create(
             type_name="post",
-            values=sample_post_data,
+            data=sample_post_data,
             user_id="test_user",
         )
 
         page = await entity_service.create(
             type_name="page",
-            values=sample_page_data,
+            data=sample_page_data,
             user_id="test_user",
         )
 
         assert post is not None
         assert page is not None
+
+
+class TestQueryParams:
+    """Test QueryParams dataclass."""
+
+    def test_query_params_defaults(self):
+        """Test QueryParams default values."""
+        params = QueryParams()
+
+        assert params.filters == {}
+        assert params.sort == "-created_at"
+        assert params.page == 1
+        assert params.per_page == 20
+        assert params.include_deleted is False
+        assert params.search == ""
+
+    def test_query_params_with_values(self):
+        """Test QueryParams with custom values."""
+        params = QueryParams(
+            filters={"status": "published"},
+            sort="title",
+            page=2,
+            per_page=10,
+        )
+
+        assert params.filters == {"status": "published"}
+        assert params.sort == "title"
+        assert params.page == 2
+        assert params.per_page == 10
+
+
+class TestEntitySerialization:
+    """Test entity serialization."""
+
+    @pytest.mark.asyncio
+    async def test_serialize_entity(self, entity_service: EntityService, sample_post_data: dict):
+        """Test serializing an entity to dict."""
+        entity = await entity_service.create(
+            type_name="post",
+            data=sample_post_data,
+            user_id="test_user",
+        )
+
+        serialized = entity_service.serialize(entity)
+
+        assert serialized["id"] == entity.id
+        assert serialized["type"] == "post"
+        assert serialized["created_by"] == "test_user"
+        assert "created_at" in serialized
