@@ -43,7 +43,7 @@
 | 項目 | 技術 |
 |------|------|
 | バックエンド | FastAPI |
-| DB | PostgreSQL（本番） / SQLite（開発） |
+| DB | PostgreSQL |
 | ORM | SQLAlchemy |
 | テンプレート | Jinja2 |
 | フロント | HTMX |
@@ -93,5 +93,6 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 
 ## 参照
 
+- [README.md](README.md) ← **運用手順・CLIコマンド・環境変数**
 - [設計書](focomy_specification.md)
 - [ロードマップ](docs/ROADMAP.md)
