@@ -47,8 +47,7 @@ jobs:
 
       - name: Generate checksums
         run: |
-          cd dist
-          sha256sum * > SHA256SUMS
+          sha256sum dist/* > SHA256SUMS
 
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
@@ -59,7 +58,9 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           files: |
-            dist/*
+            dist/*.whl
+            dist/*.tar.gz
+            SHA256SUMS
           generate_release_notes: true
 
   docker:
