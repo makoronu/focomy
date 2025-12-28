@@ -43,7 +43,7 @@
 | 項目 | 技術 |
 |------|------|
 | バックエンド | FastAPI |
-| DB | SQLite + FTS5 |
+| DB | PostgreSQL（本番） / SQLite（開発） |
 | ORM | SQLAlchemy |
 | テンプレート | Jinja2 |
 | フロント | HTMX |
