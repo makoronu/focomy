@@ -1,5 +1,7 @@
 """Admin routes - HTMX-powered admin interface."""
 
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
@@ -16,8 +18,8 @@ from ..services.rbac import Permission, RBACService
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
-# Templates
-templates = Jinja2Templates(directory="core/templates")
+# Templates - パッケージ内の絶対パスを使用（PyPIパッケージ対応）
+templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
 
 async def get_current_admin(
