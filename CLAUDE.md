@@ -57,9 +57,9 @@
 | 項目 | 内容 |
 |------|------|
 | 作業中 | なし |
-| 完了 | 001-089 |
+| 完了 | 001-090 |
 | 残り | - |
-| 更新 | 2025-12-28 |
+| 更新 | 2025-12-29 |
 
 ---
 
@@ -88,6 +88,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | バージョン | 日付 | リンク |
 |-----------|------|--------|
 | v0.1.0 | 2025-12-28 | [PyPI](https://pypi.org/project/focomy/0.1.0/) / [Fly.io](https://focomy.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
+| v0.1.2 | 2025-12-29 | [PyPI](https://pypi.org/project/focomy/0.1.2/) / [GitHub](https://github.com/makoronu/focomy/releases/tag/v0.1.2) |
 
 ---
 
