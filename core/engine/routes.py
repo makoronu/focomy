@@ -234,7 +234,7 @@ async def home(
 ):
     """Home page - list recent posts."""
     cache_key = "page:home"
-    cached_html = cache_service.get(cache_key)
+    cached_html = await cache_service.get(cache_key)
     if cached_html:
         return HTMLResponse(content=cached_html)
 
@@ -274,7 +274,7 @@ async def home(
         },
     )
 
-    cache_service.set(cache_key, html, LIST_CACHE_TTL)
+    await cache_service.set(cache_key, html, LIST_CACHE_TTL)
     return HTMLResponse(content=html)
 
 
@@ -787,7 +787,7 @@ async def content_type_listing(
     """Listing page for content types with path_prefix."""
     # Check cache (only first page)
     cache_key = f"page:{path_prefix}:list:{page}"
-    cached_html = cache_service.get(cache_key)
+    cached_html = await cache_service.get(cache_key)
     if cached_html:
         return HTMLResponse(content=cached_html)
 
@@ -849,7 +849,7 @@ async def content_type_listing(
         },
     )
 
-    cache_service.set(cache_key, html, LIST_CACHE_TTL)
+    await cache_service.set(cache_key, html, LIST_CACHE_TTL)
     return HTMLResponse(content=html)
 
 
@@ -866,7 +866,7 @@ async def view_content_by_path(
     """Dynamic route for content types with path_prefix."""
     # Check cache first
     cache_key = f"page:{path_prefix}:{slug}"
-    cached_html = cache_service.get(cache_key)
+    cached_html = await cache_service.get(cache_key)
     if cached_html:
         return HTMLResponse(content=cached_html)
 
@@ -956,5 +956,5 @@ async def view_content_by_path(
         )
 
     # Cache the rendered HTML
-    cache_service.set(cache_key, html, PAGE_CACHE_TTL)
+    await cache_service.set(cache_key, html, PAGE_CACHE_TTL)
     return HTMLResponse(content=html)
