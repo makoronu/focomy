@@ -13,6 +13,7 @@ from .entity import EntityService
 
 class Permission(str, Enum):
     """Available permissions."""
+
     CREATE = "create"
     READ = "read"
     UPDATE = "update"
@@ -26,6 +27,7 @@ class Permission(str, Enum):
 
 class Role(str, Enum):
     """User roles with increasing privileges."""
+
     AUTHOR = "author"
     EDITOR = "editor"
     ADMIN = "admin"
@@ -47,13 +49,37 @@ PERMISSION_MATRIX: dict[str, dict[str, set[Permission]]] = {
     },
     Role.EDITOR: {
         # Editors can manage most content
-        "*": {Permission.CREATE, Permission.READ, Permission.UPDATE, Permission.DELETE, Permission.PUBLISH},
-        "post": {Permission.CREATE, Permission.READ, Permission.UPDATE, Permission.DELETE, Permission.PUBLISH},
-        "page": {Permission.CREATE, Permission.READ, Permission.UPDATE, Permission.DELETE, Permission.PUBLISH},
+        "*": {
+            Permission.CREATE,
+            Permission.READ,
+            Permission.UPDATE,
+            Permission.DELETE,
+            Permission.PUBLISH,
+        },
+        "post": {
+            Permission.CREATE,
+            Permission.READ,
+            Permission.UPDATE,
+            Permission.DELETE,
+            Permission.PUBLISH,
+        },
+        "page": {
+            Permission.CREATE,
+            Permission.READ,
+            Permission.UPDATE,
+            Permission.DELETE,
+            Permission.PUBLISH,
+        },
         "category": {Permission.CREATE, Permission.READ, Permission.UPDATE, Permission.DELETE},
         "tag": {Permission.CREATE, Permission.READ, Permission.UPDATE, Permission.DELETE},
         "comment": {Permission.CREATE, Permission.READ, Permission.UPDATE, Permission.DELETE},
-        "media": {Permission.CREATE, Permission.READ, Permission.UPDATE, Permission.DELETE, Permission.MANAGE_MEDIA},
+        "media": {
+            Permission.CREATE,
+            Permission.READ,
+            Permission.UPDATE,
+            Permission.DELETE,
+            Permission.MANAGE_MEDIA,
+        },
         "user": {Permission.READ},  # Can view users
         "audit_log": set(),  # No access to audit logs
         "site_setting": set(),  # No access to settings
@@ -61,9 +87,15 @@ PERMISSION_MATRIX: dict[str, dict[str, set[Permission]]] = {
     Role.ADMIN: {
         # Admins have full access
         "*": {
-            Permission.CREATE, Permission.READ, Permission.UPDATE, Permission.DELETE,
-            Permission.PUBLISH, Permission.MANAGE_USERS, Permission.MANAGE_SETTINGS,
-            Permission.MANAGE_MEDIA, Permission.VIEW_AUDIT,
+            Permission.CREATE,
+            Permission.READ,
+            Permission.UPDATE,
+            Permission.DELETE,
+            Permission.PUBLISH,
+            Permission.MANAGE_USERS,
+            Permission.MANAGE_SETTINGS,
+            Permission.MANAGE_MEDIA,
+            Permission.VIEW_AUDIT,
         },
     },
 }
@@ -77,6 +109,7 @@ OWNER_ONLY_ACTIONS: dict[str, set[Permission]] = {
 @dataclass
 class PermissionResult:
     """Result of permission check."""
+
     allowed: bool
     reason: str | None = None
     requires_ownership: bool = False
@@ -134,8 +167,7 @@ class RBACService:
         # Check if this requires ownership
         role_enum = Role(role) if role in [r.value for r in Role] else None
         requires_ownership = (
-            role_enum in OWNER_ONLY_ACTIONS
-            and permission in OWNER_ONLY_ACTIONS[role_enum]
+            role_enum in OWNER_ONLY_ACTIONS and permission in OWNER_ONLY_ACTIONS[role_enum]
         )
 
         return PermissionResult(

@@ -115,7 +115,9 @@ class TestEntityService:
         assert len(entities) == 5
 
     @pytest.mark.asyncio
-    async def test_list_deleted_entities(self, entity_service: EntityService, sample_post_data: dict):
+    async def test_list_deleted_entities(
+        self, entity_service: EntityService, sample_post_data: dict
+    ):
         """Test listing only deleted entities."""
         # Create and delete entities
         for i in range(3):
@@ -144,7 +146,9 @@ class TestEntityService:
         assert count == 3
 
     @pytest.mark.asyncio
-    async def test_entity_version_increment(self, entity_service: EntityService, sample_post_data: dict):
+    async def test_entity_version_increment(
+        self, entity_service: EntityService, sample_post_data: dict
+    ):
         """Test that entity version increments on update."""
         entity = await entity_service.create(
             type_name="post",
@@ -167,7 +171,9 @@ class TestEntityUniqueness:
     """Test unique constraint enforcement."""
 
     @pytest.mark.asyncio
-    async def test_duplicate_slug_rejected(self, entity_service: EntityService, sample_post_data: dict):
+    async def test_duplicate_slug_rejected(
+        self, entity_service: EntityService, sample_post_data: dict
+    ):
         """Test that duplicate slugs are rejected."""
         await entity_service.create(
             type_name="post",
@@ -184,7 +190,9 @@ class TestEntityUniqueness:
             )
 
     @pytest.mark.asyncio
-    async def test_unique_slug_across_types(self, entity_service: EntityService, sample_post_data: dict, sample_page_data: dict):
+    async def test_unique_slug_across_types(
+        self, entity_service: EntityService, sample_post_data: dict, sample_page_data: dict
+    ):
         """Test that slugs can be duplicated across different types."""
         sample_post_data["slug"] = "shared-slug"
         sample_page_data["slug"] = "shared-slug"

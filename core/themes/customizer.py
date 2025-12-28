@@ -13,6 +13,7 @@ logger = logging.getLogger(__name__)
 
 class SettingType(Enum):
     """Types of customizer settings."""
+
     TEXT = "text"
     TEXTAREA = "textarea"
     NUMBER = "number"
@@ -31,6 +32,7 @@ class SettingType(Enum):
 @dataclass
 class CustomizerSetting:
     """A single customizer setting."""
+
     id: str
     label: str
     type: SettingType
@@ -62,6 +64,7 @@ class CustomizerSetting:
 @dataclass
 class CustomizerSection:
     """A section of the customizer panel."""
+
     id: str
     title: str
     description: str = ""
@@ -73,6 +76,7 @@ class CustomizerSection:
 @dataclass
 class CustomizerPanel:
     """A panel containing multiple sections."""
+
     id: str
     title: str
     description: str = ""
@@ -298,7 +302,11 @@ class ThemeCustomizer:
         Returns:
             List of customizer panels
         """
-        theme = self.theme_manager.get_theme(theme_id) if theme_id else self.theme_manager.get_active_theme()
+        theme = (
+            self.theme_manager.get_theme(theme_id)
+            if theme_id
+            else self.theme_manager.get_active_theme()
+        )
 
         panels = []
 
@@ -488,14 +496,13 @@ class ThemeCustomizer:
             return ""
 
         font_params = "|".join(f.replace(" ", "+") + ":400,500,600,700" for f in fonts)
-        return f'@import url("https://fonts.googleapis.com/css2?family={font_params}&display=swap");'
+        return (
+            f'@import url("https://fonts.googleapis.com/css2?family={font_params}&display=swap");'
+        )
 
     def get_font_choices(self) -> list[dict]:
         """Get available font choices."""
-        return [
-            {"value": font, "label": font}
-            for font in self.GOOGLE_FONTS
-        ]
+        return [{"value": font, "label": font} for font in self.GOOGLE_FONTS]
 
     def undo(self, theme_id: str | None = None) -> bool:
         """Undo last change."""
@@ -536,11 +543,14 @@ class ThemeCustomizer:
             JSON string
         """
         values = self.get_values(theme_id)
-        return json.dumps({
-            "theme_id": theme_id,
-            "exported_at": datetime.utcnow().isoformat(),
-            "customizations": values,
-        }, indent=2)
+        return json.dumps(
+            {
+                "theme_id": theme_id,
+                "exported_at": datetime.utcnow().isoformat(),
+                "customizations": values,
+            },
+            indent=2,
+        )
 
     def import_customizations(
         self,
@@ -642,7 +652,7 @@ class ThemeCustomizer:
     def _add_to_history(self, values: dict) -> None:
         """Add values to history for undo."""
         # Remove any redo history
-        self._history = self._history[:self._history_index + 1]
+        self._history = self._history[: self._history_index + 1]
 
         # Add new state
         self._history.append(values.copy())

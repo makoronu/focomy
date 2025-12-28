@@ -24,6 +24,7 @@ def cmd_serve(args):
 
 def cmd_migrate(args):
     """Run database migrations."""
+
     async def run():
         from core.database import init_db
 
@@ -76,6 +77,7 @@ def cmd_validate(args):
 
 def cmd_build(args):
     """Build static site."""
+
     async def run():
         from core.database import init_db
         from core.services.entity import EntityService
@@ -91,6 +93,7 @@ def cmd_build(args):
 
         # Get database session
         from core.database import async_session
+
         async with async_session() as db:
             entity_svc = EntityService(db)
             seo_svc = SEOService(entity_svc, args.base_url)
@@ -119,10 +122,13 @@ def cmd_build(args):
                 meta = seo_svc.generate_meta(post)
                 seo_meta = seo_svc.render_meta_tags(meta)
 
-                post_html = theme_service.render("post.html", {
-                    "post": post_data,
-                    "seo_meta": seo_meta,
-                })
+                post_html = theme_service.render(
+                    "post.html",
+                    {
+                        "post": post_data,
+                        "seo_meta": seo_meta,
+                    },
+                )
 
                 (posts_dir / f"{slug}.html").write_text(post_html)
 
@@ -140,10 +146,13 @@ def cmd_build(args):
                 meta = seo_svc.generate_meta(page)
                 seo_meta = seo_svc.render_meta_tags(meta)
 
-                page_html = theme_service.render("post.html", {
-                    "post": page_data,
-                    "seo_meta": seo_meta,
-                })
+                page_html = theme_service.render(
+                    "post.html",
+                    {
+                        "post": page_data,
+                        "seo_meta": seo_meta,
+                    },
+                )
 
                 (pages_dir / f"{slug}.html").write_text(page_html)
 
@@ -159,6 +168,7 @@ def cmd_build(args):
 
 def cmd_create_user(args):
     """Create admin user."""
+
     async def run():
         from core.database import async_session, init_db
         from core.services.auth import AuthService
@@ -185,6 +195,7 @@ def cmd_create_user(args):
 
 def cmd_seed(args):
     """Create sample data."""
+
     async def run():
         from core.database import async_session, init_db
         from core.services.entity import EntityService
@@ -230,12 +241,15 @@ def cmd_seed(args):
             # Page
             print("Creating pages...")
             try:
-                await entity_svc.create("page", {
-                    "title": "About",
-                    "slug": "about",
-                    "body": [{"type": "paragraph", "data": {"text": "About us."}}],
-                    "status": "published",
-                })
+                await entity_svc.create(
+                    "page",
+                    {
+                        "title": "About",
+                        "slug": "about",
+                        "body": [{"type": "paragraph", "data": {"text": "About us."}}],
+                        "status": "published",
+                    },
+                )
                 print("  Created: About")
             except Exception:
                 print("  Exists: About")

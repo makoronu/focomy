@@ -15,6 +15,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class MarketplaceTheme:
     """Theme listing from marketplace."""
+
     id: str
     name: str
     version: str
@@ -56,6 +57,7 @@ class MarketplaceTheme:
 @dataclass
 class MarketplaceSearchResult:
     """Search result from marketplace."""
+
     themes: list[MarketplaceTheme]
     total: int = 0
     page: int = 1
@@ -66,6 +68,7 @@ class MarketplaceSearchResult:
 @dataclass
 class InstallResult:
     """Result of theme installation."""
+
     success: bool
     message: str
     theme_id: str | None = None
@@ -105,7 +108,9 @@ class ThemeMarketplace:
         self.theme_manager = theme_manager
         self.marketplace_url = (marketplace_url or self.DEFAULT_MARKETPLACE_URL).rstrip("/")
         self.api_key = api_key
-        self.cache_dir = Path(cache_dir) if cache_dir else Path(tempfile.gettempdir()) / "focomy_themes"
+        self.cache_dir = (
+            Path(cache_dir) if cache_dir else Path(tempfile.gettempdir()) / "focomy_themes"
+        )
 
         self.cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -437,7 +442,9 @@ class ThemeMarketplace:
 
                             if progress_callback and total_size:
                                 progress = 0.3 + (downloaded / total_size) * 0.5
-                                progress_callback(progress, f"Downloading... {downloaded // 1024}KB")
+                                progress_callback(
+                                    progress, f"Downloading... {downloaded // 1024}KB"
+                                )
 
             return zip_path
 

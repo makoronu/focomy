@@ -15,6 +15,7 @@ from .field import FieldService, field_service
 @dataclass
 class QueryParams:
     """Query parameters for find operations."""
+
     filters: dict[str, Any] = field(default_factory=dict)
     sort: str = "-created_at"
     page: int = 1
@@ -129,6 +130,7 @@ class EntityService:
             # Create revision before updating
             if create_revision:
                 from .revision import RevisionService
+
                 revision_svc = RevisionService(self.db)
                 current_data = self.serialize(entity)
                 await revision_svc.create(
@@ -325,6 +327,7 @@ class EntityService:
 
         # Get total count
         from sqlalchemy import func
+
         count_query = select(func.count(Entity.id)).where(Entity.deleted_at.isnot(None))
         if type_name:
             count_query = count_query.where(Entity.type == type_name)
@@ -364,9 +367,7 @@ class EntityService:
         if type_name:
             conditions.append(Entity.type == type_name)
 
-        result = await self.db.execute(
-            sql_delete(Entity).where(and_(*conditions))
-        )
+        result = await self.db.execute(sql_delete(Entity).where(and_(*conditions)))
         await self.db.commit()
 
         return result.rowcount
@@ -584,68 +585,41 @@ class EntityService:
         # Build subquery for EntityValue filtering
         if op == "eq":
             subq = select(EntityValue.entity_id).where(
-                and_(
-                    EntityValue.field_name == field_name,
-                    value_col == compare_value
-                )
+                and_(EntityValue.field_name == field_name, value_col == compare_value)
             )
         elif op == "neq":
             subq = select(EntityValue.entity_id).where(
-                and_(
-                    EntityValue.field_name == field_name,
-                    value_col != compare_value
-                )
+                and_(EntityValue.field_name == field_name, value_col != compare_value)
             )
         elif op == "gte":
             subq = select(EntityValue.entity_id).where(
-                and_(
-                    EntityValue.field_name == field_name,
-                    value_col >= compare_value
-                )
+                and_(EntityValue.field_name == field_name, value_col >= compare_value)
             )
         elif op == "lte":
             subq = select(EntityValue.entity_id).where(
-                and_(
-                    EntityValue.field_name == field_name,
-                    value_col <= compare_value
-                )
+                and_(EntityValue.field_name == field_name, value_col <= compare_value)
             )
         elif op == "gt":
             subq = select(EntityValue.entity_id).where(
-                and_(
-                    EntityValue.field_name == field_name,
-                    value_col > compare_value
-                )
+                and_(EntityValue.field_name == field_name, value_col > compare_value)
             )
         elif op == "lt":
             subq = select(EntityValue.entity_id).where(
-                and_(
-                    EntityValue.field_name == field_name,
-                    value_col < compare_value
-                )
+                and_(EntityValue.field_name == field_name, value_col < compare_value)
             )
         elif op == "like":
             subq = select(EntityValue.entity_id).where(
-                and_(
-                    EntityValue.field_name == field_name,
-                    value_col.like(f"%{compare_value}%")
-                )
+                and_(EntityValue.field_name == field_name, value_col.like(f"%{compare_value}%"))
             )
         elif op == "isnull":
             # Check if field doesn't exist or value is null
             if value:
                 subq = select(EntityValue.entity_id).where(
-                    and_(
-                        EntityValue.field_name == field_name,
-                        value_col.is_(None)
-                    )
+                    and_(EntityValue.field_name == field_name, value_col.is_(None))
                 )
             else:
                 subq = select(EntityValue.entity_id).where(
-                    and_(
-                        EntityValue.field_name == field_name,
-                        value_col.isnot(None)
-                    )
+                    and_(EntityValue.field_name == field_name, value_col.isnot(None))
                 )
         else:
             return query

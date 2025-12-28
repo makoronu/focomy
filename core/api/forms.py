@@ -19,6 +19,7 @@ router = APIRouter(prefix="/forms", tags=["forms"])
 
 class FormSubmitRequest(BaseModel):
     """Form submission request."""
+
     data: dict[str, Any]
 
 
@@ -61,12 +62,15 @@ async def view_form(
             steps = []
 
     # Render form template
-    html = theme_service.render("form.html", {
-        "form": form_data,
-        "fields": fields_config,
-        "steps": steps,
-        "csrf_token": getattr(request.state, "csrf_token", ""),
-    })
+    html = theme_service.render(
+        "form.html",
+        {
+            "form": form_data,
+            "fields": fields_config,
+            "steps": steps,
+            "csrf_token": getattr(request.state, "csrf_token", ""),
+        },
+    )
 
     return HTMLResponse(content=html)
 
@@ -121,14 +125,17 @@ async def submit_form(
         raise HTTPException(status_code=400, detail={"errors": errors})
 
     # Save submission
-    await entity_svc.create("form_submission", {
-        "form_id": form.id,
-        "form_title": form_data.get("title"),
-        "data": submission_data,
-        "ip_address": request.client.host if request.client else None,
-        "user_agent": request.headers.get("User-Agent"),
-        "status": "new",
-    })
+    await entity_svc.create(
+        "form_submission",
+        {
+            "form_id": form.id,
+            "form_title": form_data.get("title"),
+            "data": submission_data,
+            "ip_address": request.client.host if request.client else None,
+            "user_agent": request.headers.get("User-Agent"),
+            "status": "new",
+        },
+    )
 
     # Send notification email
     notify_email = form_data.get("notify_email")
@@ -153,9 +160,12 @@ async def submit_form(
         return {"success": True, "message": success_message}
 
     # Render success page
-    html = theme_service.render("form_success.html", {
-        "form": form_data,
-        "message": success_message,
-    })
+    html = theme_service.render(
+        "form_success.html",
+        {
+            "form": form_data,
+            "message": success_message,
+        },
+    )
 
     return HTMLResponse(content=html)

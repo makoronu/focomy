@@ -23,6 +23,7 @@ JWT_EXPIRY_HOURS = 24
 @dataclass
 class APIKey:
     """API key data."""
+
     id: str
     name: str
     key_hash: str
@@ -38,6 +39,7 @@ class APIKey:
 @dataclass
 class TokenPayload:
     """JWT token payload."""
+
     sub: str  # User ID
     exp: datetime
     iat: datetime
@@ -258,10 +260,7 @@ class APIAuthService:
 
     async def list_api_keys(self, user_id: str) -> list[APIKey]:
         """List all API keys for a user (active only)."""
-        return [
-            key for key in _api_keys.values()
-            if key.user_id == user_id and key.is_active
-        ]
+        return [key for key in _api_keys.values() if key.user_id == user_id and key.is_active]
 
     async def delete_api_key(self, key_id: str, user_id: str) -> bool:
         """Permanently delete an API key."""
@@ -333,10 +332,16 @@ class APIScopes:
     @classmethod
     def all_scopes(cls) -> list[str]:
         return [
-            cls.READ_ENTITIES, cls.WRITE_ENTITIES, cls.DELETE_ENTITIES,
-            cls.READ_MEDIA, cls.WRITE_MEDIA, cls.DELETE_MEDIA,
-            cls.READ_USERS, cls.WRITE_USERS,
-            cls.READ_SETTINGS, cls.WRITE_SETTINGS,
+            cls.READ_ENTITIES,
+            cls.WRITE_ENTITIES,
+            cls.DELETE_ENTITIES,
+            cls.READ_MEDIA,
+            cls.WRITE_MEDIA,
+            cls.DELETE_MEDIA,
+            cls.READ_USERS,
+            cls.WRITE_USERS,
+            cls.READ_SETTINGS,
+            cls.WRITE_SETTINGS,
         ]
 
 

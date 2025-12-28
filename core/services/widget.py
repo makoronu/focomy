@@ -17,6 +17,7 @@ from .entity import EntityService
 @dataclass
 class WidgetContext:
     """Context passed to widget renderers."""
+
     db: AsyncSession
     entity_svc: EntityService
     request_context: dict[str, Any]
@@ -56,18 +57,20 @@ class RecentPostsWidget(BaseWidget):
             title = data.get("title", "Untitled")
             slug = data.get("slug", "")
             date = data.get("created_at", "")[:10] if data.get("created_at") else ""
-            items.append(f'''
+            items.append(
+                f"""
                 <li class="widget-post-item">
                     <a href="/post/{slug}">{title}</a>
                     <span class="widget-post-date">{date}</span>
                 </li>
-            ''')
+            """
+            )
 
-        return f'''
+        return f"""
             <ul class="widget-posts-list">
                 {"".join(items)}
             </ul>
-        '''
+        """
 
 
 class CategoriesWidget(BaseWidget):
@@ -90,17 +93,19 @@ class CategoriesWidget(BaseWidget):
             data = context.entity_svc.serialize(cat)
             name = data.get("name", "")
             slug = data.get("slug", "")
-            items.append(f'''
+            items.append(
+                f"""
                 <li class="widget-category-item">
                     <a href="/category/{slug}">{name}</a>
                 </li>
-            ''')
+            """
+            )
 
-        return f'''
+        return f"""
             <ul class="widget-categories-list">
                 {"".join(items)}
             </ul>
-        '''
+        """
 
 
 class SearchWidget(BaseWidget):
@@ -111,12 +116,12 @@ class SearchWidget(BaseWidget):
 
     async def render(self, config: dict, context: WidgetContext) -> str:
         placeholder = config.get("placeholder", "Search...")
-        return f'''
+        return f"""
             <form action="/search" method="GET" class="widget-search-form">
                 <input type="text" name="q" placeholder="{placeholder}" class="widget-search-input">
                 <button type="submit" class="widget-search-button">Search</button>
             </form>
-        '''
+        """
 
 
 class ArchivesWidget(BaseWidget):
@@ -152,18 +157,20 @@ class ArchivesWidget(BaseWidget):
         for ym, count in sorted_months:
             year, month = ym.split("-")
             label = f"{year}年{month}月"
-            items.append(f'''
+            items.append(
+                f"""
                 <li class="widget-archive-item">
                     <a href="/archive/{year}/{month}">{label}</a>
                     <span class="widget-archive-count">({count})</span>
                 </li>
-            ''')
+            """
+            )
 
-        return f'''
+        return f"""
             <ul class="widget-archives-list">
                 {"".join(items)}
             </ul>
-        '''
+        """
 
 
 class CustomHtmlWidget(BaseWidget):
@@ -265,14 +272,16 @@ class WidgetService:
                 content = f'<p class="widget-error">Widget error: {str(e)}</p>'
 
             title_html = f'<h3 class="widget-title">{title}</h3>' if title else ""
-            rendered.append(f'''
+            rendered.append(
+                f"""
                 <div class="widget widget--{widget_type}">
                     {title_html}
                     <div class="widget-content">
                         {content}
                     </div>
                 </div>
-            ''')
+            """
+            )
 
         return "\n".join(rendered)
 
@@ -281,10 +290,7 @@ class WidgetService:
         request_context: dict[str, Any] = None,
     ) -> dict[str, str]:
         """Render all widget areas."""
-        return {
-            area: await self.render_area(area, request_context)
-            for area in self.AREAS
-        }
+        return {area: await self.render_area(area, request_context) for area in self.AREAS}
 
     async def create_widget(
         self,
@@ -317,9 +323,7 @@ class WidgetService:
         """Update a widget."""
         if "config" in data and isinstance(data["config"], dict):
             data["config"] = json.dumps(data["config"])
-        return await self.entity_svc.update(
-            widget_id, data, user_id, create_revision=False
-        )
+        return await self.entity_svc.update(widget_id, data, user_id, create_revision=False)
 
     async def delete_widget(self, widget_id: str, user_id: str = None) -> bool:
         """Delete a widget."""

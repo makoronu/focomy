@@ -65,7 +65,7 @@ class TestContentTypeModel:
             fields=[
                 FieldDefinition(name="title", type="text", required=True),
                 FieldDefinition(name="slug", type="slug", unique=True),
-            ]
+            ],
         )
 
         assert len(ct.fields) == 2
@@ -99,7 +99,7 @@ class TestFieldDefinitionModel:
             options=[
                 {"value": "draft", "label": "Draft"},
                 {"value": "published", "label": "Published"},
-            ]
+            ],
         )
 
         assert len(field.options) == 2
@@ -114,7 +114,7 @@ class TestFieldDefinitionModel:
                 "draft": ["published"],
                 "published": ["draft", "archived"],
                 "archived": [],
-            }
+            },
         )
 
         # Allowed transitions
@@ -156,7 +156,7 @@ class TestValidationResult:
             valid=False,
             errors=[
                 ValidationError(field="title", message="Title is required"),
-            ]
+            ],
         )
 
         assert result.valid is False

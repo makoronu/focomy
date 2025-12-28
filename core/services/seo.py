@@ -53,8 +53,12 @@ class SEOService:
             "description": description,
             "canonical": canonical_url,
             "robots": ", ".join(robots) if robots else None,
-            "ogp": self._generate_ogp(og_title, og_description, canonical_url, og_image, entity.type, data),
-            "json_ld": self._generate_json_ld(entity, data, title, description, canonical_url, image),
+            "ogp": self._generate_ogp(
+                og_title, og_description, canonical_url, og_image, entity.type, data
+            ),
+            "json_ld": self._generate_json_ld(
+                entity, data, title, description, canonical_url, image
+            ),
         }
 
     def _get_title(self, data: dict, ct) -> str:
@@ -270,7 +274,7 @@ class SEOService:
         text = text.strip()
         if len(text) <= max_length:
             return text
-        return text[:max_length - 3].rsplit(" ", 1)[0] + "..."
+        return text[: max_length - 3].rsplit(" ", 1)[0] + "..."
 
     async def generate_sitemap(self, content_types: list[str] = None) -> str:
         """Generate sitemap.xml content."""
@@ -291,12 +295,14 @@ class SEOService:
                 url = self._get_url(entity, data)
                 lastmod = entity.updated_at.strftime("%Y-%m-%d") if entity.updated_at else ""
 
-                urls.append({
-                    "loc": url,
-                    "lastmod": lastmod,
-                    "changefreq": "weekly" if ct_name == "post" else "monthly",
-                    "priority": "0.8" if ct_name == "post" else "0.5",
-                })
+                urls.append(
+                    {
+                        "loc": url,
+                        "lastmod": lastmod,
+                        "changefreq": "weekly" if ct_name == "post" else "monthly",
+                        "priority": "0.8" if ct_name == "post" else "0.5",
+                    }
+                )
 
         # Generate XML
         xml_parts = ['<?xml version="1.0" encoding="UTF-8"?>']
@@ -347,10 +353,10 @@ class SEOService:
                 "@type": "SearchAction",
                 "target": {
                     "@type": "EntryPoint",
-                    "urlTemplate": f"{self.site_url}/search?q={{search_term_string}}"
+                    "urlTemplate": f"{self.site_url}/search?q={{search_term_string}}",
                 },
-                "query-input": "required name=search_term_string"
-            }
+                "query-input": "required name=search_term_string",
+            },
         }
         if site_description:
             website["description"] = site_description
@@ -390,13 +396,10 @@ class SEOService:
                 {
                     "@type": "Question",
                     "name": item["question"],
-                    "acceptedAnswer": {
-                        "@type": "Answer",
-                        "text": item["answer"]
-                    }
+                    "acceptedAnswer": {"@type": "Answer", "text": item["answer"]},
                 }
                 for item in faq_items
-            ]
+            ],
         }
 
     def generate_breadcrumb_json_ld(self, items: list[dict]) -> dict[str, Any]:
@@ -409,14 +412,9 @@ class SEOService:
             "@context": "https://schema.org",
             "@type": "BreadcrumbList",
             "itemListElement": [
-                {
-                    "@type": "ListItem",
-                    "position": i + 1,
-                    "name": item["name"],
-                    "item": item["url"]
-                }
+                {"@type": "ListItem", "position": i + 1, "name": item["name"], "item": item["url"]}
                 for i, item in enumerate(items)
-            ]
+            ],
         }
 
     def render_meta_tags(self, meta: dict) -> str:

@@ -20,6 +20,7 @@ from .relation import RelationService
 @dataclass
 class MenuItem:
     """Resolved menu item for rendering."""
+
     id: str
     label: str
     url: str
@@ -76,21 +77,15 @@ class MenuService:
 
     async def get_all_menus(self) -> dict[str, list[MenuItem]]:
         """Get all menus for all locations."""
-        return {
-            location: await self.get_menu(location)
-            for location in self.LOCATIONS
-        }
+        return {location: await self.get_menu(location) for location in self.LOCATIONS}
 
     async def _get_db_menu_items(self, location: str) -> list[dict[str, Any]]:
         """Get menu items from database for a location."""
         # Query entities with location filter
-        query = (
-            select(Entity)
-            .where(
-                and_(
-                    Entity.type == "menu_item",
-                    Entity.deleted_at.is_(None),
-                )
+        query = select(Entity).where(
+            and_(
+                Entity.type == "menu_item",
+                Entity.deleted_at.is_(None),
             )
         )
         result = await self.db.execute(query)
@@ -121,16 +116,18 @@ class MenuService:
             # Resolve URL if link_type is not custom
             url = await self._resolve_url(item_data)
 
-            items.append({
-                "id": entity.id,
-                "label": item_data.get("label", ""),
-                "url": url,
-                "target": item_data.get("target", "_self"),
-                "icon": item_data.get("icon", ""),
-                "is_active": item_data.get("is_active", True),
-                "sort_order": item_data.get("sort_order", 0),
-                "parent_id": parent_id,
-            })
+            items.append(
+                {
+                    "id": entity.id,
+                    "label": item_data.get("label", ""),
+                    "url": url,
+                    "target": item_data.get("target", "_self"),
+                    "icon": item_data.get("icon", ""),
+                    "is_active": item_data.get("is_active", True),
+                    "sort_order": item_data.get("sort_order", 0),
+                    "parent_id": parent_id,
+                }
+            )
 
         return items
 
@@ -223,8 +220,7 @@ class MenuService:
             icon=config.icon,
             sort_order=index,
             children=[
-                self._config_to_menu_item(c, i, item_id)
-                for i, c in enumerate(config.children)
+                self._config_to_menu_item(c, i, item_id) for i, c in enumerate(config.children)
             ],
         )
 
@@ -263,9 +259,7 @@ class MenuService:
 
         # Set parent relation if specified
         if parent_id:
-            await self.relation_svc.attach(
-                entity.id, parent_id, "menu_item_parent"
-            )
+            await self.relation_svc.attach(entity.id, parent_id, "menu_item_parent")
 
         return entity
 
@@ -277,9 +271,7 @@ class MenuService:
         user_id: str = None,
     ) -> Entity | None:
         """Update a menu item."""
-        entity = await self.entity_svc.update(
-            menu_item_id, data, user_id, create_revision=False
-        )
+        entity = await self.entity_svc.update(menu_item_id, data, user_id, create_revision=False)
 
         if not entity:
             return None
@@ -291,15 +283,11 @@ class MenuService:
                 menu_item_id, "menu_item_parent", direction="from"
             )
             for rel in current_parents:
-                await self.relation_svc.detach(
-                    menu_item_id, rel.to_entity_id, "menu_item_parent"
-                )
+                await self.relation_svc.detach(menu_item_id, rel.to_entity_id, "menu_item_parent")
 
             # Set new parent if specified
             if parent_id:
-                await self.relation_svc.attach(
-                    menu_item_id, parent_id, "menu_item_parent"
-                )
+                await self.relation_svc.attach(menu_item_id, parent_id, "menu_item_parent")
 
         return entity
 

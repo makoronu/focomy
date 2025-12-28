@@ -11,6 +11,7 @@ from .entity import EntityService
 @dataclass
 class ScheduledAction:
     """Scheduled action record."""
+
     id: str
     entity_id: str
     action_type: str  # publish, unpublish_archive, unpublish_draft, unpublish_delete

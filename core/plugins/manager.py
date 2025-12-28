@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class PluginInfo:
     """Extended plugin information for admin UI."""
+
     meta: PluginMeta
     is_active: bool = False
     can_activate: bool = True

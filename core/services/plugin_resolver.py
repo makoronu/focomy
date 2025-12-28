@@ -13,6 +13,7 @@ from dataclasses import dataclass
 @dataclass
 class PluginInfo:
     """Plugin metadata."""
+
     name: str
     version: str
     requires: list[str]  # List of required plugins
@@ -23,6 +24,7 @@ class PluginInfo:
 @dataclass
 class DependencyError:
     """Dependency resolution error."""
+
     plugin: str
     error_type: str  # "missing", "circular", "conflict", "version"
     message: str
@@ -32,6 +34,7 @@ class DependencyError:
 @dataclass
 class ResolveResult:
     """Result of dependency resolution."""
+
     success: bool
     load_order: list[str]
     errors: list[DependencyError]
@@ -100,12 +103,14 @@ class PluginResolver:
         # Check for missing plugins
         for plugin_name in to_resolve:
             if plugin_name not in self._plugins:
-                errors.append(DependencyError(
-                    plugin=plugin_name,
-                    error_type="missing",
-                    message=f"Plugin '{plugin_name}' not found",
-                    related_plugins=[],
-                ))
+                errors.append(
+                    DependencyError(
+                        plugin=plugin_name,
+                        error_type="missing",
+                        message=f"Plugin '{plugin_name}' not found",
+                        related_plugins=[],
+                    )
+                )
 
         if errors:
             return ResolveResult(
@@ -123,25 +128,30 @@ class PluginResolver:
             if plugin_name not in self._plugins:
                 # Find which plugins require it
                 requiring = [
-                    p for p in to_resolve
+                    p
+                    for p in to_resolve
                     if plugin_name in self._plugins.get(p, PluginInfo("", "", [], [], [])).requires
                 ]
-                errors.append(DependencyError(
-                    plugin=plugin_name,
-                    error_type="missing",
-                    message=f"Required plugin '{plugin_name}' not found",
-                    related_plugins=requiring,
-                ))
+                errors.append(
+                    DependencyError(
+                        plugin=plugin_name,
+                        error_type="missing",
+                        message=f"Required plugin '{plugin_name}' not found",
+                        related_plugins=requiring,
+                    )
+                )
 
         # Check for circular dependencies
         circular = self._detect_circular_dependencies(all_required)
         if circular:
-            errors.append(DependencyError(
-                plugin=circular[0],
-                error_type="circular",
-                message=f"Circular dependency detected: {' -> '.join(circular)}",
-                related_plugins=circular,
-            ))
+            errors.append(
+                DependencyError(
+                    plugin=circular[0],
+                    error_type="circular",
+                    message=f"Circular dependency detected: {' -> '.join(circular)}",
+                    related_plugins=circular,
+                )
+            )
 
         # Check for conflicts
         for plugin_name in all_required:
@@ -149,12 +159,14 @@ class PluginResolver:
             if plugin:
                 for conflict in plugin.conflicts:
                     if conflict in all_required:
-                        errors.append(DependencyError(
-                            plugin=plugin_name,
-                            error_type="conflict",
-                            message=f"Plugin '{plugin_name}' conflicts with '{conflict}'",
-                            related_plugins=[conflict],
-                        ))
+                        errors.append(
+                            DependencyError(
+                                plugin=plugin_name,
+                                error_type="conflict",
+                                message=f"Plugin '{plugin_name}' conflicts with '{conflict}'",
+                                related_plugins=[conflict],
+                            )
+                        )
 
         if errors:
             return ResolveResult(

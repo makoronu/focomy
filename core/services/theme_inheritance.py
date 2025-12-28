@@ -13,6 +13,7 @@ import yaml
 @dataclass
 class ThemeConfig:
     """Theme configuration."""
+
     name: str
     label: str
     version: str
@@ -28,6 +29,7 @@ class ThemeConfig:
 @dataclass
 class ResolvedTheme:
     """Fully resolved theme with inheritance applied."""
+
     name: str
     inheritance_chain: list[str]
     templates: dict[str, Path]  # template_name -> file_path

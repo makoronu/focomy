@@ -35,14 +35,11 @@ class EntityCreate(BaseModel):
         }
         ```
     """
+
     data: dict[str, Any] = Field(
         default_factory=dict,
         description="Entity field values as key-value pairs",
-        examples=[{
-            "title": "My First Post",
-            "slug": "my-first-post",
-            "status": "draft"
-        }]
+        examples=[{"title": "My First Post", "slug": "my-first-post", "status": "draft"}],
     )
 
 
@@ -51,10 +48,11 @@ class EntityUpdate(BaseModel):
 
     Only include fields that should be updated.
     """
+
     data: dict[str, Any] = Field(
         default_factory=dict,
         description="Entity field values to update",
-        examples=[{"status": "published"}]
+        examples=[{"status": "published"}],
     )
 
 
@@ -74,6 +72,7 @@ class EntityResponse(BaseModel):
         }
         ```
     """
+
     id: str = Field(..., description="Unique entity identifier")
     type: str = Field(..., description="Content type name")
     created_at: str = Field(..., description="Creation timestamp (ISO 8601)")
@@ -100,6 +99,7 @@ class EntityListResponse(BaseModel):
         }
         ```
     """
+
     items: list[dict[str, Any]] = Field(..., description="List of entities")
     total: int = Field(..., description="Total number of entities")
     page: int = Field(..., description="Current page number")
@@ -119,18 +119,23 @@ class EntityListResponse(BaseModel):
                 "application/json": {
                     "example": {
                         "items": [
-                            {"id": "abc123", "type": "post", "title": "Hello World", "status": "published"}
+                            {
+                                "id": "abc123",
+                                "type": "post",
+                                "title": "Hello World",
+                                "status": "published",
+                            }
                         ],
                         "total": 42,
                         "page": 1,
                         "per_page": 20,
-                        "pages": 3
+                        "pages": 3,
                     }
                 }
-            }
+            },
         },
-        404: {"description": "Content type not found"}
-    }
+        404: {"description": "Content type not found"},
+    },
 )
 @limiter.limit("100/minute")
 async def list_entities(
@@ -183,14 +188,14 @@ async def list_entities(
                         "type": "post",
                         "title": "My New Post",
                         "slug": "my-new-post",
-                        "created_at": "2024-01-15T10:30:00Z"
+                        "created_at": "2024-01-15T10:30:00Z",
                     }
                 }
-            }
+            },
         },
         400: {"description": "Validation error"},
-        404: {"description": "Content type not found"}
-    }
+        404: {"description": "Content type not found"},
+    },
 )
 @limiter.limit("100/minute")
 async def create_entity(
@@ -233,13 +238,13 @@ async def create_entity(
                         "title": "Hello World",
                         "slug": "hello-world",
                         "status": "published",
-                        "created_at": "2024-01-15T10:30:00Z"
+                        "created_at": "2024-01-15T10:30:00Z",
                     }
                 }
-            }
+            },
         },
-        404: {"description": "Entity not found"}
-    }
+        404: {"description": "Entity not found"},
+    },
 )
 @limiter.limit("100/minute")
 async def get_entity(
@@ -278,14 +283,14 @@ async def get_entity(
                         "type": "post",
                         "title": "Updated Title",
                         "status": "published",
-                        "updated_at": "2024-01-15T12:00:00Z"
+                        "updated_at": "2024-01-15T12:00:00Z",
                     }
                 }
-            }
+            },
         },
         400: {"description": "Validation error"},
-        404: {"description": "Entity not found"}
-    }
+        404: {"description": "Entity not found"},
+    },
 )
 @limiter.limit("100/minute")
 async def update_entity(
@@ -323,14 +328,10 @@ async def update_entity(
     responses={
         200: {
             "description": "Deletion confirmation",
-            "content": {
-                "application/json": {
-                    "example": {"status": "deleted", "id": "abc123"}
-                }
-            }
+            "content": {"application/json": {"example": {"status": "deleted", "id": "abc123"}}},
         },
-        404: {"description": "Entity not found"}
-    }
+        404: {"description": "Entity not found"},
+    },
 )
 @limiter.limit("100/minute")
 async def delete_entity(

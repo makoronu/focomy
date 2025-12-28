@@ -17,6 +17,7 @@ from typing import Any
 @dataclass
 class PluginPermissions:
     """Plugin permission set."""
+
     # Database access
     can_read_entities: bool = True
     can_write_entities: bool = False
@@ -46,6 +47,7 @@ class PluginPermissions:
 @dataclass
 class ResourceUsage:
     """Track resource usage."""
+
     db_queries: int = 0
     start_time: float = 0
     memory_used_mb: float = 0
@@ -53,11 +55,13 @@ class ResourceUsage:
 
 class PermissionDeniedError(Exception):
     """Raised when a plugin tries to access a restricted resource."""
+
     pass
 
 
 class ResourceLimitError(Exception):
     """Raised when a plugin exceeds resource limits."""
+
     pass
 
 
@@ -147,9 +151,7 @@ class PluginSandbox:
     def require_permission(self, permission: str, **context):
         """Require a permission or raise error."""
         if not self.check_permission(permission, **context):
-            raise PermissionDeniedError(
-                f"Permission denied: {permission}"
-            )
+            raise PermissionDeniedError(f"Permission denied: {permission}")
 
     def check_resource_limits(self):
         """Check if resource limits are exceeded."""

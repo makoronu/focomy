@@ -232,10 +232,10 @@ class PluginLoader:
                 return module.plugin_class
 
             # Check for default class name
-            class_name = "".join(
-                word.capitalize()
-                for word in plugin_id.replace("-", "_").split("_")
-            ) + "Plugin"
+            class_name = (
+                "".join(word.capitalize() for word in plugin_id.replace("-", "_").split("_"))
+                + "Plugin"
+            )
 
             if hasattr(module, class_name):
                 return getattr(module, class_name)

@@ -78,9 +78,7 @@ class RevisionService:
         include_autosaves: bool = False,
     ) -> int:
         """Count revisions for an entity."""
-        query = select(func.count()).select_from(Revision).where(
-            Revision.entity_id == entity_id
-        )
+        query = select(func.count()).select_from(Revision).where(Revision.entity_id == entity_id)
 
         if not include_autosaves:
             query = query.where(Revision.revision_type != "autosave")
@@ -116,13 +114,17 @@ class RevisionService:
         cutoff = datetime.utcnow() - timedelta(hours=self.AUTOSAVE_CLEANUP_HOURS)
 
         # Get all autosaves older than cutoff
-        query = select(Revision).where(
-            and_(
-                Revision.entity_id == entity_id,
-                Revision.revision_type == "autosave",
-                Revision.created_at < cutoff,
+        query = (
+            select(Revision)
+            .where(
+                and_(
+                    Revision.entity_id == entity_id,
+                    Revision.revision_type == "autosave",
+                    Revision.created_at < cutoff,
+                )
             )
-        ).order_by(Revision.created_at.desc())
+            .order_by(Revision.created_at.desc())
+        )
 
         result = await self.db.execute(query)
         old_autosaves = list(result.scalars().all())

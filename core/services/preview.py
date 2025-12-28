@@ -82,9 +82,7 @@ class PreviewService:
 
         # Get entity (including drafts/deleted)
         entity_id = token_data["entity_id"]
-        result = await self.db.execute(
-            select(Entity).where(Entity.id == entity_id)
-        )
+        result = await self.db.execute(select(Entity).where(Entity.id == entity_id))
         return result.scalar_one_or_none()
 
     async def revoke_token(self, token: str) -> bool:
@@ -98,8 +96,7 @@ class PreviewService:
         """Revoke all preview tokens for an entity."""
         count = 0
         tokens_to_delete = [
-            t for t, data in _preview_tokens.items()
-            if data["entity_id"] == entity_id
+            t for t, data in _preview_tokens.items() if data["entity_id"] == entity_id
         ]
         for token in tokens_to_delete:
             del _preview_tokens[token]
@@ -122,10 +119,7 @@ class PreviewService:
     def _cleanup_expired_tokens(self):
         """Remove expired tokens."""
         now = datetime.utcnow()
-        expired = [
-            t for t, data in _preview_tokens.items()
-            if now > data["expires_at"]
-        ]
+        expired = [t for t, data in _preview_tokens.items() if now > data["expires_at"]]
         for token in expired:
             del _preview_tokens[token]
 

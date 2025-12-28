@@ -19,6 +19,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class ImportConfig:
     """Configuration for WordPress import."""
+
     # File paths
     wxr_file: Path | None = None
     upload_dir: Path = Path("uploads")
@@ -69,6 +70,7 @@ class ImportConfig:
 @dataclass
 class ImportProgress:
     """Track import progress."""
+
     phase: str = ""
     current: int = 0
     total: int = 0
@@ -80,6 +82,7 @@ class ImportProgress:
 @dataclass
 class ImportResult:
     """Complete import result."""
+
     success: bool = True
     analysis: AnalysisReport | None = None
     posts_imported: int = 0
@@ -188,19 +191,23 @@ class WordPressImporter:
                 self._load_checkpoint()
 
             # Phase 1: Parse WXR
-            self._report_progress(ImportProgress(
-                phase="parsing",
-                message="Parsing WordPress export file...",
-            ))
+            self._report_progress(
+                ImportProgress(
+                    phase="parsing",
+                    message="Parsing WordPress export file...",
+                )
+            )
 
             if not self._wxr_data:
                 self._wxr_data = self._parser.parse(self.config.wxr_file)
 
             # Phase 2: Analyze
-            self._report_progress(ImportProgress(
-                phase="analyzing",
-                message="Analyzing site content...",
-            ))
+            self._report_progress(
+                ImportProgress(
+                    phase="analyzing",
+                    message="Analyzing site content...",
+                )
+            )
 
             if not self._analysis:
                 self._analysis = self._analyzer.analyze(self._wxr_data)
@@ -289,20 +296,24 @@ class WordPressImporter:
 
     async def _import_authors(self) -> int:
         """Import WordPress authors."""
-        self._report_progress(ImportProgress(
-            phase="authors",
-            total=len(self._wxr_data.authors),
-            message="Importing authors...",
-        ))
+        self._report_progress(
+            ImportProgress(
+                phase="authors",
+                total=len(self._wxr_data.authors),
+                message="Importing authors...",
+            )
+        )
 
         count = 0
         for i, author in enumerate(self._wxr_data.authors):
-            self._report_progress(ImportProgress(
-                phase="authors",
-                current=i + 1,
-                total=len(self._wxr_data.authors),
-                message=f"Importing author: {author.display_name}",
-            ))
+            self._report_progress(
+                ImportProgress(
+                    phase="authors",
+                    current=i + 1,
+                    total=len(self._wxr_data.authors),
+                    message=f"Importing author: {author.display_name}",
+                )
+            )
 
             author_data = {
                 "wp_id": author.id,
@@ -323,20 +334,24 @@ class WordPressImporter:
 
     async def _import_categories(self) -> int:
         """Import WordPress categories."""
-        self._report_progress(ImportProgress(
-            phase="categories",
-            total=len(self._wxr_data.categories),
-            message="Importing categories...",
-        ))
+        self._report_progress(
+            ImportProgress(
+                phase="categories",
+                total=len(self._wxr_data.categories),
+                message="Importing categories...",
+            )
+        )
 
         count = 0
         for i, cat in enumerate(self._wxr_data.categories):
-            self._report_progress(ImportProgress(
-                phase="categories",
-                current=i + 1,
-                total=len(self._wxr_data.categories),
-                message=f"Importing category: {cat.name}",
-            ))
+            self._report_progress(
+                ImportProgress(
+                    phase="categories",
+                    current=i + 1,
+                    total=len(self._wxr_data.categories),
+                    message=f"Importing category: {cat.name}",
+                )
+            )
 
             cat_data = {
                 "wp_id": cat.id,
@@ -356,20 +371,24 @@ class WordPressImporter:
 
     async def _import_tags(self) -> int:
         """Import WordPress tags."""
-        self._report_progress(ImportProgress(
-            phase="tags",
-            total=len(self._wxr_data.tags),
-            message="Importing tags...",
-        ))
+        self._report_progress(
+            ImportProgress(
+                phase="tags",
+                total=len(self._wxr_data.tags),
+                message="Importing tags...",
+            )
+        )
 
         count = 0
         for i, tag in enumerate(self._wxr_data.tags):
-            self._report_progress(ImportProgress(
-                phase="tags",
-                current=i + 1,
-                total=len(self._wxr_data.tags),
-                message=f"Importing tag: {tag.name}",
-            ))
+            self._report_progress(
+                ImportProgress(
+                    phase="tags",
+                    current=i + 1,
+                    total=len(self._wxr_data.tags),
+                    message=f"Importing tag: {tag.name}",
+                )
+            )
 
             tag_data = {
                 "wp_id": tag.id,
@@ -395,29 +414,35 @@ class WordPressImporter:
         media_items = []
         for post in self._wxr_data.posts:
             if post.post_type == "attachment":
-                media_items.append(MediaItem(
-                    original_url=post.guid or post.link,
-                    filename=post.slug or f"media_{post.id}",
-                    post_id=post.id,
-                    title=post.title,
-                    alt_text=post.postmeta.get("_wp_attachment_image_alt", ""),
-                    caption=post.excerpt,
-                    description=post.content,
-                ))
+                media_items.append(
+                    MediaItem(
+                        original_url=post.guid or post.link,
+                        filename=post.slug or f"media_{post.id}",
+                        post_id=post.id,
+                        title=post.title,
+                        alt_text=post.postmeta.get("_wp_attachment_image_alt", ""),
+                        caption=post.excerpt,
+                        description=post.content,
+                    )
+                )
 
-        self._report_progress(ImportProgress(
-            phase="media",
-            total=len(media_items),
-            message="Downloading media files...",
-        ))
+        self._report_progress(
+            ImportProgress(
+                phase="media",
+                total=len(media_items),
+                message="Downloading media files...",
+            )
+        )
 
         def progress_callback(current, total, item):
-            self._report_progress(ImportProgress(
-                phase="media",
-                current=current,
-                total=total,
-                message=f"Downloading: {item.filename}",
-            ))
+            self._report_progress(
+                ImportProgress(
+                    phase="media",
+                    current=current,
+                    total=total,
+                    message=f"Downloading: {item.filename}",
+                )
+            )
 
         result = await self._media_importer.import_media(
             media_items,
@@ -436,20 +461,24 @@ class WordPressImporter:
         if self.config.skip_private:
             posts = [p for p in posts if p.status != "private"]
 
-        self._report_progress(ImportProgress(
-            phase=post_type,
-            total=len(posts),
-            message=f"Importing {post_type}s...",
-        ))
+        self._report_progress(
+            ImportProgress(
+                phase=post_type,
+                total=len(posts),
+                message=f"Importing {post_type}s...",
+            )
+        )
 
         count = 0
         for i, post in enumerate(posts):
-            self._report_progress(ImportProgress(
-                phase=post_type,
-                current=i + 1,
-                total=len(posts),
-                message=f"Importing: {post.title[:50]}",
-            ))
+            self._report_progress(
+                ImportProgress(
+                    phase=post_type,
+                    current=i + 1,
+                    total=len(posts),
+                    message=f"Importing: {post.title[:50]}",
+                )
+            )
 
             # Transform post data
             post_data = self._transform_post(post)
@@ -508,30 +537,31 @@ class WordPressImporter:
                 "description": post.postmeta.get("_yoast_wpseo_metadesc", ""),
                 "focus_keyword": post.postmeta.get("_yoast_wpseo_focuskw", ""),
             },
-            "meta": {
-                k: v for k, v in post.postmeta.items()
-                if not k.startswith("_")
-            },
+            "meta": {k: v for k, v in post.postmeta.items() if not k.startswith("_")},
         }
 
     async def _import_menus(self) -> int:
         """Import WordPress navigation menus."""
         menus = self._wxr_data.menus
 
-        self._report_progress(ImportProgress(
-            phase="menus",
-            total=len(menus),
-            message="Importing menus...",
-        ))
+        self._report_progress(
+            ImportProgress(
+                phase="menus",
+                total=len(menus),
+                message="Importing menus...",
+            )
+        )
 
         count = 0
         for menu_name, items in menus.items():
-            self._report_progress(ImportProgress(
-                phase="menus",
-                current=count + 1,
-                total=len(menus),
-                message=f"Importing menu: {menu_name}",
-            ))
+            self._report_progress(
+                ImportProgress(
+                    phase="menus",
+                    current=count + 1,
+                    total=len(menus),
+                    message=f"Importing menu: {menu_name}",
+                )
+            )
 
             menu_data = {
                 "name": menu_name,
@@ -563,10 +593,12 @@ class WordPressImporter:
         if not self._redirect_generator:
             return RedirectReport()
 
-        self._report_progress(ImportProgress(
-            phase="redirects",
-            message="Generating redirects...",
-        ))
+        self._report_progress(
+            ImportProgress(
+                phase="redirects",
+                message="Generating redirects...",
+            )
+        )
 
         # Prepare data for redirect generation
         posts = [
@@ -641,11 +673,13 @@ class WordPressImporter:
         # Export URL mapping
         if result.media_result and result.media_result.url_mapping:
             mapping_file = self.config.output_dir / "url_mapping.json"
-            mapping_file.write_text(json.dumps(
-                result.media_result.url_mapping,
-                indent=2,
-                ensure_ascii=False,
-            ))
+            mapping_file.write_text(
+                json.dumps(
+                    result.media_result.url_mapping,
+                    indent=2,
+                    ensure_ascii=False,
+                )
+            )
             output_files.append(str(mapping_file))
 
         # Export import summary
@@ -678,10 +712,12 @@ class WordPressImporter:
         self._checkpoint[phase] = progress
         self._checkpoint["last_updated"] = datetime.utcnow().isoformat()
 
-        self.config.checkpoint_file.write_text(json.dumps(
-            self._checkpoint,
-            indent=2,
-        ))
+        self.config.checkpoint_file.write_text(
+            json.dumps(
+                self._checkpoint,
+                indent=2,
+            )
+        )
 
     def _load_checkpoint(self):
         """Load checkpoint for resuming import."""

@@ -14,6 +14,7 @@ from .entity import EntityService
 @dataclass
 class WorkflowState:
     """Workflow state definition."""
+
     name: str
     label: str
     color: str = "gray"
@@ -24,6 +25,7 @@ class WorkflowState:
 @dataclass
 class WorkflowTransition:
     """Workflow transition definition."""
+
     from_state: str
     to_state: str
     label: str
@@ -35,6 +37,7 @@ class WorkflowTransition:
 @dataclass
 class WorkflowDefinition:
     """Complete workflow definition."""
+
     name: str
     label: str
     description: str = ""
@@ -71,6 +74,7 @@ class WorkflowDefinition:
 @dataclass
 class WorkflowHistoryEntry:
     """Workflow history entry."""
+
     entity_id: str
     from_state: str
     to_state: str
@@ -117,24 +121,28 @@ class WorkflowService:
 
             states = []
             for s in data.get("states", []):
-                states.append(WorkflowState(
-                    name=s.get("name", ""),
-                    label=s.get("label", s.get("name", "")),
-                    color=s.get("color", "gray"),
-                    initial=s.get("initial", False),
-                    final=s.get("final", False),
-                ))
+                states.append(
+                    WorkflowState(
+                        name=s.get("name", ""),
+                        label=s.get("label", s.get("name", "")),
+                        color=s.get("color", "gray"),
+                        initial=s.get("initial", False),
+                        final=s.get("final", False),
+                    )
+                )
 
             transitions = []
             for t in data.get("transitions", []):
-                transitions.append(WorkflowTransition(
-                    from_state=t.get("from", ""),
-                    to_state=t.get("to", ""),
-                    label=t.get("label", ""),
-                    permissions=t.get("permissions", []),
-                    require_comment=t.get("require_comment", False),
-                    actions=t.get("actions", []),
-                ))
+                transitions.append(
+                    WorkflowTransition(
+                        from_state=t.get("from", ""),
+                        to_state=t.get("to", ""),
+                        label=t.get("label", ""),
+                        permissions=t.get("permissions", []),
+                        require_comment=t.get("require_comment", False),
+                        actions=t.get("actions", []),
+                    )
+                )
 
             return WorkflowDefinition(
                 name=data.get("name", path.stem),
@@ -281,7 +289,8 @@ class WorkflowService:
         # Filter by permissions
         if user_roles:
             return [
-                t for t in all_transitions
+                t
+                for t in all_transitions
                 if not t.permissions or any(r in t.permissions for r in user_roles)
             ]
 

@@ -15,6 +15,7 @@ from ..models import Entity
 @dataclass
 class Invitation:
     """User invitation data."""
+
     id: str
     email: str
     role: str
@@ -81,6 +82,7 @@ class InviteService:
         """
         # Check if email already registered
         from .auth import AuthService
+
         auth_svc = AuthService(self.db)
         existing = await auth_svc._get_user_auth_by_email(email)
         if existing:
@@ -151,6 +153,7 @@ class InviteService:
 
         # Create user
         from .auth import AuthService
+
         auth_svc = AuthService(self.db)
 
         user = await auth_svc.register(
@@ -200,17 +203,13 @@ class InviteService:
         """List all pending (non-expired, non-accepted) invitations."""
         now = datetime.utcnow()
         return [
-            inv for inv in _invitations.values()
-            if inv.expires_at > now and inv.accepted_at is None
+            inv for inv in _invitations.values() if inv.expires_at > now and inv.accepted_at is None
         ]
 
     async def cleanup_expired(self) -> int:
         """Remove expired invitations."""
         now = datetime.utcnow()
-        expired = [
-            token for token, inv in _invitations.items()
-            if inv.expires_at < now
-        ]
+        expired = [token for token, inv in _invitations.items() if inv.expires_at < now]
         for token in expired:
             del _invitations[token]
         return len(expired)

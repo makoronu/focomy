@@ -29,7 +29,6 @@ DEFAULT_TRANSLATIONS = {
         "error": "エラー",
         "success": "成功",
         "warning": "警告",
-
         # Auth
         "login": "ログイン",
         "logout": "ログアウト",
@@ -38,7 +37,6 @@ DEFAULT_TRANSLATIONS = {
         "forgot_password": "パスワードを忘れた方",
         "reset_password": "パスワードリセット",
         "register": "登録",
-
         # Admin
         "dashboard": "ダッシュボード",
         "settings": "設定",
@@ -47,7 +45,6 @@ DEFAULT_TRANSLATIONS = {
         "comments": "コメント",
         "trash": "ゴミ箱",
         "audit_log": "監査ログ",
-
         # Content
         "title": "タイトル",
         "slug": "スラッグ",
@@ -60,7 +57,6 @@ DEFAULT_TRANSLATIONS = {
         "author": "著者",
         "category": "カテゴリ",
         "tags": "タグ",
-
         # Messages
         "saved_successfully": "保存しました",
         "deleted_successfully": "削除しました",
@@ -88,7 +84,6 @@ DEFAULT_TRANSLATIONS = {
         "error": "Error",
         "success": "Success",
         "warning": "Warning",
-
         # Auth
         "login": "Login",
         "logout": "Logout",
@@ -97,7 +92,6 @@ DEFAULT_TRANSLATIONS = {
         "forgot_password": "Forgot password?",
         "reset_password": "Reset Password",
         "register": "Register",
-
         # Admin
         "dashboard": "Dashboard",
         "settings": "Settings",
@@ -106,7 +100,6 @@ DEFAULT_TRANSLATIONS = {
         "comments": "Comments",
         "trash": "Trash",
         "audit_log": "Audit Log",
-
         # Content
         "title": "Title",
         "slug": "Slug",
@@ -119,7 +112,6 @@ DEFAULT_TRANSLATIONS = {
         "author": "Author",
         "category": "Category",
         "tags": "Tags",
-
         # Messages
         "saved_successfully": "Saved successfully",
         "deleted_successfully": "Deleted successfully",

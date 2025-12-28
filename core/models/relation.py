@@ -19,6 +19,7 @@ class Relation(Base):
     No foreign keys hardcoded in entity tables.
     All relationships are managed through this single table.
     """
+
     __tablename__ = "relations"
 
     id: Mapped[int] = mapped_column(
@@ -81,4 +82,6 @@ class Relation(Base):
     )
 
     def __repr__(self) -> str:
-        return f"<Relation({self.from_entity_id} -> {self.to_entity_id}, type={self.relation_type})>"
+        return (
+            f"<Relation({self.from_entity_id} -> {self.to_entity_id}, type={self.relation_type})>"
+        )

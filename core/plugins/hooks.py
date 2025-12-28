@@ -15,6 +15,7 @@ T = TypeVar("T")
 @dataclass
 class HookHandler:
     """Registered hook handler."""
+
     callback: Callable
     priority: int = 10
     plugin_id: str | None = None
@@ -25,6 +26,7 @@ class HookHandler:
 @dataclass
 class HookResult:
     """Result of hook execution."""
+
     value: Any
     handlers_called: int = 0
     errors: list[str] = field(default_factory=list)
@@ -176,15 +178,9 @@ class HookRegistry:
         original_count = len(registry[hook_name])
 
         if callback:
-            registry[hook_name] = [
-                h for h in registry[hook_name]
-                if h.callback != callback
-            ]
+            registry[hook_name] = [h for h in registry[hook_name] if h.callback != callback]
         elif plugin_id:
-            registry[hook_name] = [
-                h for h in registry[hook_name]
-                if h.plugin_id != plugin_id
-            ]
+            registry[hook_name] = [h for h in registry[hook_name] if h.plugin_id != plugin_id]
         else:
             registry[hook_name] = []
 
@@ -214,15 +210,12 @@ class HookRegistry:
                 if handler.is_async:
                     # Run async handler synchronously
                     loop = asyncio.get_event_loop()
-                    value = loop.run_until_complete(
-                        handler.callback(value, *args, **kwargs)
-                    )
+                    value = loop.run_until_complete(handler.callback(value, *args, **kwargs))
                 else:
                     value = handler.callback(value, *args, **kwargs)
             except Exception as e:
                 logger.exception(
-                    f"Error in filter '{hook_name}' handler "
-                    f"(plugin: {handler.plugin_id}): {e}"
+                    f"Error in filter '{hook_name}' handler " f"(plugin: {handler.plugin_id}): {e}"
                 )
 
         return value
@@ -260,8 +253,7 @@ class HookRegistry:
                     value = handler.callback(value, *args, **kwargs)
             except Exception as e:
                 logger.exception(
-                    f"Error in filter '{hook_name}' handler "
-                    f"(plugin: {handler.plugin_id}): {e}"
+                    f"Error in filter '{hook_name}' handler " f"(plugin: {handler.plugin_id}): {e}"
                 )
 
         return value
@@ -293,8 +285,7 @@ class HookRegistry:
                 result.handlers_called += 1
             except Exception as e:
                 error_msg = (
-                    f"Error in action '{hook_name}' handler "
-                    f"(plugin: {handler.plugin_id}): {e}"
+                    f"Error in action '{hook_name}' handler " f"(plugin: {handler.plugin_id}): {e}"
                 )
                 logger.exception(error_msg)
                 result.errors.append(error_msg)
@@ -327,8 +318,7 @@ class HookRegistry:
                 result.handlers_called += 1
             except Exception as e:
                 error_msg = (
-                    f"Error in action '{hook_name}' handler "
-                    f"(plugin: {handler.plugin_id}): {e}"
+                    f"Error in action '{hook_name}' handler " f"(plugin: {handler.plugin_id}): {e}"
                 )
                 logger.exception(error_msg)
                 result.errors.append(error_msg)
@@ -394,9 +384,11 @@ class HookRegistry:
             def modify_content(content):
                 return content
         """
+
         def decorator(func: Callable) -> Callable:
             self.add_filter(hook_name, func, priority)
             return func
+
         return decorator
 
     def action(
@@ -412,9 +404,11 @@ class HookRegistry:
             def on_saved(content):
                 print(f"Saved: {content['id']}")
         """
+
         def decorator(func: Callable) -> Callable:
             self.add_action(hook_name, func, priority)
             return func
+
         return decorator
 
 
@@ -431,16 +425,19 @@ def hook(hook_name: str, priority: int = 10) -> Callable:
         def modify_content(content):
             return content
     """
+
     def decorator(func: Callable) -> Callable:
         # If function has a return annotation or returns something, treat as filter
         # Otherwise treat as action
         import inspect
+
         sig = inspect.signature(func)
         if sig.return_annotation != inspect.Parameter.empty:
             _global_registry.add_filter(hook_name, func, priority)
         else:
             _global_registry.add_action(hook_name, func, priority)
         return func
+
     return decorator
 
 
@@ -468,40 +465,32 @@ CORE_HOOKS = {
     "content.after_delete": "Called after content is deleted. Action receives content ID.",
     "content.before_publish": "Called before content is published. Filter receives content.",
     "content.after_publish": "Called after content is published. Action receives content.",
-
     # User hooks
     "user.before_login": "Called before user login attempt. Filter receives credentials.",
     "user.after_login": "Called after successful login. Action receives user.",
     "user.before_logout": "Called before user logout. Action receives user.",
     "user.after_register": "Called after user registration. Action receives new user.",
-
     # Template hooks
     "template.context": "Filter template context before rendering. Receives context dict.",
     "template.before_render": "Called before template rendering. Action receives template name.",
     "template.after_render": "Filter rendered HTML. Receives HTML string.",
-
     # Admin hooks
     "admin.menu": "Filter admin menu items. Receives menu list.",
     "admin.dashboard": "Filter dashboard widgets. Receives widget list.",
     "admin.before_action": "Called before admin action. Receives action info.",
-
     # API hooks
     "api.before_request": "Filter API request. Receives request object.",
     "api.after_response": "Filter API response. Receives response object.",
-
     # Media hooks
     "media.before_upload": "Called before file upload. Filter receives file info.",
     "media.after_upload": "Called after file upload. Action receives media record.",
     "media.before_delete": "Called before media deletion. Action receives media record.",
-
     # Search hooks
     "search.query": "Filter search query before execution. Receives query dict.",
     "search.results": "Filter search results. Receives results list.",
-
     # Email hooks
     "email.before_send": "Filter email before sending. Receives email dict.",
     "email.after_send": "Called after email sent. Action receives email info.",
-
     # Cache hooks
     "cache.before_get": "Called before cache get. Action receives cache key.",
     "cache.after_set": "Called after cache set. Action receives key and value.",

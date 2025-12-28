@@ -16,6 +16,7 @@ router = APIRouter(prefix="/comments", tags=["Comments"])
 
 class CommentCreate(BaseModel):
     """Request body for creating a comment."""
+
     post_id: str = Field(..., description="ID of the post to comment on")
     author_name: str = Field(..., min_length=1, max_length=100, description="Author display name")
     author_email: EmailStr = Field(..., description="Author email address")
@@ -26,6 +27,7 @@ class CommentCreate(BaseModel):
 
 class CommentResponse(BaseModel):
     """Response for a single comment."""
+
     id: str
     author_name: str
     content: str
@@ -45,14 +47,14 @@ class CommentResponse(BaseModel):
                 "application/json": {
                     "example": {
                         "status": "pending",
-                        "message": "Your comment has been submitted for review."
+                        "message": "Your comment has been submitted for review.",
                     }
                 }
-            }
+            },
         },
         400: {"description": "Invalid input or spam detected"},
-        429: {"description": "Rate limit exceeded"}
-    }
+        429: {"description": "Rate limit exceeded"},
+    },
 )
 @limiter.limit("5/minute")
 async def create_comment(
@@ -84,8 +86,7 @@ async def create_comment(
 
     if not result:
         raise HTTPException(
-            status_code=400,
-            detail="Comment could not be submitted. Please try again later."
+            status_code=400, detail="Comment could not be submitted. Please try again later."
         )
 
     return {
@@ -170,14 +171,14 @@ async def create_comment_form(
                                 "author_name": "John",
                                 "content": "Great post!",
                                 "created_at": "2024-01-15T10:30:00Z",
-                                "children": []
+                                "children": [],
                             }
                         ]
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def get_comments(
     post_id: str,
@@ -191,9 +192,7 @@ async def get_comments(
     comment_svc = CommentService(db)
     comments = await comment_svc.get_comments_for_post(post_id)
 
-    return {
-        "comments": [c.to_dict() for c in comments]
-    }
+    return {"comments": [c.to_dict() for c in comments]}
 
 
 @router.get(
@@ -229,7 +228,8 @@ def _render_comments_html(comments: list, level: int = 0) -> str:
 
     for comment in comments:
         indent_class = f"comment-level-{min(level, 3)}"
-        html_parts.append(f'''
+        html_parts.append(
+            f"""
         <div class="comment {indent_class}" id="comment-{comment.id}">
             <div class="comment-header">
                 <span class="comment-author">{_escape_html(comment.author_name)}</span>
@@ -243,23 +243,23 @@ def _render_comments_html(comments: list, level: int = 0) -> str:
                     返信
                 </button>
             </div>
-        ''')
+        """
+        )
 
         if comment.children:
             html_parts.append('<div class="comment-replies">')
             html_parts.append(_render_comments_html(comment.children, level + 1))
-            html_parts.append('</div>')
+            html_parts.append("</div>")
 
-        html_parts.append('</div>')
+        html_parts.append("</div>")
 
-    return ''.join(html_parts)
+    return "".join(html_parts)
 
 
 def _escape_html(text: str) -> str:
     """Escape HTML special characters."""
     return (
-        text
-        .replace("&", "&amp;")
+        text.replace("&", "&amp;")
         .replace("<", "&lt;")
         .replace(">", "&gt;")
         .replace('"', "&quot;")

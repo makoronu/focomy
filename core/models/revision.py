@@ -30,6 +30,7 @@ class Revision(Base):
 
     Allows restoring previous versions.
     """
+
     __tablename__ = "revisions"
 
     id: Mapped[str] = mapped_column(
@@ -66,9 +67,7 @@ class Revision(Base):
         nullable=True,
     )
 
-    __table_args__ = (
-        Index("idx_revisions_entity_created", "entity_id", "created_at"),
-    )
+    __table_args__ = (Index("idx_revisions_entity_created", "entity_id", "created_at"),)
 
     def __repr__(self) -> str:
         return f"<Revision(id={self.id}, entity_id={self.entity_id}, type={self.revision_type})>"

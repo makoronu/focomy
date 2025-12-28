@@ -14,6 +14,7 @@ from PIL import Image
 @dataclass
 class ThumbnailSize:
     """Thumbnail size configuration."""
+
     name: str
     width: int
     height: int
@@ -37,6 +38,7 @@ DEFAULT_SIZES = [
 @dataclass
 class GeneratedThumbnail:
     """Generated thumbnail info."""
+
     name: str
     width: int
     height: int
@@ -119,13 +121,15 @@ class ThumbnailService:
                         save_kwargs["method"] = 6  # Slower but better compression
                     thumb.save(output, format=self.format.upper(), **save_kwargs)
 
-                    thumbnails.append(GeneratedThumbnail(
-                        name=size.name,
-                        width=thumb.width,
-                        height=thumb.height,
-                        path=str(thumb_path),
-                        size=output.tell(),
-                    ))
+                    thumbnails.append(
+                        GeneratedThumbnail(
+                            name=size.name,
+                            width=thumb.width,
+                            height=thumb.height,
+                            path=str(thumb_path),
+                            size=output.tell(),
+                        )
+                    )
 
                     # Store the bytes for saving
                     output.seek(0)

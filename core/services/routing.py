@@ -12,18 +12,19 @@ from datetime import datetime
 from typing import Literal
 
 RoutingPattern = Literal[
-    "simple",           # /{type}/{slug}
-    "hierarchical",     # /{parent}/{child}/{slug}
-    "date-based",       # /{year}/{month}/{slug}
-    "date-slug",        # /{year}/{month}/{day}/{slug}
-    "category",         # /{category}/{slug}
-    "custom",           # User-defined pattern
+    "simple",  # /{type}/{slug}
+    "hierarchical",  # /{parent}/{child}/{slug}
+    "date-based",  # /{year}/{month}/{slug}
+    "date-slug",  # /{year}/{month}/{day}/{slug}
+    "category",  # /{category}/{slug}
+    "custom",  # User-defined pattern
 ]
 
 
 @dataclass
 class PathCollision:
     """Path prefix collision info."""
+
     path: str
     types: list[str]
     severity: str  # "error" or "warning"
@@ -33,6 +34,7 @@ class PathCollision:
 @dataclass
 class RouteMatch:
     """Route matching result."""
+
     matched: bool
     content_type: str
     entity_id: str | None
@@ -42,6 +44,7 @@ class RouteMatch:
 @dataclass
 class RouteConfig:
     """Routing configuration for a content type."""
+
     content_type: str
     pattern: RoutingPattern
     prefix: str
@@ -98,24 +101,28 @@ class RoutingService:
         # Check for exact collisions
         for prefix, types in prefixes.items():
             if len(types) > 1:
-                collisions.append(PathCollision(
-                    path=prefix,
-                    types=types,
-                    severity="error",
-                    message=f"Multiple types share the same path_prefix: {', '.join(types)}",
-                ))
+                collisions.append(
+                    PathCollision(
+                        path=prefix,
+                        types=types,
+                        severity="error",
+                        message=f"Multiple types share the same path_prefix: {', '.join(types)}",
+                    )
+                )
 
         # Check for overlapping prefixes
         sorted_prefixes = sorted(prefixes.keys())
         for i, prefix1 in enumerate(sorted_prefixes):
-            for prefix2 in sorted_prefixes[i+1:]:
+            for prefix2 in sorted_prefixes[i + 1 :]:
                 if self._is_overlapping(prefix1, prefix2):
-                    collisions.append(PathCollision(
-                        path=f"{prefix1} <-> {prefix2}",
-                        types=prefixes[prefix1] + prefixes[prefix2],
-                        severity="warning",
-                        message="Overlapping path prefixes may cause routing ambiguity",
-                    ))
+                    collisions.append(
+                        PathCollision(
+                            path=f"{prefix1} <-> {prefix2}",
+                            types=prefixes[prefix1] + prefixes[prefix2],
+                            severity="warning",
+                            message="Overlapping path prefixes may cause routing ambiguity",
+                        )
+                    )
 
         return collisions
 
@@ -222,7 +229,9 @@ class RoutingService:
             return f"{prefix}/{slug}"
 
         elif config.pattern == "category":
-            category = entity_data.get("category_slug") or entity_data.get("category", "uncategorized")
+            category = entity_data.get("category_slug") or entity_data.get(
+                "category", "uncategorized"
+            )
             return f"{prefix}/{category}/{slug}"
 
         elif config.pattern == "custom" and config.custom_pattern:

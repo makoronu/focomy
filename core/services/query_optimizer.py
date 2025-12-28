@@ -20,6 +20,7 @@ T = TypeVar("T")
 @dataclass
 class QueryStats:
     """Statistics about a query result."""
+
     total: int
     page: int
     per_page: int
@@ -94,10 +95,9 @@ class QueryOptimizer:
         """Get PostgreSQL's row count estimate from pg_class."""
         try:
             from sqlalchemy import text
+
             result = await self.db.execute(
-                text(
-                    "SELECT reltuples::bigint FROM pg_class WHERE relname = :table"
-                ),
+                text("SELECT reltuples::bigint FROM pg_class WHERE relname = :table"),
                 {"table": table_name},
             )
             row = result.first()
@@ -249,6 +249,7 @@ class LazyLoader:
 
 
 # Utility functions
+
 
 async def get_optimized_stats(
     db: AsyncSession,

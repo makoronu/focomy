@@ -17,6 +17,7 @@ from pathlib import Path
 
 class DeploymentState(Enum):
     """Deployment states."""
+
     RUNNING = "running"
     DEPLOYING = "deploying"
     DRAINING = "draining"
@@ -27,6 +28,7 @@ class DeploymentState(Enum):
 @dataclass
 class HealthCheckResult:
     """Result of a health check."""
+
     healthy: bool
     checks: dict[str, bool]
     message: str
@@ -36,6 +38,7 @@ class HealthCheckResult:
 @dataclass
 class DeploymentInfo:
     """Current deployment information."""
+
     version: str
     deployed_at: datetime
     state: DeploymentState
@@ -174,8 +177,9 @@ class DeploymentService:
         """Check available disk space."""
         try:
             import shutil
+
             total, used, free = shutil.disk_usage("/")
-            free_gb = free / (1024 ** 3)
+            free_gb = free / (1024**3)
             return free_gb >= min_gb
         except Exception:
             return True
@@ -184,6 +188,7 @@ class DeploymentService:
         """Check memory usage."""
         try:
             import psutil
+
             memory = psutil.virtual_memory()
             return memory.percent < max_percent
         except ImportError:

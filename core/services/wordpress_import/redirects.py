@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 @dataclass
 class Redirect:
     """Represents a URL redirect."""
+
     from_path: str
     to_path: str
     status_code: int = 301
@@ -20,6 +21,7 @@ class Redirect:
 @dataclass
 class RedirectReport:
     """Report of generated redirects."""
+
     redirects: list[Redirect] = field(default_factory=list)
     conflicts: list[dict] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -101,26 +103,32 @@ class RedirectGenerator:
             else:
                 new_path = f"{new_path_prefix}/{new_slug}"
 
-            redirects.append(Redirect(
-                from_path=old_path,
-                to_path=new_path,
-                status_code=301,
-                comment=f"Post: {post.get('title', new_slug)[:50]}",
-            ))
+            redirects.append(
+                Redirect(
+                    from_path=old_path,
+                    to_path=new_path,
+                    status_code=301,
+                    comment=f"Post: {post.get('title', new_slug)[:50]}",
+                )
+            )
 
             # Also handle variations (with/without trailing slash)
             if old_path.endswith("/"):
-                redirects.append(Redirect(
-                    from_path=old_path.rstrip("/"),
-                    to_path=new_path,
-                    status_code=301,
-                ))
+                redirects.append(
+                    Redirect(
+                        from_path=old_path.rstrip("/"),
+                        to_path=new_path,
+                        status_code=301,
+                    )
+                )
             else:
-                redirects.append(Redirect(
-                    from_path=old_path + "/",
-                    to_path=new_path,
-                    status_code=301,
-                ))
+                redirects.append(
+                    Redirect(
+                        from_path=old_path + "/",
+                        to_path=new_path,
+                        status_code=301,
+                    )
+                )
 
         return redirects
 
@@ -152,27 +160,33 @@ class RedirectGenerator:
             old_path = f"/category/{old_slug}"
             new_path = f"{new_path_prefix}/{new_slug}"
 
-            redirects.append(Redirect(
-                from_path=old_path,
-                to_path=new_path,
-                status_code=301,
-                comment=f"Category: {cat.get('name', old_slug)}",
-            ))
+            redirects.append(
+                Redirect(
+                    from_path=old_path,
+                    to_path=new_path,
+                    status_code=301,
+                    comment=f"Category: {cat.get('name', old_slug)}",
+                )
+            )
 
             # With trailing slash
-            redirects.append(Redirect(
-                from_path=old_path + "/",
-                to_path=new_path,
-                status_code=301,
-            ))
+            redirects.append(
+                Redirect(
+                    from_path=old_path + "/",
+                    to_path=new_path,
+                    status_code=301,
+                )
+            )
 
             # Paginated
-            redirects.append(Redirect(
-                from_path=f"{old_path}/page/(.+)",
-                to_path=f"{new_path}?page=$1",
-                status_code=301,
-                regex=True,
-            ))
+            redirects.append(
+                Redirect(
+                    from_path=f"{old_path}/page/(.+)",
+                    to_path=f"{new_path}?page=$1",
+                    status_code=301,
+                    regex=True,
+                )
+            )
 
         return redirects
 
@@ -203,18 +217,22 @@ class RedirectGenerator:
             old_path = f"/tag/{old_slug}"
             new_path = f"{new_path_prefix}/{new_slug}"
 
-            redirects.append(Redirect(
-                from_path=old_path,
-                to_path=new_path,
-                status_code=301,
-                comment=f"Tag: {tag.get('name', old_slug)}",
-            ))
+            redirects.append(
+                Redirect(
+                    from_path=old_path,
+                    to_path=new_path,
+                    status_code=301,
+                    comment=f"Tag: {tag.get('name', old_slug)}",
+                )
+            )
 
-            redirects.append(Redirect(
-                from_path=old_path + "/",
-                to_path=new_path,
-                status_code=301,
-            ))
+            redirects.append(
+                Redirect(
+                    from_path=old_path + "/",
+                    to_path=new_path,
+                    status_code=301,
+                )
+            )
 
         return redirects
 
@@ -245,18 +263,22 @@ class RedirectGenerator:
             old_path = f"/author/{old_login}"
             new_path = f"{new_path_prefix}/{new_slug}"
 
-            redirects.append(Redirect(
-                from_path=old_path,
-                to_path=new_path,
-                status_code=301,
-                comment=f"Author: {author.get('display_name', old_login)}",
-            ))
+            redirects.append(
+                Redirect(
+                    from_path=old_path,
+                    to_path=new_path,
+                    status_code=301,
+                    comment=f"Author: {author.get('display_name', old_login)}",
+                )
+            )
 
-            redirects.append(Redirect(
-                from_path=old_path + "/",
-                to_path=new_path,
-                status_code=301,
-            ))
+            redirects.append(
+                Redirect(
+                    from_path=old_path + "/",
+                    to_path=new_path,
+                    status_code=301,
+                )
+            )
 
         return redirects
 
@@ -392,57 +414,73 @@ class RedirectGenerator:
         all_redirects = []
 
         # Post redirects
-        all_redirects.extend(self.generate_from_posts(
-            posts,
-            config.get("post_path_prefix", "/blog"),
-        ))
+        all_redirects.extend(
+            self.generate_from_posts(
+                posts,
+                config.get("post_path_prefix", "/blog"),
+            )
+        )
 
         # Category redirects
-        all_redirects.extend(self.generate_from_categories(
-            categories,
-            config.get("category_path_prefix", "/category"),
-        ))
+        all_redirects.extend(
+            self.generate_from_categories(
+                categories,
+                config.get("category_path_prefix", "/category"),
+            )
+        )
 
         # Tag redirects
-        all_redirects.extend(self.generate_from_tags(
-            tags,
-            config.get("tag_path_prefix", "/tag"),
-        ))
+        all_redirects.extend(
+            self.generate_from_tags(
+                tags,
+                config.get("tag_path_prefix", "/tag"),
+            )
+        )
 
         # Author redirects
-        all_redirects.extend(self.generate_from_authors(
-            authors,
-            config.get("author_path_prefix", "/author"),
-        ))
+        all_redirects.extend(
+            self.generate_from_authors(
+                authors,
+                config.get("author_path_prefix", "/author"),
+            )
+        )
 
         # Date archives
         if config.get("include_date_archives", True):
-            all_redirects.extend(self.generate_date_archive_redirects(
-                config.get("archive_path", "/blog/archive"),
-            ))
+            all_redirects.extend(
+                self.generate_date_archive_redirects(
+                    config.get("archive_path", "/blog/archive"),
+                )
+            )
 
         # Feeds
         if config.get("include_feeds", True):
-            all_redirects.extend(self.generate_feed_redirects(
-                config.get("feed_path", "/blog/feed.xml"),
-            ))
+            all_redirects.extend(
+                self.generate_feed_redirects(
+                    config.get("feed_path", "/blog/feed.xml"),
+                )
+            )
 
         # Admin redirects
         if config.get("include_admin_redirects", True):
-            all_redirects.extend(self.generate_wp_admin_redirects(
-                config.get("admin_path", "/admin"),
-            ))
+            all_redirects.extend(
+                self.generate_wp_admin_redirects(
+                    config.get("admin_path", "/admin"),
+                )
+            )
 
         # Detect conflicts
         seen_paths = {}
         for redirect in all_redirects:
             path = redirect.from_path
             if path in seen_paths:
-                report.conflicts.append({
-                    "path": path,
-                    "redirect1": seen_paths[path].to_path,
-                    "redirect2": redirect.to_path,
-                })
+                report.conflicts.append(
+                    {
+                        "path": path,
+                        "redirect1": seen_paths[path].to_path,
+                        "redirect2": redirect.to_path,
+                    }
+                )
             else:
                 seen_paths[path] = redirect
                 report.redirects.append(redirect)
@@ -460,7 +498,7 @@ class RedirectGenerator:
         # Remove base path if present
         old_parsed = urlparse(self.old_base)
         if old_parsed.path and path.startswith(old_parsed.path):
-            path = path[len(old_parsed.path):]
+            path = path[len(old_parsed.path) :]
 
         return path if path else "/"
 

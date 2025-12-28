@@ -26,6 +26,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 
 class RegisterRequest(BaseModel):
     """Request body for user registration."""
+
     email: EmailStr = Field(..., description="User email address", examples=["user@example.com"])
     password: str = Field(..., min_length=12, description="Password (min 12 characters)")
     name: str = Field(..., description="Display name", examples=["John Doe"])
@@ -34,12 +35,14 @@ class RegisterRequest(BaseModel):
 
 class LoginRequest(BaseModel):
     """Request body for user login."""
+
     email: EmailStr = Field(..., description="User email address")
     password: str = Field(..., description="User password")
 
 
 class ChangePasswordRequest(BaseModel):
     """Request body for password change."""
+
     old_password: str = Field(..., description="Current password")
     new_password: str = Field(..., min_length=12, description="New password (min 12 characters)")
 
@@ -72,13 +75,13 @@ def get_session_token(request: Request) -> str | None:
                         "id": "user123",
                         "email": "user@example.com",
                         "name": "John Doe",
-                        "role": "author"
+                        "role": "author",
                     }
                 }
-            }
+            },
         },
-        400: {"description": "Email already exists or validation error"}
-    }
+        400: {"description": "Email already exists or validation error"},
+    },
 )
 @limiter.limit("5/minute")
 async def register(
@@ -117,13 +120,13 @@ async def register(
                 "application/json": {
                     "example": {
                         "user": {"id": "user123", "email": "user@example.com", "name": "John"},
-                        "token": "eyJhbGciOiJIUzI1NiIs..."
+                        "token": "eyJhbGciOiJIUzI1NiIs...",
                     }
                 }
-            }
+            },
         },
-        401: {"description": "Invalid credentials or account locked"}
-    }
+        401: {"description": "Invalid credentials or account locked"},
+    },
 )
 @limiter.limit("5/minute")
 async def login(
@@ -173,9 +176,9 @@ async def login(
     responses={
         200: {
             "description": "Logged out successfully",
-            "content": {"application/json": {"example": {"status": "logged_out"}}}
+            "content": {"application/json": {"example": {"status": "logged_out"}}},
         }
-    }
+    },
 )
 async def logout(
     request: Request,
@@ -208,13 +211,13 @@ async def logout(
                         "id": "user123",
                         "email": "user@example.com",
                         "name": "John Doe",
-                        "role": "admin"
+                        "role": "admin",
                     }
                 }
-            }
+            },
         },
-        401: {"description": "Not authenticated or session expired"}
-    }
+        401: {"description": "Not authenticated or session expired"},
+    },
 )
 async def get_current_user(
     request: Request,
@@ -245,11 +248,11 @@ async def get_current_user(
     responses={
         200: {
             "description": "Password changed successfully",
-            "content": {"application/json": {"example": {"status": "password_changed"}}}
+            "content": {"application/json": {"example": {"status": "password_changed"}}},
         },
         400: {"description": "Invalid old password or new password too weak"},
-        401: {"description": "Not authenticated"}
-    }
+        401: {"description": "Not authenticated"},
+    },
 )
 async def change_password(
     body: ChangePasswordRequest,
@@ -283,14 +286,15 @@ async def change_password(
 
 # === OAuth ===
 
+
 @router.get(
     "/oauth/{provider}",
     summary="Initiate OAuth login",
     description="Start OAuth authentication flow with the specified provider.",
     responses={
         307: {"description": "Redirect to OAuth provider"},
-        400: {"description": "Provider not configured"}
-    }
+        400: {"description": "Provider not configured"},
+    },
 )
 async def oauth_login(
     provider: str,
@@ -318,8 +322,8 @@ async def oauth_login(
     description="Handle callback from OAuth provider after user authorization.",
     responses={
         303: {"description": "Redirect to admin dashboard on success"},
-        400: {"description": "OAuth authentication failed"}
-    }
+        400: {"description": "OAuth authentication failed"},
+    },
 )
 async def oauth_callback(
     provider: str,
@@ -360,17 +364,21 @@ async def oauth_callback(
             role="author",
         )
         # Update with provider info
-        await entity_svc.update(user.id, {
-            "oauth_provider": user_info.provider,
-            "oauth_id": user_info.provider_id,
-            "avatar": user_info.picture,
-        })
+        await entity_svc.update(
+            user.id,
+            {
+                "oauth_provider": user_info.provider,
+                "oauth_id": user_info.provider_id,
+                "avatar": user_info.picture,
+            },
+        )
 
     # Create session
     user, token = await auth_svc.login_oauth(user)
 
     # Set cookie and redirect
     from fastapi.responses import RedirectResponse
+
     redirect_response = RedirectResponse(url="/admin", status_code=303)
     redirect_response.set_cookie(
         key="session",

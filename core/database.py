@@ -25,12 +25,13 @@ def _get_ssl_context():
 def _clean_database_url(url: str) -> str:
     """Remove SSL-related parameters from URL."""
     import re
+
     # Remove ?ssl=... or &ssl=...
-    url = re.sub(r'[?&]ssl(mode)?=[^&]*', '', url)
+    url = re.sub(r"[?&]ssl(mode)?=[^&]*", "", url)
     # Clean up double && or trailing &
-    url = re.sub(r'&&+', '&', url)
-    url = re.sub(r'\?&', '?', url)
-    url = url.rstrip('?&')
+    url = re.sub(r"&&+", "&", url)
+    url = re.sub(r"\?&", "?", url)
+    url = url.rstrip("?&")
     return url
 
 
@@ -55,6 +56,7 @@ async_session = async_sessionmaker(
 
 class Base(DeclarativeBase):
     """Base class for all models."""
+
     pass
 
 

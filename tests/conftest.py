@@ -89,17 +89,14 @@ async def auth_service(db: AsyncSession) -> AuthService:
 
 # Test data fixtures
 
+
 @pytest.fixture
 def sample_post_data() -> dict:
     """Sample post entity data."""
     return {
         "title": "Test Post",
         "slug": "test-post",
-        "content": {
-            "blocks": [
-                {"type": "paragraph", "data": {"text": "Test content"}}
-            ]
-        },
+        "content": {"blocks": [{"type": "paragraph", "data": {"text": "Test content"}}]},
         "status": "draft",
     }
 
@@ -110,11 +107,7 @@ def sample_page_data() -> dict:
     return {
         "title": "Test Page",
         "slug": "test-page",
-        "content": {
-            "blocks": [
-                {"type": "paragraph", "data": {"text": "Test page content"}}
-            ]
-        },
+        "content": {"blocks": [{"type": "paragraph", "data": {"text": "Test page content"}}]},
         "status": "published",
     }
 
@@ -142,6 +135,7 @@ def sample_admin_data() -> dict:
 
 
 # Content type fixtures
+
 
 @pytest.fixture
 def post_content_type() -> dict:
@@ -177,6 +171,7 @@ def page_content_type() -> dict:
 
 
 # Helper functions
+
 
 def assert_entity_created(entity, expected_type: str, expected_values: dict):
     """Assert entity was created correctly."""

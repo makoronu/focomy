@@ -265,7 +265,7 @@ class MediaService:
                     EntityValue.value_text == media_id,
                     EntityValue.value_text == media_path,
                     EntityValue.value_text.contains(media_url),
-                )
+                ),
             )
         )
         result = await self.db.execute(query)
@@ -304,11 +304,13 @@ class MediaService:
             json_value = ev_result.scalar_one_or_none()
 
             if json_value and self._json_contains_media(json_value, media_id, media_url):
-                references.append({
-                    "entity_id": entity_id,
-                    "field_name": field_name,
-                    "entity_type": entity_type,
-                })
+                references.append(
+                    {
+                        "entity_id": entity_id,
+                        "field_name": field_name,
+                        "entity_type": entity_type,
+                    }
+                )
 
         return references
 

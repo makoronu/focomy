@@ -26,7 +26,9 @@ class TestUserRegistration:
         assert user.type == "user"
 
     @pytest.mark.asyncio
-    async def test_register_duplicate_email(self, auth_service: AuthService, sample_user_data: dict):
+    async def test_register_duplicate_email(
+        self, auth_service: AuthService, sample_user_data: dict
+    ):
         """Test that duplicate emails are rejected."""
         await auth_service.register(
             email=sample_user_data["email"],

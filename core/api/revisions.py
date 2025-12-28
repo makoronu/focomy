@@ -24,12 +24,14 @@ router = APIRouter(prefix="/revisions", tags=["Revisions"])
 
 class AutosaveRequest(BaseModel):
     """Request body for autosave."""
+
     entity_id: str = Field(..., description="Entity ID to save")
     data: dict[str, Any] = Field(..., description="Current form data to save")
 
 
 class RestoreRequest(BaseModel):
     """Request body for restore."""
+
     revision_id: str = Field(..., description="Revision ID to restore from")
 
 
@@ -44,14 +46,19 @@ class RestoreRequest(BaseModel):
                 "application/json": {
                     "example": {
                         "revisions": [
-                            {"id": "rev123", "revision_type": "manual", "title": "My Post", "created_at": "2024-01-15T10:30:00Z"}
+                            {
+                                "id": "rev123",
+                                "revision_type": "manual",
+                                "title": "My Post",
+                                "created_at": "2024-01-15T10:30:00Z",
+                            }
                         ],
-                        "total": 5
+                        "total": 5,
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def list_revisions(
     entity_id: str,
@@ -87,8 +94,8 @@ async def list_revisions(
     description="Get details of a specific revision including its full data snapshot.",
     responses={
         200: {"description": "Revision details with data"},
-        404: {"description": "Revision not found"}
-    }
+        404: {"description": "Revision not found"},
+    },
 )
 async def get_revision(
     entity_id: str,
@@ -112,10 +119,7 @@ async def get_revision(
     "/autosave",
     summary="Create autosave",
     description="Save form data automatically. Called by the editor every 30 seconds.",
-    responses={
-        200: {"description": "Autosave created"},
-        404: {"description": "Entity not found"}
-    }
+    responses={200: {"description": "Autosave created"}, 404: {"description": "Entity not found"}},
 )
 async def autosave(
     body: AutosaveRequest,
@@ -155,10 +159,12 @@ async def autosave(
     responses={
         200: {
             "description": "Entity restored",
-            "content": {"application/json": {"example": {"status": "restored", "revision_id": "rev123"}}}
+            "content": {
+                "application/json": {"example": {"status": "restored", "revision_id": "rev123"}}
+            },
         },
-        404: {"description": "Entity or revision not found"}
-    }
+        404: {"description": "Entity or revision not found"},
+    },
 )
 async def restore_revision(
     entity_id: str,
@@ -200,10 +206,10 @@ async def restore_revision(
     responses={
         200: {
             "description": "Revision deleted",
-            "content": {"application/json": {"example": {"status": "deleted"}}}
+            "content": {"application/json": {"example": {"status": "deleted"}}},
         },
-        404: {"description": "Revision not found"}
-    }
+        404: {"description": "Revision not found"},
+    },
 )
 async def delete_revision(
     entity_id: str,

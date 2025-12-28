@@ -78,10 +78,13 @@ class TestI18nService:
 
     def test_add_new_language(self, i18n: I18nService):
         """Test adding a new language."""
-        i18n.add_translations("fr", {
-            "save": "Sauvegarder",
-            "cancel": "Annuler",
-        })
+        i18n.add_translations(
+            "fr",
+            {
+                "save": "Sauvegarder",
+                "cancel": "Annuler",
+            },
+        )
 
         assert i18n.t("save", lang="fr") == "Sauvegarder"
         assert i18n.t("cancel", lang="fr") == "Annuler"
@@ -130,9 +133,21 @@ class TestTranslationCategories:
     def test_common_translations(self, i18n: I18nService):
         """Test common UI translations."""
         common_keys = [
-            "save", "cancel", "delete", "edit", "create",
-            "search", "filter", "actions", "confirm",
-            "yes", "no", "loading", "error", "success", "warning"
+            "save",
+            "cancel",
+            "delete",
+            "edit",
+            "create",
+            "search",
+            "filter",
+            "actions",
+            "confirm",
+            "yes",
+            "no",
+            "loading",
+            "error",
+            "success",
+            "warning",
         ]
 
         for key in common_keys:
@@ -142,8 +157,13 @@ class TestTranslationCategories:
     def test_auth_translations(self, i18n: I18nService):
         """Test authentication translations."""
         auth_keys = [
-            "login", "logout", "email", "password",
-            "forgot_password", "reset_password", "register"
+            "login",
+            "logout",
+            "email",
+            "password",
+            "forgot_password",
+            "reset_password",
+            "register",
         ]
 
         for key in auth_keys:
@@ -152,10 +172,7 @@ class TestTranslationCategories:
 
     def test_admin_translations(self, i18n: I18nService):
         """Test admin UI translations."""
-        admin_keys = [
-            "dashboard", "settings", "users", "media",
-            "comments", "trash", "audit_log"
-        ]
+        admin_keys = ["dashboard", "settings", "users", "media", "comments", "trash", "audit_log"]
 
         for key in admin_keys:
             assert i18n.has_translation(key, "ja")
@@ -164,9 +181,17 @@ class TestTranslationCategories:
     def test_content_translations(self, i18n: I18nService):
         """Test content management translations."""
         content_keys = [
-            "title", "slug", "status", "draft", "published",
-            "scheduled", "created_at", "updated_at",
-            "author", "category", "tags"
+            "title",
+            "slug",
+            "status",
+            "draft",
+            "published",
+            "scheduled",
+            "created_at",
+            "updated_at",
+            "author",
+            "category",
+            "tags",
         ]
 
         for key in content_keys:
@@ -176,9 +201,13 @@ class TestTranslationCategories:
     def test_message_translations(self, i18n: I18nService):
         """Test message translations."""
         message_keys = [
-            "saved_successfully", "deleted_successfully",
-            "error_occurred", "confirm_delete",
-            "no_results", "required_field", "invalid_email"
+            "saved_successfully",
+            "deleted_successfully",
+            "error_occurred",
+            "confirm_delete",
+            "no_results",
+            "required_field",
+            "invalid_email",
         ]
 
         for key in message_keys:

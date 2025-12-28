@@ -11,6 +11,7 @@ from typing import Any
 
 class PluginState(Enum):
     """Plugin lifecycle states."""
+
     UNKNOWN = "unknown"
     DISCOVERED = "discovered"
     LOADED = "loaded"
@@ -23,6 +24,7 @@ class PluginState(Enum):
 @dataclass
 class PluginMeta:
     """Plugin metadata from manifest."""
+
     # Required
     id: str
     name: str
@@ -221,13 +223,15 @@ class Plugin(ABC):
             icon: Icon name
             parent: Parent menu ID if submenu
         """
-        self._admin_menus.append({
-            "title": title,
-            "path": path,
-            "icon": icon,
-            "parent": parent,
-            "plugin_id": self.id,
-        })
+        self._admin_menus.append(
+            {
+                "title": title,
+                "path": path,
+                "icon": icon,
+                "parent": parent,
+                "plugin_id": self.id,
+            }
+        )
 
     def get_hooks(self) -> list[tuple[str, Callable, int]]:
         """Get all registered hooks."""
@@ -286,6 +290,7 @@ class Plugin(ABC):
             level: Log level (debug, info, warning, error)
         """
         import logging
+
         logger = logging.getLogger(f"plugin.{self.id}")
         getattr(logger, level)(message)
 

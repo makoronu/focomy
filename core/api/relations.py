@@ -16,6 +16,7 @@ router = APIRouter(tags=["relations"])
 
 class RelationAttach(BaseModel):
     """Request to attach a relation."""
+
     to_id: str
     sort_order: int = 0
     metadata: dict[str, Any] | None = None
@@ -23,6 +24,7 @@ class RelationAttach(BaseModel):
 
 class RelationSync(BaseModel):
     """Request to sync relations."""
+
     to_ids: list[str]
 
 

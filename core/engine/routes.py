@@ -47,10 +47,12 @@ def generate_breadcrumbs(items: list[dict], site_url: str) -> dict:
                 "@type": "ListItem",
                 "position": i + 1,
                 "name": item["name"],
-                "item": f"{site_url}{item['url']}" if not item["url"].startswith("http") else item["url"]
+                "item": f"{site_url}{item['url']}"
+                if not item["url"].startswith("http")
+                else item["url"],
             }
             for i, item in enumerate(breadcrumb_items)
-        ]
+        ],
     }
 
     return {
@@ -123,6 +125,7 @@ async def render_theme(
 
 # === Static Assets ===
 
+
 @router.get("/css/theme.css", response_class=Response)
 async def theme_css(db: AsyncSession = Depends(get_db)):
     """Serve theme CSS with caching headers."""
@@ -135,11 +138,12 @@ async def theme_css(db: AsyncSession = Depends(get_db)):
         headers={
             "Cache-Control": "public, max-age=86400",  # 24 hours
             "Vary": "Accept-Encoding",
-        }
+        },
     )
 
 
 # === SEO Routes (must be before dynamic routes) ===
+
 
 @router.get("/robots.txt", response_class=Response)
 async def robots_txt(request: Request):
@@ -174,22 +178,14 @@ async def manifest_json(request: Request):
         "background_color": "#ffffff",
         "theme_color": "#2563eb",
         "icons": [
-            {
-                "src": f"{site_url}/static/favicon-192.png",
-                "sizes": "192x192",
-                "type": "image/png"
-            },
-            {
-                "src": f"{site_url}/static/favicon-512.png",
-                "sizes": "512x512",
-                "type": "image/png"
-            }
-        ]
+            {"src": f"{site_url}/static/favicon-192.png", "sizes": "192x192", "type": "image/png"},
+            {"src": f"{site_url}/static/favicon-512.png", "sizes": "512x512", "type": "image/png"},
+        ],
     }
 
     return Response(
         content=json.dumps(manifest, ensure_ascii=False, indent=2),
-        media_type="application/manifest+json"
+        media_type="application/manifest+json",
     )
 
 
@@ -213,10 +209,7 @@ async def get_menus_context(db: AsyncSession) -> dict:
     menu_svc = MenuService(db)
     all_menus = await menu_svc.get_all_menus()
     return {
-        "menus": {
-            location: [m.to_dict() for m in items]
-            for location, items in all_menus.items()
-        }
+        "menus": {location: [m.to_dict() for m in items] for location, items in all_menus.items()}
     }
 
 
@@ -226,9 +219,10 @@ async def get_widgets_context(db: AsyncSession) -> dict:
     widgets = await widget_svc.render_all_areas()
     return {"widgets": widgets}
 
+
 # Cache TTL settings
 PAGE_CACHE_TTL = 300  # 5 minutes for pages
-LIST_CACHE_TTL = 60   # 1 minute for listings
+LIST_CACHE_TTL = 60  # 1 minute for listings
 
 
 @router.get("/", response_class=HTMLResponse)
@@ -267,12 +261,16 @@ async def home(
     widgets_ctx = await get_widgets_context(db)
     seo_ctx = await get_seo_settings(db, site_url)
 
-    html = await render_theme(db, "home.html", {
-        "posts": posts_data,
-        **menus_ctx,
-        **widgets_ctx,
-        **seo_ctx,
-    })
+    html = await render_theme(
+        db,
+        "home.html",
+        {
+            "posts": posts_data,
+            **menus_ctx,
+            **widgets_ctx,
+            **seo_ctx,
+        },
+    )
 
     cache_service.set(cache_key, html, LIST_CACHE_TTL)
     return HTMLResponse(content=html)
@@ -310,22 +308,27 @@ async def view_page(
     seo_meta = seo_svc.render_meta_tags(meta)
 
     # Generate breadcrumbs
-    breadcrumb_ctx = generate_breadcrumbs([
-        {"name": page_data.get("title", "ページ"), "url": f"/page/{slug}"}
-    ], site_url)
+    breadcrumb_ctx = generate_breadcrumbs(
+        [{"name": page_data.get("title", "ページ"), "url": f"/page/{slug}"}], site_url
+    )
 
-    html = await render_theme(db, "post.html", {
-        "post": page_data,
-        "seo_meta": seo_meta,
-        **menus_ctx,
-        **seo_ctx,
-        **breadcrumb_ctx,
-    })
+    html = await render_theme(
+        db,
+        "post.html",
+        {
+            "post": page_data,
+            "seo_meta": seo_meta,
+            **menus_ctx,
+            **seo_ctx,
+            **breadcrumb_ctx,
+        },
+    )
 
     return HTMLResponse(content=html)
 
 
 # === Category ===
+
 
 @router.get("/category/{slug}", response_class=HTMLResponse)
 async def view_category(
@@ -347,6 +350,7 @@ async def view_category(
 
     # Find posts in category (via relation)
     from ..services.relation import RelationService
+
     relation_svc = RelationService(db)
 
     per_page = 10
@@ -358,7 +362,7 @@ async def view_category(
 
     # Filter published posts
     posts = []
-    for pid in post_ids[offset:offset + per_page]:
+    for pid in post_ids[offset : offset + per_page]:
         post = await entity_svc.get(pid)
         if post:
             post_data = entity_svc.serialize(post)
@@ -371,18 +375,23 @@ async def view_category(
     # Get menus
     menus_ctx = await get_menus_context(db)
 
-    html = await render_theme(db, "category.html", {
-        "category": category_data,
-        "posts": posts,
-        "page": page,
-        "total_pages": total_pages,
-        **menus_ctx,
-    })
+    html = await render_theme(
+        db,
+        "category.html",
+        {
+            "category": category_data,
+            "posts": posts,
+            "page": page,
+            "total_pages": total_pages,
+            **menus_ctx,
+        },
+    )
 
     return HTMLResponse(content=html)
 
 
 # === Archive ===
+
 
 @router.get("/archive/{year}/{month}", response_class=HTMLResponse)
 async def view_archive(
@@ -397,6 +406,7 @@ async def view_archive(
 
     # Calculate date range
     from datetime import date
+
     date(year, month, 1)
     if month == 12:
         date(year + 1, 1, 1)
@@ -426,18 +436,23 @@ async def view_archive(
     # Get menus
     menus_ctx = await get_menus_context(db)
 
-    html = await render_theme(db, "archive.html", {
-        "year": year,
-        "month": month,
-        "posts": posts,
-        "page": page,
-        **menus_ctx,
-    })
+    html = await render_theme(
+        db,
+        "archive.html",
+        {
+            "year": year,
+            "month": month,
+            "posts": posts,
+            "page": page,
+            **menus_ctx,
+        },
+    )
 
     return HTMLResponse(content=html)
 
 
 # === Search ===
+
 
 @router.get("/search", response_class=HTMLResponse)
 async def search(
@@ -475,26 +490,31 @@ async def search(
                 matched.append(data)
 
         total = len(matched)
-        posts = matched[offset:offset + per_page]
+        posts = matched[offset : offset + per_page]
 
     total_pages = (total + 9) // 10 if total > 0 else 0
 
     # Get menus
     menus_ctx = await get_menus_context(db)
 
-    html = await render_theme(db, "search.html", {
-        "query": q,
-        "posts": posts,
-        "total": total,
-        "page": page,
-        "total_pages": total_pages,
-        **menus_ctx,
-    })
+    html = await render_theme(
+        db,
+        "search.html",
+        {
+            "query": q,
+            "posts": posts,
+            "total": total,
+            "page": page,
+            "total_pages": total_pages,
+            **menus_ctx,
+        },
+    )
 
     return HTMLResponse(content=html)
 
 
 # === RSS Feed ===
+
 
 @router.get("/feed.xml", response_class=Response)
 async def rss_feed(
@@ -574,14 +594,16 @@ async def _generate_rss_feed(
     for e in entities:
         data = entity_svc.serialize(e)
         slug = data.get("slug", "")
-        items.append(f"""
+        items.append(
+            f"""
         <item>
             <title><![CDATA[{data.get('title', '')}]]></title>
             <link>{site_url}/{path_prefix}/{slug}</link>
             <description><![CDATA[{data.get('excerpt', '')}]]></description>
             <pubDate>{data.get('created_at', '')}</pubDate>
             <guid>{site_url}/{path_prefix}/{slug}</guid>
-        </item>""")
+        </item>"""
+        )
 
     title = ct.label_plural if ct else "Posts"
     rss = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -614,14 +636,16 @@ async def _generate_atom_feed(
         data = entity_svc.serialize(e)
         slug = data.get("slug", "")
         url = f"{site_url}/{path_prefix}/{slug}"
-        entries.append(f"""
+        entries.append(
+            f"""
     <entry>
         <title><![CDATA[{data.get('title', '')}]]></title>
         <link href="{url}"/>
         <id>{url}</id>
         <updated>{data.get('updated_at', data.get('created_at', ''))}</updated>
         <summary><![CDATA[{data.get('excerpt', '')}]]></summary>
-    </entry>""")
+    </entry>"""
+        )
 
     title = ct.label_plural if ct else "Posts"
     updated = entities[0].updated_at.isoformat() if entities else ""
@@ -655,14 +679,16 @@ async def _generate_json_feed(
     for e in entities:
         data = entity_svc.serialize(e)
         slug = data.get("slug", "")
-        items.append({
-            "id": f"{site_url}/{path_prefix}/{slug}",
-            "url": f"{site_url}/{path_prefix}/{slug}",
-            "title": data.get("title", ""),
-            "content_text": data.get("excerpt", ""),
-            "date_published": data.get("created_at", ""),
-            "date_modified": data.get("updated_at", data.get("created_at", "")),
-        })
+        items.append(
+            {
+                "id": f"{site_url}/{path_prefix}/{slug}",
+                "url": f"{site_url}/{path_prefix}/{slug}",
+                "title": data.get("title", ""),
+                "content_text": data.get("excerpt", ""),
+                "date_published": data.get("created_at", ""),
+                "date_modified": data.get("updated_at", data.get("created_at", "")),
+            }
+        )
 
     title = ct.label_plural if ct else "Posts"
     feed = {
@@ -675,12 +701,12 @@ async def _generate_json_feed(
     }
 
     return Response(
-        content=json.dumps(feed, ensure_ascii=False, indent=2),
-        media_type="application/feed+json"
+        content=json.dumps(feed, ensure_ascii=False, indent=2), media_type="application/feed+json"
     )
 
 
 # === Dynamic Archive ===
+
 
 @router.get("/{path_prefix}/archive/{year:int}/{month:int}", response_class=HTMLResponse)
 async def content_type_archive(
@@ -730,19 +756,24 @@ async def content_type_archive(
     # Get menus
     menus_ctx = await get_menus_context(db)
 
-    html = await render_theme(db, "archive.html", {
-        "year": year,
-        "month": month,
-        "posts": posts,
-        "page": page,
-        "content_type": target_ct,
-        **menus_ctx,
-    })
+    html = await render_theme(
+        db,
+        "archive.html",
+        {
+            "year": year,
+            "month": month,
+            "posts": posts,
+            "page": page,
+            "content_type": target_ct,
+            **menus_ctx,
+        },
+    )
 
     return HTMLResponse(content=html)
 
 
 # === Content Type Listing ===
+
 
 @router.get("/{path_prefix}", response_class=HTMLResponse)
 async def content_type_listing(
@@ -802,21 +833,26 @@ async def content_type_listing(
     widgets_ctx = await get_widgets_context(db)
     seo_ctx = await get_seo_settings(db, site_url)
 
-    html = await render_theme(db, "home.html", {
-        "posts": posts_data,
-        "content_type": target_ct,
-        "page": page,
-        "total_pages": total_pages,
-        **menus_ctx,
-        **widgets_ctx,
-        **seo_ctx,
-    })
+    html = await render_theme(
+        db,
+        "home.html",
+        {
+            "posts": posts_data,
+            "content_type": target_ct,
+            "page": page,
+            "total_pages": total_pages,
+            **menus_ctx,
+            **widgets_ctx,
+            **seo_ctx,
+        },
+    )
 
     cache_service.set(cache_key, html, LIST_CACHE_TTL)
     return HTMLResponse(content=html)
 
 
 # === Dynamic Content Type Routes ===
+
 
 @router.get("/{path_prefix:path}/{slug}", response_class=HTMLResponse)
 async def view_content_by_path(
@@ -881,33 +917,41 @@ async def view_content_by_path(
 
     # Generate breadcrumbs
     content_url = f"/{path_prefix}/{slug}"
-    breadcrumb_ctx = generate_breadcrumbs([
-        {"name": entity_data.get("title", target_ct.label), "url": content_url}
-    ], site_url)
+    breadcrumb_ctx = generate_breadcrumbs(
+        [{"name": entity_data.get("title", target_ct.label), "url": content_url}], site_url
+    )
 
     # Determine template
     template = target_ct.template or f"{target_ct.name}.html"
     try:
-        html = await render_theme(db, template, {
-            "post": entity_data,
-            "content": entity_data,
-            "seo_meta": seo_meta,
-            "content_type": target_ct,
-            **menus_ctx,
-            **widgets_ctx,
-            **seo_ctx,
-            **breadcrumb_ctx,
-        })
+        html = await render_theme(
+            db,
+            template,
+            {
+                "post": entity_data,
+                "content": entity_data,
+                "seo_meta": seo_meta,
+                "content_type": target_ct,
+                **menus_ctx,
+                **widgets_ctx,
+                **seo_ctx,
+                **breadcrumb_ctx,
+            },
+        )
     except Exception:
         # Fallback to post.html
-        html = await render_theme(db, "post.html", {
-            "post": entity_data,
-            "seo_meta": seo_meta,
-            **menus_ctx,
-            **widgets_ctx,
-            **seo_ctx,
-            **breadcrumb_ctx,
-        })
+        html = await render_theme(
+            db,
+            "post.html",
+            {
+                "post": entity_data,
+                "seo_meta": seo_meta,
+                **menus_ctx,
+                **widgets_ctx,
+                **seo_ctx,
+                **breadcrumb_ctx,
+            },
+        )
 
     # Cache the rendered HTML
     cache_service.set(cache_key, html, PAGE_CACHE_TTL)

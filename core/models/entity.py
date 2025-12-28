@@ -21,6 +21,7 @@ class Entity(Base):
     Post, Page, Category, User - all are just entities with different types.
     This is the foundation of the metadata-driven architecture.
     """
+
     __tablename__ = "entities"
 
     id: Mapped[str] = mapped_column(
@@ -84,9 +85,7 @@ class Entity(Base):
         cascade="all, delete-orphan",
     )
 
-    __table_args__ = (
-        Index("idx_entities_type_deleted", "type", "deleted_at"),
-    )
+    __table_args__ = (Index("idx_entities_type_deleted", "type", "deleted_at"),)
 
     def __repr__(self) -> str:
         return f"<Entity(id={self.id}, type={self.type})>"
@@ -99,6 +98,7 @@ class EntityValue(Base):
     Type-specific columns prevent the "everything is a string" problem.
     Proper indexes make queries fast.
     """
+
     __tablename__ = "entity_values"
 
     id: Mapped[int] = mapped_column(

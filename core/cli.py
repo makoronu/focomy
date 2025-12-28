@@ -23,7 +23,8 @@ def main():
         description="Focomy - The Most Beautiful CMS",
     )
     parser.add_argument(
-        "--version", "-v",
+        "--version",
+        "-v",
         action="version",
         version=f"Focomy {__version__}",
     )
@@ -44,15 +45,21 @@ def main():
     # migrate
     migrate_parser = subparsers.add_parser("migrate", help="Run database migrations")
     migrate_parser.add_argument("--revision", "-r", default="head", help="Target revision")
-    migrate_parser.add_argument("--sql", action="store_true", help="Output SQL instead of executing")
+    migrate_parser.add_argument(
+        "--sql", action="store_true", help="Output SQL instead of executing"
+    )
     migrate_parser.add_argument("--history", action="store_true", help="Show migration history")
     migrate_parser.add_argument("--current", action="store_true", help="Show current revision")
-    migrate_parser.add_argument("--downgrade", action="store_true", help="Downgrade instead of upgrade")
+    migrate_parser.add_argument(
+        "--downgrade", action="store_true", help="Downgrade instead of upgrade"
+    )
 
     # makemigrations
     makemigrations_parser = subparsers.add_parser("makemigrations", help="Generate new migration")
     makemigrations_parser.add_argument("--message", "-m", required=True, help="Migration message")
-    makemigrations_parser.add_argument("--autogenerate", action="store_true", help="Auto-detect schema changes")
+    makemigrations_parser.add_argument(
+        "--autogenerate", action="store_true", help="Auto-detect schema changes"
+    )
 
     # validate
     subparsers.add_parser("validate", help="Validate content type definitions")
@@ -79,7 +86,9 @@ def main():
     createuser_parser = subparsers.add_parser("createuser", help="Create a new user")
     createuser_parser.add_argument("--email", "-e", required=True, help="User email")
     createuser_parser.add_argument("--name", "-n", default="Admin", help="User name")
-    createuser_parser.add_argument("--role", "-r", default="admin", choices=["admin", "editor", "author"], help="User role")
+    createuser_parser.add_argument(
+        "--role", "-r", default="admin", choices=["admin", "editor", "author"], help="User role"
+    )
     createuser_parser.add_argument("--password", "-p", help="Password (prompted if not provided)")
 
     args = parser.parse_args()
@@ -178,11 +187,7 @@ def cmd_init(args):
     }
 
     # Copy config.yaml from template
-    _copy_scaffold_file(
-        scaffold_path, target,
-        "config.yaml.template", "config.yaml",
-        replacements
-    )
+    _copy_scaffold_file(scaffold_path, target, "config.yaml.template", "config.yaml", replacements)
 
     # Copy content_types
     _copy_scaffold_dir(scaffold_path, target, "content_types")
@@ -194,22 +199,16 @@ def cmd_init(args):
     _copy_scaffold_file(scaffold_path, target, "relations.yaml")
 
     # Copy .env from template
-    _copy_scaffold_file(
-        scaffold_path, target,
-        ".env.template", ".env",
-        replacements
-    )
+    _copy_scaffold_file(scaffold_path, target, ".env.template", ".env", replacements)
 
     # Copy .gitignore from template
-    _copy_scaffold_file(
-        scaffold_path, target,
-        ".gitignore.template", ".gitignore"
-    )
+    _copy_scaffold_file(scaffold_path, target, ".gitignore.template", ".gitignore")
 
     # Create .gitkeep in uploads
     (target / "uploads" / ".gitkeep").touch()
 
-    print(f"""
+    print(
+        f"""
 Site created successfully!
 
 Next steps:
@@ -220,7 +219,8 @@ Next steps:
   focomy serve
 
 Open http://localhost:8000/admin
-""")
+"""
+    )
 
 
 def cmd_serve(args):
@@ -445,7 +445,6 @@ def cmd_backup(args):
         if args.include_db:
             print("  Dumping database...")
             try:
-
                 from .config import settings
 
                 # Parse database URL
@@ -454,7 +453,7 @@ def cmd_backup(args):
                 db_url = db_url.replace("postgresql+asyncpg://", "postgresql://")
 
                 # Create temp file for dump
-                with tempfile.NamedTemporaryFile(mode='w', suffix='.sql', delete=False) as tmp:
+                with tempfile.NamedTemporaryFile(mode="w", suffix=".sql", delete=False) as tmp:
                     tmp_path = tmp.name
 
                 result = subprocess.run(

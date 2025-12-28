@@ -25,6 +25,7 @@ NAMESPACES = {
 @dataclass
 class WXRPost:
     """Parsed WordPress post."""
+
     id: int
     title: str
     slug: str
@@ -53,6 +54,7 @@ class WXRPost:
 @dataclass
 class WXRComment:
     """Parsed WordPress comment."""
+
     id: int
     post_id: int
     author: str
@@ -69,6 +71,7 @@ class WXRComment:
 @dataclass
 class WXRTerm:
     """Parsed WordPress term (category/tag/custom taxonomy)."""
+
     id: int
     name: str
     slug: str
@@ -80,6 +83,7 @@ class WXRTerm:
 @dataclass
 class WXRAuthor:
     """Parsed WordPress author."""
+
     id: int
     login: str
     email: str
@@ -91,6 +95,7 @@ class WXRAuthor:
 @dataclass
 class WXRMenuItem:
     """Parsed WordPress menu item."""
+
     id: int
     title: str
     url: str
@@ -106,6 +111,7 @@ class WXRMenuItem:
 @dataclass
 class WXRSiteInfo:
     """WordPress site information."""
+
     title: str
     link: str
     description: str
@@ -118,6 +124,7 @@ class WXRSiteInfo:
 @dataclass
 class WXRData:
     """Complete parsed WXR data."""
+
     site: WXRSiteInfo
     authors: list[WXRAuthor]
     categories: list[WXRTerm]
@@ -320,11 +327,13 @@ class WXRParser:
             elif domain == "post_tag":
                 tags.append(term_data)
             else:
-                custom_taxonomies.append({
-                    "taxonomy": domain,
-                    "slug": nicename,
-                    "name": name,
-                })
+                custom_taxonomies.append(
+                    {
+                        "taxonomy": domain,
+                        "slug": nicename,
+                        "name": name,
+                    }
+                )
 
         # Parse post meta
         postmeta = {}
@@ -414,7 +423,9 @@ class WXRParser:
             object_type=postmeta.get("_menu_item_object", ""),
             object_id=int(postmeta.get("_menu_item_object_id", 0)),
             target=postmeta.get("_menu_item_target", ""),
-            classes=postmeta.get("_menu_item_classes", "").split() if postmeta.get("_menu_item_classes") else [],
+            classes=postmeta.get("_menu_item_classes", "").split()
+            if postmeta.get("_menu_item_classes")
+            else [],
         )
 
     def _get_menu_name(self, item: ET.Element, terms: list[WXRTerm]) -> str:

@@ -11,6 +11,7 @@ from .entity import EntityService
 @dataclass
 class EditLock:
     """Edit lock information."""
+
     entity_id: str
     user_id: str
     user_name: str
@@ -177,7 +178,9 @@ class EditLockService:
             expires_at=expires_at,
         )
 
-    async def is_locked_by_other(self, entity_id: str, user_id: str) -> tuple[bool, EditLock | None]:
+    async def is_locked_by_other(
+        self, entity_id: str, user_id: str
+    ) -> tuple[bool, EditLock | None]:
         """
         Check if entity is locked by another user.
 

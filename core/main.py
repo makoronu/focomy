@@ -49,6 +49,7 @@ class RedirectMiddleware(BaseHTTPMiddleware):
 
                 if redirect:
                     from starlette.responses import RedirectResponse
+
                     return RedirectResponse(
                         url=redirect["to_path"],
                         status_code=redirect["status_code"],
@@ -310,6 +311,7 @@ async def lifespan(app: FastAPI):
 
     # Configure OAuth
     from .services.oauth import oauth_service
+
     oauth_service.configure(app)
     logger.info("OAuth configured")
 
@@ -388,13 +390,12 @@ async def not_found_handler(request: Request, exc: StarletteHTTPException):
     # Return JSON for API routes
     if request.url.path.startswith("/api/"):
         return Response(
-            content='{"detail": "Not found"}',
-            status_code=404,
-            media_type="application/json"
+            content='{"detail": "Not found"}', status_code=404, media_type="application/json"
         )
 
     # Render HTML error page for frontend
     from .services.theme import theme_service
+
     try:
         html = theme_service.render(
             "404.html",
@@ -402,10 +403,7 @@ async def not_found_handler(request: Request, exc: StarletteHTTPException):
         )
         return HTMLResponse(content=html, status_code=404)
     except Exception:
-        return HTMLResponse(
-            content="<h1>404 - Not Found</h1>",
-            status_code=404
-        )
+        return HTMLResponse(content="<h1>404 - Not Found</h1>", status_code=404)
 
 
 @app.exception_handler(500)
@@ -416,11 +414,12 @@ async def server_error_handler(request: Request, exc: Exception):
         return Response(
             content='{"detail": "Internal server error"}',
             status_code=500,
-            media_type="application/json"
+            media_type="application/json",
         )
 
     # Render HTML error page for frontend
     from .services.theme import theme_service
+
     try:
         html = theme_service.render(
             "500.html",
@@ -428,10 +427,7 @@ async def server_error_handler(request: Request, exc: Exception):
         )
         return HTMLResponse(content=html, status_code=500)
     except Exception:
-        return HTMLResponse(
-            content="<h1>500 - Internal Server Error</h1>",
-            status_code=500
-        )
+        return HTMLResponse(content="<h1>500 - Internal Server Error</h1>", status_code=500)
 
 
 # Include routers

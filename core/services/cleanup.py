@@ -49,9 +49,7 @@ class CleanupService:
         """
         # Find EntityValues where the parent Entity is deleted or doesn't exist
         orphaned_query = select(EntityValue.id).where(
-            ~EntityValue.entity_id.in_(
-                select(Entity.id).where(Entity.deleted_at.is_(None))
-            )
+            ~EntityValue.entity_id.in_(select(Entity.id).where(Entity.deleted_at.is_(None)))
         )
 
         result = await self.db.execute(orphaned_query)
@@ -64,10 +62,8 @@ class CleanupService:
         batch_size = 1000
         total = 0
         for i in range(0, len(orphaned_ids), batch_size):
-            batch = orphaned_ids[i:i + batch_size]
-            await self.db.execute(
-                delete(EntityValue).where(EntityValue.id.in_(batch))
-            )
+            batch = orphaned_ids[i : i + batch_size]
+            await self.db.execute(delete(EntityValue).where(EntityValue.id.in_(batch)))
             total += len(batch)
 
         await self.db.commit()
@@ -129,9 +125,7 @@ class CleanupService:
             )
         )
 
-        await self.db.execute(
-            delete(EntityValue).where(EntityValue.entity_id.in_(old_entity_ids))
-        )
+        await self.db.execute(delete(EntityValue).where(EntityValue.entity_id.in_(old_entity_ids)))
 
         # Then delete the entities
         result = await self.db.execute(
@@ -164,18 +158,20 @@ class CleanupService:
         unused = []
         for media in all_media:
             # Check if media is referenced in any EntityValue
-            ref_query = select(EntityValue).where(
-                EntityValue.value_text.contains(media.id)
-            ).limit(1)
+            ref_query = (
+                select(EntityValue).where(EntityValue.value_text.contains(media.id)).limit(1)
+            )
             ref_result = await self.db.execute(ref_query)
 
             if not ref_result.scalar_one_or_none():
-                unused.append({
-                    "id": media.id,
-                    "filename": media.filename,
-                    "size": media.size,
-                    "created_at": media.created_at.isoformat(),
-                })
+                unused.append(
+                    {
+                        "id": media.id,
+                        "filename": media.filename,
+                        "size": media.size,
+                        "created_at": media.created_at.isoformat(),
+                    }
+                )
 
         return unused
 

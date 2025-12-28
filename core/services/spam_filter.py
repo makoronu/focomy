@@ -19,6 +19,7 @@ import httpx
 @dataclass
 class SpamCheckResult:
     """Result of spam check."""
+
     is_spam: bool
     confidence: float  # 0.0 to 1.0
     reasons: list[str]
@@ -28,6 +29,7 @@ class SpamCheckResult:
 @dataclass
 class CommentData:
     """Comment data for spam checking."""
+
     content: str
     author_name: str
     author_email: str
@@ -138,10 +140,7 @@ class SpamFilterService:
         minute_ago = now - timedelta(minutes=1)
 
         # Clean old entries
-        self._rate_limits[ip_address] = [
-            t for t in self._rate_limits[ip_address]
-            if t > minute_ago
-        ]
+        self._rate_limits[ip_address] = [t for t in self._rate_limits[ip_address] if t > minute_ago]
 
         # Count recent requests
         count = len(self._rate_limits[ip_address])
@@ -183,9 +182,19 @@ class SpamFilterService:
 
         # Check for spam keywords
         spam_keywords = [
-            "buy now", "click here", "free money", "make money fast",
-            "viagra", "casino", "lottery", "winner", "congratulations",
-            "act now", "limited time", "earn extra", "work from home",
+            "buy now",
+            "click here",
+            "free money",
+            "make money fast",
+            "viagra",
+            "casino",
+            "lottery",
+            "winner",
+            "congratulations",
+            "act now",
+            "limited time",
+            "earn extra",
+            "work from home",
         ]
         for keyword in spam_keywords:
             if keyword in content_lower:

@@ -11,6 +11,7 @@ from ..config import settings
 @dataclass
 class EmailMessage:
     """Email message data."""
+
     to: str
     subject: str
     body: str
@@ -33,13 +34,13 @@ class MailService:
     """
 
     def __init__(self):
-        self.host = getattr(settings, 'mail_host', None)
-        self.port = getattr(settings, 'mail_port', 587)
-        self.username = getattr(settings, 'mail_username', None)
-        self.password = getattr(settings, 'mail_password', None)
-        self.from_email = getattr(settings, 'mail_from', None)
-        self.from_name = getattr(settings, 'mail_from_name', 'Focomy')
-        self.use_tls = getattr(settings, 'mail_use_tls', True)
+        self.host = getattr(settings, "mail_host", None)
+        self.port = getattr(settings, "mail_port", 587)
+        self.username = getattr(settings, "mail_username", None)
+        self.password = getattr(settings, "mail_password", None)
+        self.from_email = getattr(settings, "mail_from", None)
+        self.from_name = getattr(settings, "mail_from_name", "Focomy")
+        self.use_tls = getattr(settings, "mail_use_tls", True)
 
     def is_configured(self) -> bool:
         """Check if mail is configured."""
@@ -52,19 +53,19 @@ class MailService:
             return False
 
         try:
-            msg = MIMEMultipart('alternative')
-            msg['Subject'] = message.subject
-            msg['From'] = f"{self.from_name} <{self.from_email}>"
-            msg['To'] = message.to
+            msg = MIMEMultipart("alternative")
+            msg["Subject"] = message.subject
+            msg["From"] = f"{self.from_name} <{self.from_email}>"
+            msg["To"] = message.to
 
             if message.reply_to:
-                msg['Reply-To'] = message.reply_to
+                msg["Reply-To"] = message.reply_to
 
             # Add body
-            msg.attach(MIMEText(message.body, 'plain', 'utf-8'))
+            msg.attach(MIMEText(message.body, "plain", "utf-8"))
 
             if message.html:
-                msg.attach(MIMEText(message.html, 'html', 'utf-8'))
+                msg.attach(MIMEText(message.html, "html", "utf-8"))
 
             # Send
             with smtplib.SMTP(self.host, self.port) as server:
@@ -109,13 +110,15 @@ class MailService:
 
         html = "\n".join(html_lines)
 
-        return self.send(EmailMessage(
-            to=to,
-            subject=f"[Focomy] {form_title} - 新しい送信",
-            body=body,
-            html=html,
-            reply_to=reply_to,
-        ))
+        return self.send(
+            EmailMessage(
+                to=to,
+                subject=f"[Focomy] {form_title} - 新しい送信",
+                body=body,
+                html=html,
+                reply_to=reply_to,
+            )
+        )
 
 
 # Singleton

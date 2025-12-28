@@ -20,6 +20,7 @@ from .relation import RelationService
 @dataclass
 class CommentData:
     """Structured comment data for templates."""
+
     id: str
     author_name: str
     author_email: str
@@ -118,9 +119,7 @@ class CommentService:
         Returns nested comment structure.
         """
         # Get all comments related to this post
-        related = await self.relation_svc.get_related(
-            post_id, "comment_post", direction="to"
-        )
+        related = await self.relation_svc.get_related(post_id, "comment_post", direction="to")
 
         if not related:
             return []
@@ -138,15 +137,17 @@ class CommentService:
                 )
                 parent_id = parent_relations[0].to_entity_id if parent_relations else None
 
-                comments.append({
-                    "id": e.id,
-                    "author_name": data.get("author_name", ""),
-                    "author_email": data.get("author_email", ""),
-                    "content": data.get("content", ""),
-                    "status": status,
-                    "created_at": data.get("created_at", ""),
-                    "parent_id": parent_id,
-                })
+                comments.append(
+                    {
+                        "id": e.id,
+                        "author_name": data.get("author_name", ""),
+                        "author_email": data.get("author_email", ""),
+                        "content": data.get("content", ""),
+                        "status": status,
+                        "created_at": data.get("created_at", ""),
+                        "parent_id": parent_id,
+                    }
+                )
 
         # Build tree
         return self._build_comment_tree(comments)
@@ -225,6 +226,7 @@ class CommentService:
     async def get_pending_count(self) -> int:
         """Get count of pending comments."""
         from .entity import QueryParams
+
         params = QueryParams(filters={"status": "pending"})
         return await self.entity_svc.count("comment", params)
 

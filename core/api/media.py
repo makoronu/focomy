@@ -22,6 +22,7 @@ router = APIRouter(prefix="/media", tags=["Media"])
 
 class MediaUpdate(BaseModel):
     """Update media metadata."""
+
     alt_text: str | None = Field(None, description="Alt text for accessibility")
 
 
@@ -41,13 +42,13 @@ class MediaUpdate(BaseModel):
                         "mime_type": "image/webp",
                         "size": 102400,
                         "width": 1920,
-                        "height": 1080
+                        "height": 1080,
                     }
                 }
-            }
+            },
         },
-        400: {"description": "No filename provided"}
-    }
+        400: {"description": "No filename provided"},
+    },
 )
 async def upload_file(
     file: UploadFile = File(..., description="File to upload"),
@@ -83,16 +84,22 @@ async def upload_file(
             "content": {
                 "application/json": {
                     "example": {
-                        "items": [{"id": "media123", "filename": "photo.jpg", "url": "/uploads/2024/01/15/abc.webp"}],
+                        "items": [
+                            {
+                                "id": "media123",
+                                "filename": "photo.jpg",
+                                "url": "/uploads/2024/01/15/abc.webp",
+                            }
+                        ],
                         "total": 42,
                         "page": 1,
                         "per_page": 20,
-                        "pages": 3
+                        "pages": 3,
                     }
                 }
-            }
+            },
         }
-    }
+    },
 )
 async def list_media(
     page: int = Query(1, ge=1, description="Page number"),
@@ -136,13 +143,13 @@ async def list_media(
                         "size": 102400,
                         "width": 1920,
                         "height": 1080,
-                        "alt_text": "A beautiful sunset"
+                        "alt_text": "A beautiful sunset",
                     }
                 }
-            }
+            },
         },
-        404: {"description": "Media not found"}
-    }
+        404: {"description": "Media not found"},
+    },
 )
 async def get_media(
     media_id: str,
@@ -164,8 +171,8 @@ async def get_media(
     description="Update media metadata (e.g., alt text).",
     responses={
         200: {"description": "Updated media details"},
-        404: {"description": "Media not found"}
-    }
+        404: {"description": "Media not found"},
+    },
 )
 async def update_media(
     media_id: str,
@@ -197,10 +204,10 @@ async def update_media(
     responses={
         200: {
             "description": "Deletion confirmation",
-            "content": {"application/json": {"example": {"status": "deleted"}}}
+            "content": {"application/json": {"example": {"status": "deleted"}}},
         },
-        404: {"description": "Media not found"}
-    }
+        404: {"description": "Media not found"},
+    },
 )
 async def delete_media(
     media_id: str,

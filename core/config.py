@@ -82,6 +82,7 @@ class SecurityConfig(BaseModel):
 
 class CORSConfig(BaseModel):
     """CORS configuration."""
+
     enabled: bool = True
     allow_origins: list[str] = ["*"]  # Use ["https://example.com"] in production
     allow_methods: list[str] = ["*"]
@@ -92,6 +93,7 @@ class CORSConfig(BaseModel):
 
 class RateLimitConfig(BaseModel):
     """API rate limiting configuration."""
+
     enabled: bool = True
     default_limit: str = "100/minute"  # Default rate limit
     login_limit: str = "5/minute"  # Stricter for login
@@ -190,9 +192,7 @@ def get_settings() -> Settings:
         parsed_menus = {}
         for location in ("header", "footer", "sidebar"):
             if location in menus_config:
-                parsed_menus[location] = [
-                    _parse_menu_item(item) for item in menus_config[location]
-                ]
+                parsed_menus[location] = [_parse_menu_item(item) for item in menus_config[location]]
         settings.menus = MenusConfig(**parsed_menus)
 
     return settings

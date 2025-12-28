@@ -16,6 +16,7 @@ logger = logging.getLogger(__name__)
 
 class ThemeState(Enum):
     """Theme lifecycle states."""
+
     AVAILABLE = "available"
     ACTIVE = "active"
     INACTIVE = "inactive"
@@ -26,6 +27,7 @@ class ThemeState(Enum):
 @dataclass
 class ThemeMeta:
     """Theme metadata from theme.yaml."""
+
     # Required
     id: str
     name: str
@@ -64,6 +66,7 @@ class ThemeMeta:
 @dataclass
 class ThemeInfo:
     """Extended theme information for admin UI."""
+
     meta: ThemeMeta
     is_active: bool = False
     has_parent: bool = False
@@ -180,7 +183,9 @@ class ThemeManager:
                 customizer_sections=data.get("customizer", []),
                 templates=data.get("templates", {}),
                 path=path,
-                state=ThemeState.ACTIVE if data["id"] == self._active_theme_id else ThemeState.INACTIVE,
+                state=ThemeState.ACTIVE
+                if data["id"] == self._active_theme_id
+                else ThemeState.INACTIVE,
             )
 
             return meta
@@ -399,7 +404,11 @@ class ThemeManager:
                 theme_dir = self.themes_dir / theme_id
                 if theme_dir.exists():
                     # Backup existing
-                    backup_dir = self.data_dir / "backups" / f"{theme_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    backup_dir = (
+                        self.data_dir
+                        / "backups"
+                        / f"{theme_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+                    )
                     shutil.move(theme_dir, backup_dir)
 
                 # Extract
@@ -407,7 +416,7 @@ class ThemeManager:
 
                 for name in zf.namelist():
                     if name.startswith(theme_root):
-                        rel_path = name[len(theme_root):].lstrip("/")
+                        rel_path = name[len(theme_root) :].lstrip("/")
                         if rel_path:
                             target = theme_dir / rel_path
                             if name.endswith("/"):
@@ -448,7 +457,9 @@ class ThemeManager:
 
         try:
             # Backup before deletion
-            backup_dir = self.data_dir / "backups" / f"{theme_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            backup_dir = (
+                self.data_dir / "backups" / f"{theme_id}_{datetime.now().strftime('%Y%m%d%H%M%S')}"
+            )
             shutil.move(theme.path, backup_dir)
 
             # Remove from registry

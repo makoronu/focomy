@@ -49,25 +49,33 @@ class MigrationHelpers:
 
             # Nullify orphan references (safe approach)
             if orphans["created_by_orphans"] > 0:
-                await self.db.execute(text("""
+                await self.db.execute(
+                    text(
+                        """
                     UPDATE entities
                     SET created_by = NULL
                     WHERE created_by IS NOT NULL
                     AND created_by NOT IN (
                         SELECT id FROM entities WHERE type = 'user' AND deleted_at IS NULL
                     )
-                """))
+                """
+                    )
+                )
                 result["nullified_count"] += orphans["created_by_orphans"]
 
             if orphans["updated_by_orphans"] > 0:
-                await self.db.execute(text("""
+                await self.db.execute(
+                    text(
+                        """
                     UPDATE entities
                     SET updated_by = NULL
                     WHERE updated_by IS NOT NULL
                     AND updated_by NOT IN (
                         SELECT id FROM entities WHERE type = 'user' AND deleted_at IS NULL
                     )
-                """))
+                """
+                    )
+                )
                 result["nullified_count"] += orphans["updated_by_orphans"]
 
             # Add FK constraints (PostgreSQL syntax)
@@ -79,24 +87,32 @@ class MigrationHelpers:
             if db_type == "postgresql":
                 # Add created_by FK
                 try:
-                    await self.db.execute(text("""
+                    await self.db.execute(
+                        text(
+                            """
                         ALTER TABLE entities
                         ADD CONSTRAINT fk_entities_created_by
                         FOREIGN KEY (created_by) REFERENCES entities(id)
                         ON DELETE SET NULL
-                    """))
+                    """
+                        )
+                    )
                     result["constraints_added"].append("fk_entities_created_by")
                 except Exception:
                     pass  # Constraint might already exist
 
                 # Add updated_by FK
                 try:
-                    await self.db.execute(text("""
+                    await self.db.execute(
+                        text(
+                            """
                         ALTER TABLE entities
                         ADD CONSTRAINT fk_entities_updated_by
                         FOREIGN KEY (updated_by) REFERENCES entities(id)
                         ON DELETE SET NULL
-                    """))
+                    """
+                        )
+                    )
                     result["constraints_added"].append("fk_entities_updated_by")
                 except Exception:
                     pass  # Constraint might already exist
@@ -124,7 +140,9 @@ class MigrationHelpers:
         }
 
         # Check created_by orphans
-        created_by_query = await self.db.execute(text("""
+        created_by_query = await self.db.execute(
+            text(
+                """
             SELECT COUNT(*) FROM entities e
             WHERE e.created_by IS NOT NULL
             AND NOT EXISTS (
@@ -132,11 +150,15 @@ class MigrationHelpers:
                 WHERE u.id = e.created_by
                 AND u.type = 'user'
             )
-        """))
+        """
+            )
+        )
         result["created_by_orphans"] = created_by_query.scalar() or 0
 
         # Check updated_by orphans
-        updated_by_query = await self.db.execute(text("""
+        updated_by_query = await self.db.execute(
+            text(
+                """
             SELECT COUNT(*) FROM entities e
             WHERE e.updated_by IS NOT NULL
             AND NOT EXISTS (
@@ -144,7 +166,9 @@ class MigrationHelpers:
                 WHERE u.id = e.updated_by
                 AND u.type = 'user'
             )
-        """))
+        """
+            )
+        )
         result["updated_by_orphans"] = updated_by_query.scalar() or 0
 
         return result
@@ -161,19 +185,27 @@ class MigrationHelpers:
 
             if db_type == "postgresql":
                 try:
-                    await self.db.execute(text("""
+                    await self.db.execute(
+                        text(
+                            """
                         ALTER TABLE entities
                         DROP CONSTRAINT IF EXISTS fk_entities_created_by
-                    """))
+                    """
+                        )
+                    )
                     result["constraints_removed"].append("fk_entities_created_by")
                 except Exception:
                     pass
 
                 try:
-                    await self.db.execute(text("""
+                    await self.db.execute(
+                        text(
+                            """
                         ALTER TABLE entities
                         DROP CONSTRAINT IF EXISTS fk_entities_updated_by
-                    """))
+                    """
+                        )
+                    )
                     result["constraints_removed"].append("fk_entities_updated_by")
                 except Exception:
                     pass
@@ -214,11 +246,16 @@ class MigrationHelpers:
 
                         try:
                             # Create partial index for this field
-                            await self.db.execute(text(f"""
+                            await self.db.execute(
+                                text(
+                                    f"""
                                 CREATE INDEX IF NOT EXISTS {index_name}
                                 ON entity_values (entity_id, value_text)
                                 WHERE field_name = :field_name
-                            """), {"field_name": field_name})
+                            """
+                                ),
+                                {"field_name": field_name},
+                            )
                             result["indexes_created"].append(index_name)
                         except Exception as e:
                             result["errors"].append(f"{index_name}: {str(e)}")
@@ -270,17 +307,27 @@ class MigrationHelpers:
         for table in required_tables:
             try:
                 if db_type == "postgresql":
-                    check = await self.db.execute(text("""
+                    check = await self.db.execute(
+                        text(
+                            """
                         SELECT EXISTS (
                             SELECT FROM information_schema.tables
                             WHERE table_name = :table
                         )
-                    """), {"table": table})
+                    """
+                        ),
+                        {"table": table},
+                    )
                 else:
-                    check = await self.db.execute(text("""
+                    check = await self.db.execute(
+                        text(
+                            """
                         SELECT name FROM sqlite_master
                         WHERE type='table' AND name=:table
-                    """), {"table": table})
+                    """
+                        ),
+                        {"table": table},
+                    )
 
                 exists = check.scalar()
                 if not exists:

@@ -18,6 +18,7 @@ import yaml
 
 class ConfigSource(IntEnum):
     """Configuration sources by priority (higher = more important)."""
+
     DEFAULT = 0
     YAML = 10
     DATABASE = 20
@@ -27,6 +28,7 @@ class ConfigSource(IntEnum):
 @dataclass
 class ConfigValue:
     """A configuration value with source information."""
+
     key: str
     value: Any
     source: ConfigSource
@@ -36,6 +38,7 @@ class ConfigValue:
 @dataclass
 class ConfigConflict:
     """Represents a configuration conflict."""
+
     key: str
     values: list[ConfigValue]
     resolved_value: Any
@@ -256,37 +259,45 @@ class ConfigPriorityService:
             values = []
 
             if key in self._defaults:
-                values.append(ConfigValue(
-                    key=key,
-                    value=self._defaults[key],
-                    source=ConfigSource.DEFAULT,
-                    source_detail="Default",
-                ))
+                values.append(
+                    ConfigValue(
+                        key=key,
+                        value=self._defaults[key],
+                        source=ConfigSource.DEFAULT,
+                        source_detail="Default",
+                    )
+                )
 
             if key in self._yaml_values:
-                values.append(ConfigValue(
-                    key=key,
-                    value=self._yaml_values[key],
-                    source=ConfigSource.YAML,
-                    source_detail=self._yaml_file,
-                ))
+                values.append(
+                    ConfigValue(
+                        key=key,
+                        value=self._yaml_values[key],
+                        source=ConfigSource.YAML,
+                        source_detail=self._yaml_file,
+                    )
+                )
 
             if key in self._db_values:
-                values.append(ConfigValue(
-                    key=key,
-                    value=self._db_values[key],
-                    source=ConfigSource.DATABASE,
-                    source_detail="Database",
-                ))
+                values.append(
+                    ConfigValue(
+                        key=key,
+                        value=self._db_values[key],
+                        source=ConfigSource.DATABASE,
+                        source_detail="Database",
+                    )
+                )
 
             env_value = self._get_from_env(key)
             if env_value is not None:
-                values.append(ConfigValue(
-                    key=key,
-                    value=env_value,
-                    source=ConfigSource.ENVIRONMENT,
-                    source_detail=f"ENV:{self.ENV_PREFIX}{key.upper()}",
-                ))
+                values.append(
+                    ConfigValue(
+                        key=key,
+                        value=env_value,
+                        source=ConfigSource.ENVIRONMENT,
+                        source_detail=f"ENV:{self.ENV_PREFIX}{key.upper()}",
+                    )
+                )
 
             if len(values) > 1:
                 # Find unique values
@@ -297,12 +308,14 @@ class ConfigPriorityService:
 
                 if len(unique_values) > 1:
                     resolved = self.get_with_source(key)
-                    conflicts.append(ConfigConflict(
-                        key=key,
-                        values=values,
-                        resolved_value=resolved.value if resolved else None,
-                        resolved_source=resolved.source if resolved else ConfigSource.DEFAULT,
-                    ))
+                    conflicts.append(
+                        ConfigConflict(
+                            key=key,
+                            values=values,
+                            resolved_value=resolved.value if resolved else None,
+                            resolved_source=resolved.source if resolved else ConfigSource.DEFAULT,
+                        )
+                    )
 
         return conflicts
 

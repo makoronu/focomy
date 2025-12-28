@@ -11,6 +11,7 @@ from .wxr_parser import WXRData, WXRParser
 @dataclass
 class ContentStats:
     """Content statistics."""
+
     total: int = 0
     published: int = 0
     draft: int = 0
@@ -22,6 +23,7 @@ class ContentStats:
 @dataclass
 class TaxonomyStats:
     """Taxonomy statistics."""
+
     name: str
     slug: str
     count: int
@@ -31,6 +33,7 @@ class TaxonomyStats:
 @dataclass
 class PostTypeStats:
     """Custom post type statistics."""
+
     name: str
     count: int
     fields: list[str] = field(default_factory=list)
@@ -39,6 +42,7 @@ class PostTypeStats:
 @dataclass
 class PluginInfo:
     """Detected plugin information."""
+
     name: str
     slug: str
     detected_by: str  # How it was detected
@@ -48,6 +52,7 @@ class PluginInfo:
 @dataclass
 class CustomFieldAnalysis:
     """Custom field analysis."""
+
     key: str
     count: int
     sample_values: list[Any]
@@ -60,6 +65,7 @@ class CustomFieldAnalysis:
 @dataclass
 class ShortcodeAnalysis:
     """Shortcode analysis."""
+
     name: str
     count: int
     sample_usages: list[str]
@@ -70,6 +76,7 @@ class ShortcodeAnalysis:
 @dataclass
 class MediaStats:
     """Media statistics."""
+
     total_count: int = 0
     total_size: int = 0
     by_type: dict[str, int] = field(default_factory=dict)
@@ -80,6 +87,7 @@ class MediaStats:
 @dataclass
 class AnalysisWarning:
     """Analysis warning."""
+
     code: str
     message: str
     details: str = ""
@@ -89,6 +97,7 @@ class AnalysisWarning:
 @dataclass
 class AnalysisReport:
     """Complete analysis report."""
+
     # Site info
     site_url: str = ""
     site_name: str = ""
@@ -277,11 +286,13 @@ class WordPressAnalyzer:
                 cat_counts[slug] = cat_counts.get(slug, 0) + 1
 
         for term in data.categories:
-            report.categories.append(TaxonomyStats(
-                name=term.name,
-                slug=term.slug,
-                count=cat_counts.get(term.slug, 0),
-            ))
+            report.categories.append(
+                TaxonomyStats(
+                    name=term.name,
+                    slug=term.slug,
+                    count=cat_counts.get(term.slug, 0),
+                )
+            )
 
         # Tags
         tag_counts = {}
@@ -291,11 +302,13 @@ class WordPressAnalyzer:
                 tag_counts[slug] = tag_counts.get(slug, 0) + 1
 
         for term in data.tags:
-            report.tags.append(TaxonomyStats(
-                name=term.name,
-                slug=term.slug,
-                count=tag_counts.get(term.slug, 0),
-            ))
+            report.tags.append(
+                TaxonomyStats(
+                    name=term.name,
+                    slug=term.slug,
+                    count=tag_counts.get(term.slug, 0),
+                )
+            )
 
         # Custom taxonomies
         taxonomy_counts: dict[str, dict[str, int]] = {}
@@ -309,11 +322,13 @@ class WordPressAnalyzer:
 
         for tax_name, terms in taxonomy_counts.items():
             total = sum(terms.values())
-            report.custom_taxonomies.append(TaxonomyStats(
-                name=tax_name,
-                slug=tax_name,
-                count=total,
-            ))
+            report.custom_taxonomies.append(
+                TaxonomyStats(
+                    name=tax_name,
+                    slug=tax_name,
+                    count=total,
+                )
+            )
 
     def _analyze_custom_post_types(self, data: WXRData, report: AnalysisReport) -> None:
         """Analyze custom post types."""
@@ -335,11 +350,13 @@ class WordPressAnalyzer:
                     post_type_fields[pt].add(key)
 
         for pt, count in post_type_counts.items():
-            report.custom_post_types.append(PostTypeStats(
-                name=pt,
-                count=count,
-                fields=list(post_type_fields.get(pt, [])),
-            ))
+            report.custom_post_types.append(
+                PostTypeStats(
+                    name=pt,
+                    count=count,
+                    fields=list(post_type_fields.get(pt, [])),
+                )
+            )
 
     def _analyze_custom_fields(self, data: WXRData, report: AnalysisReport) -> None:
         """Analyze custom fields and infer types."""
@@ -369,16 +386,22 @@ class WordPressAnalyzer:
 
         for key, data in field_data.items():
             inferred_type = self._infer_field_type(data["samples"])
-            is_acf = any(f"_{key}" in p.postmeta for p in data.posts if hasattr(p, 'postmeta')) if hasattr(data, 'posts') else False
+            is_acf = (
+                any(f"_{key}" in p.postmeta for p in data.posts if hasattr(p, "postmeta"))
+                if hasattr(data, "posts")
+                else False
+            )
 
-            report.custom_fields.append(CustomFieldAnalysis(
-                key=key,
-                count=data["count"],
-                sample_values=data["samples"][:3],
-                inferred_type=inferred_type,
-                is_acf=is_acf,
-                post_types=list(data["post_types"]),
-            ))
+            report.custom_fields.append(
+                CustomFieldAnalysis(
+                    key=key,
+                    count=data["count"],
+                    sample_values=data["samples"][:3],
+                    inferred_type=inferred_type,
+                    is_acf=is_acf,
+                    post_types=list(data["post_types"]),
+                )
+            )
 
     def _infer_field_type(self, samples: list[Any]) -> str:
         """Infer field type from sample values."""
@@ -399,7 +422,9 @@ class WordPressAnalyzer:
         if all_float:
             return "float"
 
-        all_bool = all(str(s).lower() in ("true", "false", "1", "0", "yes", "no") for s in non_empty)
+        all_bool = all(
+            str(s).lower() in ("true", "false", "1", "0", "yes", "no") for s in non_empty
+        )
         if all_bool:
             return "boolean"
 
@@ -431,7 +456,9 @@ class WordPressAnalyzer:
 
     def _analyze_shortcodes(self, data: WXRData, report: AnalysisReport) -> None:
         """Analyze shortcodes in content."""
-        shortcode_pattern = re.compile(r'\[([a-zA-Z0-9_-]+)(?:\s[^\]]*)?(?:\]|\].*?\[/\1\])', re.DOTALL)
+        shortcode_pattern = re.compile(
+            r"\[([a-zA-Z0-9_-]+)(?:\s[^\]]*)?(?:\]|\].*?\[/\1\])", re.DOTALL
+        )
         shortcode_counts: dict[str, list[str]] = {}
 
         for post in data.posts:
@@ -444,23 +471,24 @@ class WordPressAnalyzer:
                     shortcode_counts[name] = []
 
                 # Store sample (first 100 chars)
-                sample_match = re.search(rf'\[{re.escape(match)}[^\]]*\]', content)
+                sample_match = re.search(rf"\[{re.escape(match)}[^\]]*\]", content)
                 if sample_match and len(shortcode_counts[name]) < 3:
                     shortcode_counts[name].append(sample_match.group()[:100])
 
         for name, samples in shortcode_counts.items():
             status, notes = self.SHORTCODE_SUPPORT.get(
-                name,
-                ("unsupported", "Unknown shortcode - will be preserved as text")
+                name, ("unsupported", "Unknown shortcode - will be preserved as text")
             )
 
-            report.shortcodes.append(ShortcodeAnalysis(
-                name=name,
-                count=len(samples),
-                sample_usages=samples,
-                conversion_status=status,
-                conversion_notes=notes,
-            ))
+            report.shortcodes.append(
+                ShortcodeAnalysis(
+                    name=name,
+                    count=len(samples),
+                    sample_usages=samples,
+                    conversion_status=status,
+                    conversion_notes=notes,
+                )
+            )
 
     def _detect_plugins(self, data: WXRData, report: AnalysisReport) -> None:
         """Detect WordPress plugins from data patterns."""
@@ -507,22 +535,26 @@ class WordPressAnalyzer:
                     for key in config["keys"]:
                         if key in post.postmeta:
                             detected.add(plugin_slug)
-                            report.detected_plugins.append(PluginInfo(
-                                name=config["name"],
-                                slug=plugin_slug,
-                                detected_by=f"meta key: {key}",
-                            ))
+                            report.detected_plugins.append(
+                                PluginInfo(
+                                    name=config["name"],
+                                    slug=plugin_slug,
+                                    detected_by=f"meta key: {key}",
+                                )
+                            )
                             break
 
                 # Check post types
                 if "post_types" in config:
                     if post.post_type in config["post_types"]:
                         detected.add(plugin_slug)
-                        report.detected_plugins.append(PluginInfo(
-                            name=config["name"],
-                            slug=plugin_slug,
-                            detected_by=f"post type: {post.post_type}",
-                        ))
+                        report.detected_plugins.append(
+                            PluginInfo(
+                                name=config["name"],
+                                slug=plugin_slug,
+                                detected_by=f"post type: {post.post_type}",
+                            )
+                        )
 
     def _analyze_media(self, data: WXRData, report: AnalysisReport) -> None:
         """Analyze media attachments."""
@@ -546,7 +578,9 @@ class WordPressAnalyzer:
                 elif "pdf" in str(mime_type):
                     main_type = "pdf"
 
-                report.media_stats.by_type[main_type] = report.media_stats.by_type.get(main_type, 0) + 1
+                report.media_stats.by_type[main_type] = (
+                    report.media_stats.by_type.get(main_type, 0) + 1
+                )
 
             # Check for missing alt
             if not post.postmeta.get("_wp_attachment_image_alt"):
@@ -560,10 +594,10 @@ class WordPressAnalyzer:
     def _calculate_estimates(self, report: AnalysisReport) -> None:
         """Calculate time and storage estimates."""
         total_items = (
-            report.posts.total +
-            report.pages.total +
-            report.attachments.total +
-            report.comments_count
+            report.posts.total
+            + report.pages.total
+            + report.attachments.total
+            + report.comments_count
         )
 
         # Rough estimate: 100 items per minute
@@ -610,11 +644,13 @@ class WordPressAnalyzer:
                 f"{len(unsupported)} unsupported shortcodes detected. "
                 "Manual conversion may be required after import."
             )
-            report.warnings.append(AnalysisWarning(
-                code="UNSUPPORTED_SHORTCODES",
-                message=f"{len(unsupported)} unsupported shortcodes",
-                details=", ".join(s.name for s in unsupported),
-            ))
+            report.warnings.append(
+                AnalysisWarning(
+                    code="UNSUPPORTED_SHORTCODES",
+                    message=f"{len(unsupported)} unsupported shortcodes",
+                    details=", ".join(s.name for s in unsupported),
+                )
+            )
 
         # Custom post types
         if report.custom_post_types:
@@ -632,8 +668,10 @@ class WordPressAnalyzer:
 
         # External media
         if report.media_stats.external_urls:
-            report.warnings.append(AnalysisWarning(
-                code="EXTERNAL_MEDIA",
-                message=f"{len(report.media_stats.external_urls)} external media URLs",
-                details="These files are hosted externally and won't be imported",
-            ))
+            report.warnings.append(
+                AnalysisWarning(
+                    code="EXTERNAL_MEDIA",
+                    message=f"{len(report.media_stats.external_urls)} external media URLs",
+                    details="These files are hosted externally and won't be imported",
+                )
+            )

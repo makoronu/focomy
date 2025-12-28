@@ -115,13 +115,15 @@ class HelloWorldPlugin(Plugin):
             elif style == "excited":
                 greeting = f"{greeting}!!!"
 
-            widgets.append({
-                "id": "hello-world",
-                "title": "Hello World",
-                "content": f"<p>{greeting}</p>",
-                "icon": "hand-wave",
-                "order": 100,
-            })
+            widgets.append(
+                {
+                    "id": "hello-world",
+                    "title": "Hello World",
+                    "content": f"<p>{greeting}</p>",
+                    "icon": "hand-wave",
+                    "order": 100,
+                }
+            )
 
         return widgets
 

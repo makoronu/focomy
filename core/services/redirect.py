@@ -36,14 +36,16 @@ class RedirectService:
         for entity in entities:
             data = self.entity_svc.serialize(entity)
             if data.get("is_active", True):
-                redirects.append({
-                    "id": entity.id,
-                    "from_path": data.get("from_path", ""),
-                    "to_path": data.get("to_path", ""),
-                    "status_code": int(data.get("status_code", 301)),
-                    "match_type": data.get("match_type", "exact"),
-                    "preserve_query": data.get("preserve_query", True),
-                })
+                redirects.append(
+                    {
+                        "id": entity.id,
+                        "from_path": data.get("from_path", ""),
+                        "to_path": data.get("to_path", ""),
+                        "status_code": int(data.get("status_code", 301)),
+                        "match_type": data.get("match_type", "exact"),
+                        "preserve_query": data.get("preserve_query", True),
+                    }
+                )
 
         return redirects
 
@@ -71,7 +73,7 @@ class RedirectService:
         for prefix, redirect in self._cache.get("prefix", {}).items():
             if path.startswith(prefix):
                 # Replace prefix in target path
-                suffix = path[len(prefix):]
+                suffix = path[len(prefix) :]
                 return self._build_redirect_response(redirect, path, query_string, suffix)
 
         # Check regex matches (slowest)

@@ -43,23 +43,17 @@ class MarketplaceService:
 
         # Category filter
         if category:
-            category_subquery = (
-                select(EntityValue.entity_id)
-                .where(
-                    EntityValue.field == "category",
-                    EntityValue.value_string == category,
-                )
+            category_subquery = select(EntityValue.entity_id).where(
+                EntityValue.field == "category",
+                EntityValue.value_string == category,
             )
             query = query.where(Entity.id.in_(category_subquery))
 
         # Featured filter
         if featured_only:
-            featured_subquery = (
-                select(EntityValue.entity_id)
-                .where(
-                    EntityValue.field == "is_featured",
-                    EntityValue.value_boolean,
-                )
+            featured_subquery = select(EntityValue.entity_id).where(
+                EntityValue.field == "is_featured",
+                EntityValue.value_boolean,
             )
             query = query.where(Entity.id.in_(featured_subquery))
 
@@ -70,44 +64,32 @@ class MarketplaceService:
         # Sorting
         if sort_by == "downloads":
             download_subquery = (
-                select(
-                    EntityValue.entity_id,
-                    EntityValue.value_integer.label("downloads")
-                )
+                select(EntityValue.entity_id, EntityValue.value_integer.label("downloads"))
                 .where(EntityValue.field == "download_count")
                 .subquery()
             )
             query = query.outerjoin(
-                download_subquery,
-                Entity.id == download_subquery.c.entity_id
+                download_subquery, Entity.id == download_subquery.c.entity_id
             ).order_by(download_subquery.c.downloads.desc().nullslast())
         elif sort_by == "rating":
             rating_subquery = (
-                select(
-                    EntityValue.entity_id,
-                    EntityValue.value_decimal.label("rating")
-                )
+                select(EntityValue.entity_id, EntityValue.value_decimal.label("rating"))
                 .where(EntityValue.field == "rating_average")
                 .subquery()
             )
             query = query.outerjoin(
-                rating_subquery,
-                Entity.id == rating_subquery.c.entity_id
+                rating_subquery, Entity.id == rating_subquery.c.entity_id
             ).order_by(rating_subquery.c.rating.desc().nullslast())
         elif sort_by == "newest":
             query = query.order_by(Entity.created_at.desc())
         elif sort_by == "price_low":
             price_subquery = (
-                select(
-                    EntityValue.entity_id,
-                    EntityValue.value_integer.label("price")
-                )
+                select(EntityValue.entity_id, EntityValue.value_integer.label("price"))
                 .where(EntityValue.field == "price")
                 .subquery()
             )
             query = query.outerjoin(
-                price_subquery,
-                Entity.id == price_subquery.c.entity_id
+                price_subquery, Entity.id == price_subquery.c.entity_id
             ).order_by(price_subquery.c.price.asc().nullslast())
 
         # Pagination

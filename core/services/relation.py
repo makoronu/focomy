@@ -171,19 +171,27 @@ class RelationService:
     ) -> list[Relation]:
         """Get all relations of a type for an entity."""
         if direction == "from":
-            query = select(Relation).where(
-                and_(
-                    Relation.from_entity_id == entity_id,
-                    Relation.relation_type == relation_type,
+            query = (
+                select(Relation)
+                .where(
+                    and_(
+                        Relation.from_entity_id == entity_id,
+                        Relation.relation_type == relation_type,
+                    )
                 )
-            ).order_by(Relation.sort_order)
+                .order_by(Relation.sort_order)
+            )
         else:
-            query = select(Relation).where(
-                and_(
-                    Relation.to_entity_id == entity_id,
-                    Relation.relation_type == relation_type,
+            query = (
+                select(Relation)
+                .where(
+                    and_(
+                        Relation.to_entity_id == entity_id,
+                        Relation.relation_type == relation_type,
+                    )
                 )
-            ).order_by(Relation.sort_order)
+                .order_by(Relation.sort_order)
+            )
 
         result = await self.db.execute(query)
         return list(result.scalars().all())
@@ -239,10 +247,6 @@ class RelationService:
         entity_id: str,
     ):
         """Delete all relations for an entity (both directions)."""
-        await self.db.execute(
-            delete(Relation).where(Relation.from_entity_id == entity_id)
-        )
-        await self.db.execute(
-            delete(Relation).where(Relation.to_entity_id == entity_id)
-        )
+        await self.db.execute(delete(Relation).where(Relation.from_entity_id == entity_id))
+        await self.db.execute(delete(Relation).where(Relation.to_entity_id == entity_id))
         await self.db.commit()

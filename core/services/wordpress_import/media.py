@@ -16,6 +16,7 @@ from PIL import Image
 @dataclass
 class MediaItem:
     """Represents a media item to import."""
+
     original_url: str
     filename: str
     post_id: int = 0
@@ -32,6 +33,7 @@ class MediaItem:
 @dataclass
 class ImportedMedia:
     """Result of importing a media item."""
+
     original_url: str
     new_url: str
     new_path: str
@@ -47,6 +49,7 @@ class ImportedMedia:
 @dataclass
 class MediaImportResult:
     """Complete result of media import."""
+
     imported: list[ImportedMedia] = field(default_factory=list)
     failed: list[ImportedMedia] = field(default_factory=list)
     url_mapping: dict[str, str] = field(default_factory=dict)
@@ -306,6 +309,7 @@ class MediaImporter:
         """Save file to upload directory."""
         # Organize by year/month
         from datetime import datetime
+
         now = datetime.now()
         subdir = self.upload_dir / str(now.year) / f"{now.month:02d}"
         subdir.mkdir(parents=True, exist_ok=True)
@@ -403,7 +407,9 @@ class MediaImporter:
                     urls.add(url)
 
         # Find video/audio sources
-        source_pattern = re.compile(r'<(?:video|audio|source)[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE)
+        source_pattern = re.compile(
+            r'<(?:video|audio|source)[^>]+src=["\']([^"\']+)["\']', re.IGNORECASE
+        )
         for match in source_pattern.finditer(content):
             urls.add(match.group(1))
 

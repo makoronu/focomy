@@ -17,6 +17,7 @@ from ..models import Entity, EntityValue
 @dataclass
 class UnusedMedia:
     """Unused media file info."""
+
     id: str
     filename: str
     path: str
@@ -28,6 +29,7 @@ class UnusedMedia:
 @dataclass
 class MediaCleanupReport:
     """Cleanup operation report."""
+
     total_checked: int
     unused_count: int
     unused_size_bytes: int
@@ -93,14 +95,16 @@ class MediaCleanupService:
                 # Get file info
                 file_info = await self._get_media_file_info(media.id)
                 if file_info:
-                    unused.append(UnusedMedia(
-                        id=media.id,
-                        filename=file_info.get("filename", ""),
-                        path=file_info.get("path", ""),
-                        size=file_info.get("size", 0),
-                        created_at=media.created_at,
-                        last_reference_check=datetime.utcnow(),
-                    ))
+                    unused.append(
+                        UnusedMedia(
+                            id=media.id,
+                            filename=file_info.get("filename", ""),
+                            path=file_info.get("path", ""),
+                            size=file_info.get("size", 0),
+                            created_at=media.created_at,
+                            last_reference_check=datetime.utcnow(),
+                        )
+                    )
 
         return unused
 
@@ -169,9 +173,7 @@ class MediaCleanupService:
 
     async def _get_media_file_info(self, media_id: str) -> dict | None:
         """Get file info for a media entity."""
-        query = select(EntityValue).where(
-            EntityValue.entity_id == media_id
-        )
+        query = select(EntityValue).where(EntityValue.entity_id == media_id)
         result = await self.db.execute(query)
         values = result.scalars().all()
 

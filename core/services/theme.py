@@ -126,7 +126,7 @@ class ThemeService:
         (default_dir / "templates").mkdir(exist_ok=True)
 
         # Create base template
-        base_template = '''<!DOCTYPE html>
+        base_template = """<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -165,12 +165,12 @@ class ThemeService:
     {% block scripts %}{% endblock %}
 </body>
 </html>
-'''
+"""
         with open(default_dir / "templates" / "base.html", "w", encoding="utf-8") as f:
             f.write(base_template)
 
         # Create post template
-        post_template = '''{% extends "base.html" %}
+        post_template = """{% extends "base.html" %}
 
 {% block title %}{{ post.title }} - {{ site_name }}{% endblock %}
 
@@ -192,12 +192,12 @@ class ThemeService:
     </div>
 </article>
 {% endblock %}
-'''
+"""
         with open(default_dir / "templates" / "post.html", "w", encoding="utf-8") as f:
             f.write(post_template)
 
         # Create index template
-        index_template = '''{% extends "base.html" %}
+        index_template = """{% extends "base.html" %}
 
 {% block title %}{{ site_name }}{% endblock %}
 
@@ -214,7 +214,7 @@ class ThemeService:
     {% endfor %}
 </div>
 {% endblock %}
-'''
+"""
         with open(default_dir / "templates" / "index.html", "w", encoding="utf-8") as f:
             f.write(index_template)
 
@@ -241,14 +241,15 @@ class ThemeService:
     def _minify_css(self, css: str) -> str:
         """Minify CSS by removing unnecessary whitespace and comments."""
         import re
+
         # Remove comments
-        css = re.sub(r'/\*[\s\S]*?\*/', '', css)
+        css = re.sub(r"/\*[\s\S]*?\*/", "", css)
         # Remove newlines and extra spaces
-        css = re.sub(r'\s+', ' ', css)
+        css = re.sub(r"\s+", " ", css)
         # Remove spaces around special characters
-        css = re.sub(r'\s*([{};:,>+~])\s*', r'\1', css)
+        css = re.sub(r"\s*([{};:,>+~])\s*", r"\1", css)
         # Remove trailing semicolons before closing braces
-        css = re.sub(r';\s*}', '}', css)
+        css = re.sub(r";\s*}", "}", css)
         return css.strip()
 
     def get_css_variables(self, theme_name: str = None, minify: bool = True) -> str:
@@ -274,7 +275,8 @@ class ThemeService:
         lines.append("}")
 
         # Add base styles
-        lines.append("""
+        lines.append(
+            """
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
 body {
@@ -478,7 +480,8 @@ body {
 .video--youtube iframe, .video--vimeo iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 0.5rem; }
 .video--native video { width: 100%; border-radius: 0.5rem; }
 .video__caption { text-align: center; font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.5rem; }
-""")
+"""
+        )
 
         # Add custom CSS
         if theme.custom_css:
@@ -526,6 +529,7 @@ body {
                     block_text = block.get("data", {}).get("text", "")
                     # Strip HTML tags
                     import re
+
                     block_text = re.sub(r"<[^>]+>", "", block_text)
                     texts.append(block_text)
             text = " ".join(texts)
@@ -536,6 +540,7 @@ body {
                 return self._excerpt(data, length)
             except (json.JSONDecodeError, TypeError):
                 import re
+
                 text = re.sub(r"<[^>]+>", "", content)
         else:
             text = str(content)
@@ -543,7 +548,7 @@ body {
         # Truncate
         if len(text) <= length:
             return text
-        return text[:length - 3].rsplit(" ", 1)[0] + "..."
+        return text[: length - 3].rsplit(" ", 1)[0] + "..."
 
     def _sanitize_url(self, url: str) -> str:
         """Sanitize URL to prevent XSS via javascript: or data: URLs."""
@@ -566,11 +571,11 @@ body {
 
         def replace_tag(match):
             tag = match.group(1).lower().split()[0]  # Get tag name without attributes
-            if tag.lstrip('/') in allow_tags:
+            if tag.lstrip("/") in allow_tags:
                 return match.group(0)
             return escape(match.group(0))
 
-        return re.sub(r'<(/?\w+[^>]*)>', replace_tag, html)
+        return re.sub(r"<(/?\w+[^>]*)>", replace_tag, html)
 
     def _render_blocks(self, content: Any) -> str:
         """Render Editor.js blocks to HTML."""
@@ -585,7 +590,7 @@ body {
                 data = json.loads(content)
                 # Handle double-encoded JSON (legacy data)
                 if isinstance(data, str):
-                    data = json.loads(data.replace('\\!', '!'))
+                    data = json.loads(data.replace("\\!", "!"))
             except json.JSONDecodeError:
                 return content
 
@@ -603,7 +608,7 @@ body {
             elif block_type == "header":
                 level = block_data.get("level", 2)
                 text = block_data.get("text", "")
-                html_parts.append(f'<h{level}>{text}</h{level}>')
+                html_parts.append(f"<h{level}>{text}</h{level}>")
 
             elif block_type == "list":
                 style = block_data.get("style", "unordered")
@@ -617,12 +622,14 @@ body {
                 url = self._sanitize_url(file_data.get("url", ""))
                 caption = escape(block_data.get("caption", ""))
                 if url:
-                    html_parts.append(f'<figure><img src="{url}" alt="{caption}" loading="lazy"><figcaption>{caption}</figcaption></figure>')
+                    html_parts.append(
+                        f'<figure><img src="{url}" alt="{caption}" loading="lazy"><figcaption>{caption}</figcaption></figure>'
+                    )
 
             elif block_type == "quote":
                 text = block_data.get("text", "")
                 caption = block_data.get("caption", "")
-                html_parts.append(f'<blockquote><p>{text}</p><cite>{caption}</cite></blockquote>')
+                html_parts.append(f"<blockquote><p>{text}</p><cite>{caption}</cite></blockquote>")
 
             elif block_type == "code":
                 code = escape(block_data.get("code", ""))
@@ -642,6 +649,7 @@ body {
             elif block_type == "raw":
                 # Sanitize raw HTML to prevent XSS
                 from .sanitizer import sanitizer_service
+
                 raw_html = block_data.get("html", "")
                 html_parts.append(sanitizer_service.sanitize(raw_html))
 
@@ -649,7 +657,9 @@ body {
                 service = escape(block_data.get("service", ""))
                 embed = self._sanitize_url(block_data.get("embed", ""))
                 caption = escape(block_data.get("caption", ""))
-                caption_html = f'<figcaption class="embed__caption">{caption}</figcaption>' if caption else ""
+                caption_html = (
+                    f'<figcaption class="embed__caption">{caption}</figcaption>' if caption else ""
+                )
                 if not embed:
                     continue
 
@@ -665,7 +675,9 @@ body {
                 elif service == "soundcloud":
                     iframe = f'<iframe src="{embed}" width="100%" height="166" scrolling="no" frameborder="no" allow="autoplay"></iframe>'
                 elif service == "twitter":
-                    iframe = f'<iframe src="{embed}" width="100%" height="500" frameborder="0"></iframe>'
+                    iframe = (
+                        f'<iframe src="{embed}" width="100%" height="500" frameborder="0"></iframe>'
+                    )
                 elif service == "instagram":
                     iframe = f'<iframe src="{embed}" width="100%" height="600" frameborder="0" scrolling="no" allowtransparency="true"></iframe>'
                 elif service == "twitch":
@@ -673,7 +685,9 @@ body {
                 else:
                     iframe = f'<iframe src="{embed}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>'
 
-                html_parts.append(f'<figure class="embed embed--{service}">{iframe}{caption_html}</figure>')
+                html_parts.append(
+                    f'<figure class="embed embed--{service}">{iframe}{caption_html}</figure>'
+                )
 
             elif block_type == "checklist":
                 items = block_data.get("items", [])
@@ -681,7 +695,9 @@ body {
                 for item in items:
                     checked = "checked" if item.get("checked") else ""
                     text = self._sanitize_html(item.get("text", ""))
-                    items_html.append(f'<li class="checklist-item"><input type="checkbox" {checked} disabled><span>{text}</span></li>')
+                    items_html.append(
+                        f'<li class="checklist-item"><input type="checkbox" {checked} disabled><span>{text}</span></li>'
+                    )
                 html_parts.append(f'<ul class="checklist">{"".join(items_html)}</ul>')
 
             elif block_type == "alert":
@@ -693,7 +709,9 @@ body {
                 text = escape(block_data.get("text", "ボタン"))
                 url = self._sanitize_url(block_data.get("url", "#")) or "#"
                 style = escape(block_data.get("style", "primary"))
-                html_parts.append(f'<div class="button-block"><a href="{url}" class="btn btn--{style}">{text}</a></div>')
+                html_parts.append(
+                    f'<div class="button-block"><a href="{url}" class="btn btn--{style}">{text}</a></div>'
+                )
 
             elif block_type == "linkCard":
                 url = self._sanitize_url(block_data.get("url", ""))
@@ -702,70 +720,88 @@ body {
                 image = self._sanitize_url(block_data.get("image", ""))
                 img_html = f'<img src="{image}" alt="" class="linkcard__image">' if image else ""
                 if url:
-                    html_parts.append(f'''<a href="{url}" class="linkcard" target="_blank" rel="noopener">
+                    html_parts.append(
+                        f"""<a href="{url}" class="linkcard" target="_blank" rel="noopener">
                         {img_html}
                         <div class="linkcard__content">
                             <div class="linkcard__title">{title}</div>
                             <div class="linkcard__description">{description}</div>
                         </div>
-                    </a>''')
+                    </a>"""
+                    )
 
             elif block_type == "columns":
                 cols = block_data.get("content", [])
-                cols_html = "".join(f'<div class="column">{self._sanitize_html(col)}</div>' for col in cols)
+                cols_html = "".join(
+                    f'<div class="column">{self._sanitize_html(col)}</div>' for col in cols
+                )
                 html_parts.append(f'<div class="columns columns--{len(cols)}">{cols_html}</div>')
 
             elif block_type == "map":
                 src = self._sanitize_url(block_data.get("src", ""))
                 caption = escape(block_data.get("caption", ""))
-                caption_html = f'<figcaption class="map__caption">{caption}</figcaption>' if caption else ""
+                caption_html = (
+                    f'<figcaption class="map__caption">{caption}</figcaption>' if caption else ""
+                )
                 if src:
-                    html_parts.append(f'''<figure class="map">
+                    html_parts.append(
+                        f"""<figure class="map">
                         <iframe src="{src}" width="100%" height="400" style="border:0" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
                         {caption_html}
-                    </figure>''')
+                    </figure>"""
+                    )
 
             elif block_type == "video":
                 url = block_data.get("url", "")
                 caption = escape(block_data.get("caption", ""))
-                caption_html = f'<figcaption class="video__caption">{caption}</figcaption>' if caption else ""
+                caption_html = (
+                    f'<figcaption class="video__caption">{caption}</figcaption>' if caption else ""
+                )
 
                 # YouTube - extract video ID safely
-                yt_match = re.search(r'(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]+)', url)
+                yt_match = re.search(r"(?:youtube\.com/watch\?v=|youtu\.be/)([a-zA-Z0-9_-]+)", url)
                 if yt_match:
                     video_id = escape(yt_match.group(1))
-                    html_parts.append(f'''<figure class="video video--youtube">
+                    html_parts.append(
+                        f"""<figure class="video video--youtube">
                         <iframe src="https://www.youtube.com/embed/{video_id}" width="100%" height="400" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
                         {caption_html}
-                    </figure>''')
+                    </figure>"""
+                    )
                     continue
 
                 # Vimeo - extract video ID safely
-                vimeo_match = re.search(r'vimeo\.com/(\d+)', url)
+                vimeo_match = re.search(r"vimeo\.com/(\d+)", url)
                 if vimeo_match:
                     video_id = escape(vimeo_match.group(1))
-                    html_parts.append(f'''<figure class="video video--vimeo">
+                    html_parts.append(
+                        f"""<figure class="video video--vimeo">
                         <iframe src="https://player.vimeo.com/video/{video_id}" width="100%" height="400" frameborder="0" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
                         {caption_html}
-                    </figure>''')
+                    </figure>"""
+                    )
                     continue
 
                 # Direct video (mp4, webm, ogg)
                 safe_url = self._sanitize_url(url)
-                if safe_url and re.search(r'\.(mp4|webm|ogg)(\?.*)?$', url, re.IGNORECASE):
-                    html_parts.append(f'''<figure class="video video--native">
+                if safe_url and re.search(r"\.(mp4|webm|ogg)(\?.*)?$", url, re.IGNORECASE):
+                    html_parts.append(
+                        f"""<figure class="video video--native">
                         <video src="{safe_url}" controls width="100%"></video>
                         {caption_html}
-                    </figure>''')
+                    </figure>"""
+                    )
                     continue
 
                 # Generic iframe - only for safe URLs
                 safe_url = self._sanitize_url(url)
                 if safe_url:
-                    html_parts.append(f'''<figure class="video">
+                    html_parts.append(
+                        f"""<figure class="video">
                         <iframe src="{safe_url}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
                         {caption_html}
-                    </figure>''')
+                    </figure>"""
+                    )
 
         return "\n".join(html_parts)
 

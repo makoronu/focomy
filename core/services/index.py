@@ -69,21 +69,25 @@ class IndexService:
         index_name = f"idx_{type_name}_{field.name}"
 
         # Check if index already exists
-        check_sql = text("""
+        check_sql = text(
+            """
             SELECT 1 FROM pg_indexes
             WHERE indexname = :index_name
-        """)
+        """
+        )
         result = await self.db.execute(check_sql, {"index_name": index_name})
         if result.scalar():
             return None  # Index already exists
 
         # Create partial index for this field
         # This indexes only rows where field_name matches, making it efficient
-        create_sql = text(f"""
+        create_sql = text(
+            f"""
             CREATE INDEX IF NOT EXISTS {index_name}
             ON entity_values ({value_column})
             WHERE field_name = :field_name
-        """)
+        """
+        )
 
         try:
             await self.db.execute(create_sql, {"field_name": field.name})
@@ -118,14 +122,16 @@ class IndexService:
 
     async def list_custom_indexes(self) -> list[dict[str, Any]]:
         """List all custom indexes created by this service."""
-        sql = text("""
+        sql = text(
+            """
             SELECT indexname, tablename, indexdef
             FROM pg_indexes
             WHERE schemaname = 'public'
             AND indexname LIKE 'idx_%_%'
             AND tablename = 'entity_values'
             ORDER BY indexname
-        """)
+        """
+        )
         result = await self.db.execute(sql)
         rows = result.fetchall()
 

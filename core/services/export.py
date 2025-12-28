@@ -23,6 +23,7 @@ ExportFormat = Literal["json", "csv", "wordpress", "markdown"]
 @dataclass
 class ExportOptions:
     """Export configuration options."""
+
     include_drafts: bool = False
     include_deleted: bool = False
     include_media: bool = True
@@ -35,6 +36,7 @@ class ExportOptions:
 @dataclass
 class ExportResult:
     """Export operation result."""
+
     format: str
     entity_count: int
     media_count: int
@@ -303,7 +305,7 @@ class ExportService:
             # Build frontmatter
             frontmatter = [
                 "---",
-                f"title: \"{title}\"",
+                f'title: "{title}"',
                 f"slug: {slug}",
                 f"date: {entity.created_at.isoformat() if entity.created_at else ''}",
                 f"status: {values.get('status', 'draft')}",
@@ -457,10 +459,7 @@ class ExportService:
         result = await self.db.execute(query)
         values = result.scalars().all()
 
-        return {
-            v.field_name: v.value_json if v.value_json else v.value_text
-            for v in values
-        }
+        return {v.field_name: v.value_json if v.value_json else v.value_text for v in values}
 
     async def _serialize_entity(
         self,
@@ -544,11 +543,13 @@ class ExportService:
         for entity in media_entities:
             values = await self._get_entity_values(entity.id)
             if values.get("path"):
-                files.append({
-                    "id": entity.id,
-                    "path": values.get("path"),
-                    "filename": values.get("filename"),
-                })
+                files.append(
+                    {
+                        "id": entity.id,
+                        "path": values.get("path"),
+                        "filename": values.get("filename"),
+                    }
+                )
 
         return files
 

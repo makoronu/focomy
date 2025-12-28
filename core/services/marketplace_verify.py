@@ -15,6 +15,7 @@ try:
     from cryptography.exceptions import InvalidSignature
     from cryptography.hazmat.primitives import hashes, serialization
     from cryptography.hazmat.primitives.asymmetric import padding
+
     CRYPTO_AVAILABLE = True
 except ImportError:
     CRYPTO_AVAILABLE = False
@@ -23,6 +24,7 @@ except ImportError:
 @dataclass
 class PackageManifest:
     """Package manifest data."""
+
     name: str
     version: str
     type: str  # "plugin" or "theme"
@@ -36,6 +38,7 @@ class PackageManifest:
 @dataclass
 class VerificationResult:
     """Result of package verification."""
+
     valid: bool
     package_name: str
     package_version: str
@@ -69,9 +72,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
 
         if CRYPTO_AVAILABLE and public_key:
             try:
-                self._public_key = serialization.load_pem_public_key(
-                    self._public_key_pem.encode()
-                )
+                self._public_key = serialization.load_pem_public_key(self._public_key_pem.encode())
             except Exception:
                 pass
 
@@ -222,11 +223,19 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
         warnings = []
 
         suspicious_patterns = [
-            ".exe", ".dll", ".so", ".dylib",  # Binaries
-            ".php", ".asp", ".jsp",  # Server scripts
-            "__pycache__", ".pyc",  # Python cache
-            ".env", ".secret",  # Secrets
-            ".git", ".svn",  # VCS
+            ".exe",
+            ".dll",
+            ".so",
+            ".dylib",  # Binaries
+            ".php",
+            ".asp",
+            ".jsp",  # Server scripts
+            "__pycache__",
+            ".pyc",  # Python cache
+            ".env",
+            ".secret",  # Secrets
+            ".git",
+            ".svn",  # VCS
         ]
 
         for file_path in files:
@@ -257,11 +266,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
         author: str,
     ) -> PackageManifest:
         """Create a manifest for a package (for package creation)."""
-        files = [
-            str(f.relative_to(directory))
-            for f in directory.rglob("*")
-            if f.is_file()
-        ]
+        files = [str(f.relative_to(directory)) for f in directory.rglob("*") if f.is_file()]
 
         checksum = self.calculate_checksum(directory)
 

@@ -20,6 +20,7 @@ class Media(Base):
     Stores metadata about uploaded files.
     Actual files are stored in the filesystem.
     """
+
     __tablename__ = "media"
 
     id: Mapped[str] = mapped_column(

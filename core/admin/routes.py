@@ -99,7 +99,9 @@ async def get_context(
     if user_role == "admin":
         content_types = all_content_types
     else:
-        visible_type_names = rbac_svc.get_menu_items(user_role, [ct.name for ct in all_content_types])
+        visible_type_names = rbac_svc.get_menu_items(
+            user_role, [ct.name for ct in all_content_types]
+        )
         content_types = [ct for ct in all_content_types if ct.name in visible_type_names]
 
     # Get CSRF token from request state (set by middleware)
@@ -107,6 +109,7 @@ async def get_context(
 
     # Get pending comment count for sidebar badge
     from ..services.comment import CommentService
+
     comment_svc = CommentService(db)
     pending_comment_count = await comment_svc.get_pending_count()
 
@@ -123,17 +126,22 @@ async def get_context(
 
 # === Login ===
 
+
 @router.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
     """Login page."""
     from ..services.oauth import oauth_service
+
     csrf_token = getattr(request.state, "csrf_token", "")
-    return templates.TemplateResponse("admin/login.html", {
-        "request": request,
-        "error": None,
-        "csrf_token": csrf_token,
-        "google_oauth_enabled": oauth_service.is_configured("google"),
-    })
+    return templates.TemplateResponse(
+        "admin/login.html",
+        {
+            "request": request,
+            "error": None,
+            "csrf_token": csrf_token,
+            "google_oauth_enabled": oauth_service.is_configured("google"),
+        },
+    )
 
 
 @router.post("/login", response_class=HTMLResponse)
@@ -147,13 +155,18 @@ async def login_submit(
 ):
     """Process login."""
     from ..main import validate_csrf_token
+
     if not validate_csrf_token(request, csrf_token):
-        return templates.TemplateResponse("admin/login.html", {
-            "request": request,
-            "error": "CSRFトークンが無効です。ページを再読み込みしてください。",
-            "email": email,
-            "csrf_token": getattr(request.state, "csrf_token", ""),
-        }, status_code=403)
+        return templates.TemplateResponse(
+            "admin/login.html",
+            {
+                "request": request,
+                "error": "CSRFトークンが無効です。ページを再読み込みしてください。",
+                "email": email,
+                "csrf_token": getattr(request.state, "csrf_token", ""),
+            },
+            status_code=403,
+        )
 
     auth_svc = AuthService(db)
 
@@ -182,12 +195,15 @@ async def login_submit(
                 failure_reason="Valid role required",
             )
             csrf_token = getattr(request.state, "csrf_token", "")
-            return templates.TemplateResponse("admin/login.html", {
-                "request": request,
-                "error": "Access denied. No valid role assigned.",
-                "email": email,
-                "csrf_token": csrf_token,
-            })
+            return templates.TemplateResponse(
+                "admin/login.html",
+                {
+                    "request": request,
+                    "error": "Access denied. No valid role assigned.",
+                    "email": email,
+                    "csrf_token": csrf_token,
+                },
+            )
 
         # Log successful login
         audit_svc = AuditService(db)
@@ -226,12 +242,15 @@ async def login_submit(
             failure_reason=str(e),
         )
         csrf_token = getattr(request.state, "csrf_token", "")
-        return templates.TemplateResponse("admin/login.html", {
-            "request": request,
-            "error": str(e),
-            "email": email,
-            "csrf_token": csrf_token,
-        })
+        return templates.TemplateResponse(
+            "admin/login.html",
+            {
+                "request": request,
+                "error": str(e),
+                "email": email,
+                "csrf_token": csrf_token,
+            },
+        )
 
 
 @router.get("/logout")
@@ -268,16 +287,20 @@ async def logout(
 
 # === Password Reset ===
 
+
 @router.get("/forgot-password", response_class=HTMLResponse)
 async def forgot_password_page(request: Request):
     """Forgot password page."""
     csrf_token = getattr(request.state, "csrf_token", "")
-    return templates.TemplateResponse("admin/forgot_password.html", {
-        "request": request,
-        "csrf_token": csrf_token,
-        "message": None,
-        "error": None,
-    })
+    return templates.TemplateResponse(
+        "admin/forgot_password.html",
+        {
+            "request": request,
+            "csrf_token": csrf_token,
+            "message": None,
+            "error": None,
+        },
+    )
 
 
 @router.post("/forgot-password", response_class=HTMLResponse)
@@ -294,12 +317,16 @@ async def forgot_password_submit(
     from ..services.mail import EmailMessage, mail_service
 
     if not validate_csrf_token(request, csrf_token):
-        return templates.TemplateResponse("admin/forgot_password.html", {
-            "request": request,
-            "error": "CSRFトークンが無効です。ページを再読み込みしてください。",
-            "message": None,
-            "csrf_token": getattr(request.state, "csrf_token", ""),
-        }, status_code=403)
+        return templates.TemplateResponse(
+            "admin/forgot_password.html",
+            {
+                "request": request,
+                "error": "CSRFトークンが無効です。ページを再読み込みしてください。",
+                "message": None,
+                "csrf_token": getattr(request.state, "csrf_token", ""),
+            },
+            status_code=403,
+        )
 
     auth_svc = AuthService(db)
     reset_token = await auth_svc.request_password_reset(email)
@@ -311,10 +338,11 @@ async def forgot_password_submit(
     if reset_token:
         reset_url = f"{settings.site.url}/admin/reset-password?token={reset_token}"
 
-        mail_service.send(EmailMessage(
-            to=email,
-            subject="[Focomy] パスワードリセット",
-            body=f"""パスワードリセットのリクエストを受け付けました。
+        mail_service.send(
+            EmailMessage(
+                to=email,
+                subject="[Focomy] パスワードリセット",
+                body=f"""パスワードリセットのリクエストを受け付けました。
 
 以下のリンクをクリックして、新しいパスワードを設定してください。
 このリンクは1時間有効です。
@@ -323,21 +351,25 @@ async def forgot_password_submit(
 
 このリクエストに心当たりがない場合は、このメールを無視してください。
 """,
-            html=f"""
+                html=f"""
 <p>パスワードリセットのリクエストを受け付けました。</p>
 <p>以下のボタンをクリックして、新しいパスワードを設定してください。<br>
 このリンクは1時間有効です。</p>
 <p><a href="{reset_url}" style="display: inline-block; padding: 10px 20px; background: #3b82f6; color: white; text-decoration: none; border-radius: 5px;">パスワードをリセット</a></p>
 <p>このリクエストに心当たりがない場合は、このメールを無視してください。</p>
 """,
-        ))
+            )
+        )
 
-    return templates.TemplateResponse("admin/forgot_password.html", {
-        "request": request,
-        "message": message,
-        "error": None,
-        "csrf_token": getattr(request.state, "csrf_token", ""),
-    })
+    return templates.TemplateResponse(
+        "admin/forgot_password.html",
+        {
+            "request": request,
+            "message": message,
+            "error": None,
+            "csrf_token": getattr(request.state, "csrf_token", ""),
+        },
+    )
 
 
 @router.get("/reset-password", response_class=HTMLResponse)
@@ -350,12 +382,15 @@ async def reset_password_page(
         return RedirectResponse(url="/admin/forgot-password", status_code=303)
 
     csrf_token = getattr(request.state, "csrf_token", "")
-    return templates.TemplateResponse("admin/reset_password.html", {
-        "request": request,
-        "token": token,
-        "csrf_token": csrf_token,
-        "error": None,
-    })
+    return templates.TemplateResponse(
+        "admin/reset_password.html",
+        {
+            "request": request,
+            "token": token,
+            "csrf_token": csrf_token,
+            "error": None,
+        },
+    )
 
 
 @router.post("/reset-password", response_class=HTMLResponse)
@@ -371,20 +406,27 @@ async def reset_password_submit(
     from ..main import validate_csrf_token
 
     if not validate_csrf_token(request, csrf_token):
-        return templates.TemplateResponse("admin/reset_password.html", {
-            "request": request,
-            "token": token,
-            "error": "CSRFトークンが無効です。ページを再読み込みしてください。",
-            "csrf_token": getattr(request.state, "csrf_token", ""),
-        }, status_code=403)
+        return templates.TemplateResponse(
+            "admin/reset_password.html",
+            {
+                "request": request,
+                "token": token,
+                "error": "CSRFトークンが無効です。ページを再読み込みしてください。",
+                "csrf_token": getattr(request.state, "csrf_token", ""),
+            },
+            status_code=403,
+        )
 
     if password != password_confirm:
-        return templates.TemplateResponse("admin/reset_password.html", {
-            "request": request,
-            "token": token,
-            "error": "パスワードが一致しません。",
-            "csrf_token": getattr(request.state, "csrf_token", ""),
-        })
+        return templates.TemplateResponse(
+            "admin/reset_password.html",
+            {
+                "request": request,
+                "token": token,
+                "error": "パスワードが一致しません。",
+                "csrf_token": getattr(request.state, "csrf_token", ""),
+            },
+        )
 
     auth_svc = AuthService(db)
 
@@ -392,31 +434,41 @@ async def reset_password_submit(
         success = await auth_svc.reset_password(token, password)
 
         if success:
-            return templates.TemplateResponse("admin/login.html", {
-                "request": request,
-                "error": None,
-                "message": "パスワードをリセットしました。新しいパスワードでログインしてください。",
-                "csrf_token": getattr(request.state, "csrf_token", ""),
-                "google_oauth_enabled": False,
-            })
+            return templates.TemplateResponse(
+                "admin/login.html",
+                {
+                    "request": request,
+                    "error": None,
+                    "message": "パスワードをリセットしました。新しいパスワードでログインしてください。",
+                    "csrf_token": getattr(request.state, "csrf_token", ""),
+                    "google_oauth_enabled": False,
+                },
+            )
         else:
-            return templates.TemplateResponse("admin/reset_password.html", {
-                "request": request,
-                "token": token,
-                "error": "リセットトークンが無効または期限切れです。",
-                "csrf_token": getattr(request.state, "csrf_token", ""),
-            })
+            return templates.TemplateResponse(
+                "admin/reset_password.html",
+                {
+                    "request": request,
+                    "token": token,
+                    "error": "リセットトークンが無効または期限切れです。",
+                    "csrf_token": getattr(request.state, "csrf_token", ""),
+                },
+            )
 
     except ValueError as e:
-        return templates.TemplateResponse("admin/reset_password.html", {
-            "request": request,
-            "token": token,
-            "error": str(e),
-            "csrf_token": getattr(request.state, "csrf_token", ""),
-        })
+        return templates.TemplateResponse(
+            "admin/reset_password.html",
+            {
+                "request": request,
+                "token": token,
+                "error": str(e),
+                "csrf_token": getattr(request.state, "csrf_token", ""),
+            },
+        )
 
 
 # === Dashboard ===
+
 
 @router.get("", response_class=HTMLResponse)
 @router.get("/", response_class=HTMLResponse)
@@ -442,15 +494,18 @@ async def dashboard(
         recent_posts.append(data)
 
     context = await get_context(request, db, current_user, "dashboard")
-    context.update({
-        "stats": stats,
-        "recent_posts": recent_posts,
-    })
+    context.update(
+        {
+            "stats": stats,
+            "recent_posts": recent_posts,
+        }
+    )
 
     return templates.TemplateResponse("admin/dashboard.html", context)
 
 
 # === Media ===
+
 
 @router.get("/media", response_class=HTMLResponse)
 async def media_list(
@@ -463,6 +518,7 @@ async def media_list(
 ):
     """Media library page."""
     from ..services.media import MediaService
+
     media_svc = MediaService(db)
 
     per_page = 20
@@ -477,20 +533,23 @@ async def media_list(
     total_pages = (total + per_page - 1) // per_page if total > 0 else 0
 
     context = await get_context(request, db, current_user, "media")
-    context.update({
-        "items": [media_svc.serialize(m) for m in items],
-        "total": total,
-        "page": page,
-        "total_pages": total_pages,
-        "message": request.query_params.get("message"),
-        "search_query": q,
-        "type_filter": type,
-    })
+    context.update(
+        {
+            "items": [media_svc.serialize(m) for m in items],
+            "total": total,
+            "page": page,
+            "total_pages": total_pages,
+            "message": request.query_params.get("message"),
+            "search_query": q,
+            "type_filter": type,
+        }
+    )
 
     return templates.TemplateResponse("admin/media.html", context)
 
 
 # === Widget Management ===
+
 
 @router.get("/widgets", response_class=HTMLResponse)
 async def widgets_page(
@@ -501,6 +560,7 @@ async def widgets_page(
 ):
     """Widget management page."""
     from ..services.widget import WidgetService
+
     widget_svc = WidgetService(db)
 
     widgets = await widget_svc.get_widgets_for_area(area)
@@ -514,13 +574,15 @@ async def widgets_page(
     ]
 
     context = await get_context(request, db, current_user, "widgets")
-    context.update({
-        "widgets": widgets,
-        "widget_types": widget_types,
-        "current_area": area,
-        "areas": areas,
-        "message": request.query_params.get("message"),
-    })
+    context.update(
+        {
+            "widgets": widgets,
+            "widget_types": widget_types,
+            "current_area": area,
+            "areas": areas,
+            "message": request.query_params.get("message"),
+        }
+    )
 
     return templates.TemplateResponse("admin/widgets.html", context)
 
@@ -537,6 +599,7 @@ async def widget_create(
 ):
     """Create a new widget."""
     from ..services.widget import WidgetService
+
     widget_svc = WidgetService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -569,6 +632,7 @@ async def widget_update(
 ):
     """Update a widget."""
     from ..services.widget import WidgetService
+
     widget_svc = WidgetService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -598,6 +662,7 @@ async def widget_delete(
 ):
     """Delete a widget."""
     from ..services.widget import WidgetService
+
     widget_svc = WidgetService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -614,6 +679,7 @@ async def widgets_reorder(
 ):
     """Reorder widgets."""
     from ..services.widget import WidgetService
+
     widget_svc = WidgetService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -628,6 +694,7 @@ async def widgets_reorder(
 
 # === Theme Management ===
 
+
 @router.get("/themes", response_class=HTMLResponse)
 async def themes_page(
     request: Request,
@@ -640,14 +707,16 @@ async def themes_page(
 
     themes_data = []
     for _name, theme in theme_service.get_all_themes().items():
-        themes_data.append({
-            "name": theme.name,
-            "label": theme.label,
-            "description": theme.description,
-            "version": theme.version,
-            "author": theme.author,
-            "preview": getattr(theme, 'preview', None),
-        })
+        themes_data.append(
+            {
+                "name": theme.name,
+                "label": theme.label,
+                "description": theme.description,
+                "version": theme.version,
+                "author": theme.author,
+                "preview": getattr(theme, "preview", None),
+            }
+        )
 
     # Get active theme from database settings
     settings_svc = SettingsService(db)
@@ -655,11 +724,13 @@ async def themes_page(
     active_theme = theme_settings.get("active", "default")
 
     context = await get_context(request, db, current_user, "themes")
-    context.update({
-        "themes": themes_data,
-        "active_theme": active_theme,
-        "message": request.query_params.get("message"),
-    })
+    context.update(
+        {
+            "themes": themes_data,
+            "active_theme": active_theme,
+            "message": request.query_params.get("message"),
+        }
+    )
 
     return templates.TemplateResponse("admin/themes.html", context)
 
@@ -684,7 +755,9 @@ async def activate_theme(
     settings_svc = SettingsService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
-    await settings_svc.set("theme.active", theme_name, category="theme", user_id=user_data.get("id"))
+    await settings_svc.set(
+        "theme.active", theme_name, category="theme", user_id=user_data.get("id")
+    )
 
     # Update theme service
     theme_service.set_current_theme(theme_name)
@@ -693,6 +766,7 @@ async def activate_theme(
 
 
 # === Settings Management ===
+
 
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(
@@ -703,6 +777,7 @@ async def settings_page(
 ):
     """Settings management page."""
     from ..services.settings import SettingsService
+
     settings_svc = SettingsService(db)
 
     # Get settings for the selected category
@@ -723,9 +798,24 @@ async def settings_page(
             {"key": "default_og_image", "label": "デフォルトOG画像URL", "type": "url"},
             {"key": "og_site_name", "label": "OGサイト名", "type": "text"},
             {"key": "og_locale", "label": "OGロケール", "type": "text", "placeholder": "ja_JP"},
-            {"key": "twitter_site", "label": "Twitter @ユーザー名", "type": "text", "placeholder": "@example"},
-            {"key": "ga4_id", "label": "Google Analytics 4 ID", "type": "text", "placeholder": "G-XXXXXXXXXX"},
-            {"key": "gtm_id", "label": "Google Tag Manager ID", "type": "text", "placeholder": "GTM-XXXXXXX"},
+            {
+                "key": "twitter_site",
+                "label": "Twitter @ユーザー名",
+                "type": "text",
+                "placeholder": "@example",
+            },
+            {
+                "key": "ga4_id",
+                "label": "Google Analytics 4 ID",
+                "type": "text",
+                "placeholder": "G-XXXXXXXXXX",
+            },
+            {
+                "key": "gtm_id",
+                "label": "Google Tag Manager ID",
+                "type": "text",
+                "placeholder": "GTM-XXXXXXX",
+            },
             {"key": "search_console_id", "label": "Search Console 認証メタ", "type": "text"},
             {"key": "bing_webmaster_id", "label": "Bing Webmaster 認証メタ", "type": "text"},
         ],
@@ -743,15 +833,55 @@ async def settings_page(
             {"key": "password_min_length", "label": "パスワード最小長", "type": "number"},
         ],
         "headers": [
-            {"key": "info", "label": "セキュリティヘッダー情報", "type": "info", "value": "以下のセキュリティヘッダーが自動的に適用されています"},
-            {"key": "hsts", "label": "HSTS (HTTP Strict Transport Security)", "type": "readonly", "value": "有効 (本番環境のみ)"},
+            {
+                "key": "info",
+                "label": "セキュリティヘッダー情報",
+                "type": "info",
+                "value": "以下のセキュリティヘッダーが自動的に適用されています",
+            },
+            {
+                "key": "hsts",
+                "label": "HSTS (HTTP Strict Transport Security)",
+                "type": "readonly",
+                "value": "有効 (本番環境のみ)",
+            },
             {"key": "csp", "label": "Content-Security-Policy", "type": "readonly", "value": "有効"},
-            {"key": "x_frame_options", "label": "X-Frame-Options", "type": "readonly", "value": "SAMEORIGIN"},
-            {"key": "x_content_type", "label": "X-Content-Type-Options", "type": "readonly", "value": "nosniff"},
-            {"key": "referrer_policy", "label": "Referrer-Policy", "type": "readonly", "value": "strict-origin-when-cross-origin"},
-            {"key": "permissions_policy", "label": "Permissions-Policy", "type": "readonly", "value": "有効 (不要なAPIを無効化)"},
-            {"key": "coop", "label": "Cross-Origin-Opener-Policy", "type": "readonly", "value": "same-origin"},
-            {"key": "corp", "label": "Cross-Origin-Resource-Policy", "type": "readonly", "value": "same-origin"},
+            {
+                "key": "x_frame_options",
+                "label": "X-Frame-Options",
+                "type": "readonly",
+                "value": "SAMEORIGIN",
+            },
+            {
+                "key": "x_content_type",
+                "label": "X-Content-Type-Options",
+                "type": "readonly",
+                "value": "nosniff",
+            },
+            {
+                "key": "referrer_policy",
+                "label": "Referrer-Policy",
+                "type": "readonly",
+                "value": "strict-origin-when-cross-origin",
+            },
+            {
+                "key": "permissions_policy",
+                "label": "Permissions-Policy",
+                "type": "readonly",
+                "value": "有効 (不要なAPIを無効化)",
+            },
+            {
+                "key": "coop",
+                "label": "Cross-Origin-Opener-Policy",
+                "type": "readonly",
+                "value": "same-origin",
+            },
+            {
+                "key": "corp",
+                "label": "Cross-Origin-Resource-Policy",
+                "type": "readonly",
+                "value": "same-origin",
+            },
         ],
     }
 
@@ -764,13 +894,15 @@ async def settings_page(
     ]
 
     context = await get_context(request, db, current_user, "settings")
-    context.update({
-        "settings": settings_data,
-        "fields": setting_fields.get(category, []),
-        "current_category": category,
-        "categories": categories,
-        "message": request.query_params.get("message"),
-    })
+    context.update(
+        {
+            "settings": settings_data,
+            "fields": setting_fields.get(category, []),
+            "current_category": category,
+            "categories": categories,
+            "message": request.query_params.get("message"),
+        }
+    )
 
     return templates.TemplateResponse("admin/settings.html", context)
 
@@ -783,6 +915,7 @@ async def settings_save(
 ):
     """Save settings."""
     from ..services.settings import SettingsService
+
     settings_svc = SettingsService(db)
     entity_svc = EntityService(db)
 
@@ -809,6 +942,7 @@ async def settings_save(
 
 # === Menu Management ===
 
+
 @router.get("/menus", response_class=HTMLResponse)
 async def menu_list(
     request: Request,
@@ -818,6 +952,7 @@ async def menu_list(
 ):
     """Menu management page."""
     from ..services.menu import MenuService
+
     menu_svc = MenuService(db)
 
     # Get menu items for the selected location
@@ -826,18 +961,20 @@ async def menu_list(
     has_db_items = await menu_svc.has_db_menu(location)
 
     context = await get_context(request, db, current_user, "menus")
-    context.update({
-        "items": items,
-        "menu_tree": [m.to_dict() for m in menu_tree],
-        "current_location": location,
-        "locations": [
-            {"value": "header", "label": "ヘッダー"},
-            {"value": "footer", "label": "フッター"},
-            {"value": "sidebar", "label": "サイドバー"},
-        ],
-        "has_db_items": has_db_items,
-        "message": request.query_params.get("message"),
-    })
+    context.update(
+        {
+            "items": items,
+            "menu_tree": [m.to_dict() for m in menu_tree],
+            "current_location": location,
+            "locations": [
+                {"value": "header", "label": "ヘッダー"},
+                {"value": "footer", "label": "フッター"},
+                {"value": "sidebar", "label": "サイドバー"},
+            ],
+            "has_db_items": has_db_items,
+            "message": request.query_params.get("message"),
+        }
+    )
 
     return templates.TemplateResponse("admin/menus.html", context)
 
@@ -851,6 +988,7 @@ async def menu_import_yaml(
 ):
     """Import menu items from YAML config to database."""
     from ..services.menu import MenuService
+
     menu_svc = MenuService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -879,6 +1017,7 @@ async def menu_item_create(
 ):
     """Create a new menu item."""
     from ..services.menu import MenuService
+
     menu_svc = MenuService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -918,6 +1057,7 @@ async def menu_item_update(
 ):
     """Update a menu item."""
     from ..services.menu import MenuService
+
     menu_svc = MenuService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -950,6 +1090,7 @@ async def menu_item_delete(
 ):
     """Delete a menu item."""
     from ..services.menu import MenuService
+
     menu_svc = MenuService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -966,6 +1107,7 @@ async def menu_reorder(
 ):
     """Reorder menu items via AJAX."""
     from ..services.menu import MenuService
+
     menu_svc = MenuService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -980,6 +1122,7 @@ async def menu_reorder(
 
 
 # === Sitemap Management ===
+
 
 @router.get("/tools/sitemap", response_class=HTMLResponse)
 async def sitemap_page(
@@ -997,8 +1140,16 @@ async def sitemap_page(
 
     # Get sitemap settings
     sitemap_settings = await settings_svc.get_by_category("sitemap")
-    excluded_types = sitemap_settings.get("exclude_types", "").split(",") if sitemap_settings.get("exclude_types") else []
-    excluded_urls = sitemap_settings.get("exclude_urls", "").split("\n") if sitemap_settings.get("exclude_urls") else []
+    excluded_types = (
+        sitemap_settings.get("exclude_types", "").split(",")
+        if sitemap_settings.get("exclude_types")
+        else []
+    )
+    excluded_urls = (
+        sitemap_settings.get("exclude_urls", "").split("\n")
+        if sitemap_settings.get("exclude_urls")
+        else []
+    )
     excluded_urls = [u.strip() for u in excluded_urls if u.strip()]
 
     # Get current sitemap URLs
@@ -1022,13 +1173,15 @@ async def sitemap_page(
             url_path = f"/{ct_name}/{slug}"
 
             if url_path not in excluded_urls:
-                urls.append({
-                    "loc": f"{site_url}{url_path}",
-                    "lastmod": e.updated_at.strftime("%Y-%m-%d") if e.updated_at else "",
-                    "changefreq": "weekly" if ct_name == "post" else "monthly",
-                    "priority": "0.8" if ct_name == "post" else "0.5",
-                    "type": ct_name,
-                })
+                urls.append(
+                    {
+                        "loc": f"{site_url}{url_path}",
+                        "lastmod": e.updated_at.strftime("%Y-%m-%d") if e.updated_at else "",
+                        "changefreq": "weekly" if ct_name == "post" else "monthly",
+                        "priority": "0.8" if ct_name == "post" else "0.5",
+                        "type": ct_name,
+                    }
+                )
 
     # Get robots.txt content
     robots_txt = f"""User-agent: *
@@ -1042,18 +1195,20 @@ Disallow: /api/
 Sitemap: {site_url}/sitemap.xml"""
 
     context = await get_context(request, db, current_user, "tools")
-    context.update({
-        "site_url": site_url,
-        "urls": urls,
-        "total_urls": len(urls),
-        "last_generated": None,  # Dynamic generation
-        "excluded_types": excluded_types,
-        "excluded_urls": excluded_urls,
-        "default_changefreq": sitemap_settings.get("default_changefreq", "weekly"),
-        "default_priority": sitemap_settings.get("default_priority", "0.5"),
-        "robots_txt": robots_txt,
-        "message": request.query_params.get("message"),
-    })
+    context.update(
+        {
+            "site_url": site_url,
+            "urls": urls,
+            "total_urls": len(urls),
+            "last_generated": None,  # Dynamic generation
+            "excluded_types": excluded_types,
+            "excluded_urls": excluded_urls,
+            "default_changefreq": sitemap_settings.get("default_changefreq", "weekly"),
+            "default_priority": sitemap_settings.get("default_priority", "0.5"),
+            "robots_txt": robots_txt,
+            "message": request.query_params.get("message"),
+        }
+    )
 
     return templates.TemplateResponse("admin/sitemap.html", context)
 
@@ -1099,13 +1254,22 @@ async def save_sitemap_exclusions(
     default_priority = form_data.get("default_priority", "0.5")
 
     # Save settings
-    await settings_svc.set("sitemap.exclude_types", ",".join(exclude_types), category="sitemap", user_id=user_id)
-    await settings_svc.set("sitemap.exclude_urls", exclude_urls, category="sitemap", user_id=user_id)
-    await settings_svc.set("sitemap.default_changefreq", default_changefreq, category="sitemap", user_id=user_id)
-    await settings_svc.set("sitemap.default_priority", default_priority, category="sitemap", user_id=user_id)
+    await settings_svc.set(
+        "sitemap.exclude_types", ",".join(exclude_types), category="sitemap", user_id=user_id
+    )
+    await settings_svc.set(
+        "sitemap.exclude_urls", exclude_urls, category="sitemap", user_id=user_id
+    )
+    await settings_svc.set(
+        "sitemap.default_changefreq", default_changefreq, category="sitemap", user_id=user_id
+    )
+    await settings_svc.set(
+        "sitemap.default_priority", default_priority, category="sitemap", user_id=user_id
+    )
 
     # Clear sitemap cache
     from ..services.cache import cache_service
+
     cache_service.delete("sitemap:xml")
 
     return RedirectResponse(
@@ -1115,6 +1279,7 @@ async def save_sitemap_exclusions(
 
 
 # === Link Validator ===
+
 
 @router.get("/tools/link-validator", response_class=HTMLResponse)
 async def link_validator_page(
@@ -1140,16 +1305,16 @@ async def validate_links(
     site_url = str(request.base_url).rstrip("/")
     validator = LinkValidatorService(db, site_url)
 
-    results = await validator.validate_all_links(
-        check_external=check_external == "true"
-    )
+    results = await validator.validate_all_links(check_external=check_external == "true")
 
     context = await get_context(request, db, current_user, "tools")
-    context.update({
-        "broken_links": results["broken_links"],
-        "external_errors": results["external_errors"],
-        "stats": results["stats"],
-    })
+    context.update(
+        {
+            "broken_links": results["broken_links"],
+            "external_errors": results["external_errors"],
+            "stats": results["stats"],
+        }
+    )
 
     return templates.TemplateResponse("admin/link_validator.html", context)
 
@@ -1169,14 +1334,17 @@ async def find_orphan_pages(
     orphans = await validator.find_orphan_pages()
 
     context = await get_context(request, db, current_user, "tools")
-    context.update({
-        "orphans": orphans,
-    })
+    context.update(
+        {
+            "orphans": orphans,
+        }
+    )
 
     return templates.TemplateResponse("admin/link_validator.html", context)
 
 
 # === Redirect Management ===
+
 
 @router.get("/redirects", response_class=HTMLResponse)
 async def redirects_page(
@@ -1186,15 +1354,18 @@ async def redirects_page(
 ):
     """Redirect management page."""
     from ..services.redirect import RedirectService
+
     redirect_svc = RedirectService(db)
 
     redirects = await redirect_svc.get_all_redirects(include_inactive=True)
 
     context = await get_context(request, db, current_user, "redirects")
-    context.update({
-        "redirects": redirects,
-        "message": request.query_params.get("message"),
-    })
+    context.update(
+        {
+            "redirects": redirects,
+            "message": request.query_params.get("message"),
+        }
+    )
 
     return templates.TemplateResponse("admin/redirects.html", context)
 
@@ -1214,6 +1385,7 @@ async def redirect_create(
 ):
     """Create a new redirect."""
     from ..services.redirect import RedirectService
+
     redirect_svc = RedirectService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -1256,6 +1428,7 @@ async def redirect_update(
 ):
     """Update a redirect."""
     from ..services.redirect import RedirectService
+
     redirect_svc = RedirectService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -1288,6 +1461,7 @@ async def redirect_toggle(
 ):
     """Toggle redirect active status."""
     from ..services.redirect import RedirectService
+
     redirect_svc = RedirectService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -1306,6 +1480,7 @@ async def redirect_delete(
 ):
     """Delete a redirect."""
     from ..services.redirect import RedirectService
+
     redirect_svc = RedirectService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -1323,6 +1498,7 @@ async def redirect_test(
 ):
     """Test a path against redirect rules."""
     from ..services.redirect import RedirectService
+
     redirect_svc = RedirectService(db)
 
     result = await redirect_svc.test_redirect(path)
@@ -1337,6 +1513,7 @@ async def redirect_test(
 
 # === Comment Moderation ===
 
+
 @router.get("/comments", response_class=HTMLResponse)
 async def comments_list(
     request: Request,
@@ -1347,6 +1524,7 @@ async def comments_list(
 ):
     """Comment moderation page."""
     from ..services.comment import CommentService
+
     comment_svc = CommentService(db)
 
     per_page = 20
@@ -1369,13 +1547,15 @@ async def comments_list(
     ]
 
     context = await get_context(request, db, current_user, "comments")
-    context.update({
-        "comments": comments,
-        "current_status": status,
-        "status_options": status_options,
-        "pending_count": pending_count,
-        "message": request.query_params.get("message"),
-    })
+    context.update(
+        {
+            "comments": comments,
+            "current_status": status,
+            "status_options": status_options,
+            "pending_count": pending_count,
+            "message": request.query_params.get("message"),
+        }
+    )
 
     return templates.TemplateResponse("admin/comments.html", context)
 
@@ -1390,6 +1570,7 @@ async def comment_moderate(
 ):
     """Moderate a comment (approve, reject, spam)."""
     from ..services.comment import CommentService
+
     comment_svc = CommentService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -1407,7 +1588,9 @@ async def comment_moderate(
     }.get(action, "更新しました")
 
     return RedirectResponse(
-        url=f"/admin/comments?message=コメントを{action_msg}" if success else "/admin/comments?message=操作に失敗しました",
+        url=f"/admin/comments?message=コメントを{action_msg}"
+        if success
+        else "/admin/comments?message=操作に失敗しました",
         status_code=303,
     )
 
@@ -1422,6 +1605,7 @@ async def comments_bulk_action(
 ):
     """Perform bulk action on comments."""
     from ..services.comment import CommentService
+
     comment_svc = CommentService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -1464,6 +1648,7 @@ async def comment_delete(
 ):
     """Delete a comment."""
     from ..services.comment import CommentService
+
     comment_svc = CommentService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
@@ -1473,6 +1658,7 @@ async def comment_delete(
 
 
 # === Entity List ===
+
 
 @router.get("/{type_name}", response_class=HTMLResponse)
 async def entity_list(
@@ -1526,6 +1712,7 @@ async def entity_list(
 
     # Get total count with filters
     from ..services.entity import QueryParams
+
     params = QueryParams(filters=filters)
     total = await entity_svc.count(type_name, params)
     total_pages = (total + per_page - 1) // per_page
@@ -1537,22 +1724,25 @@ async def entity_list(
             list_fields.append(field)
 
     context = await get_context(request, db, current_user, type_name)
-    context.update({
-        "type_name": type_name,
-        "content_type": content_type,
-        "entities": entities,
-        "list_fields": list_fields,
-        "page": page,
-        "total_pages": total_pages,
-        "message": request.query_params.get("message"),
-        "search_query": q,
-        "status_filter": status,
-    })
+    context.update(
+        {
+            "type_name": type_name,
+            "content_type": content_type,
+            "entities": entities,
+            "list_fields": list_fields,
+            "page": page,
+            "total_pages": total_pages,
+            "message": request.query_params.get("message"),
+            "search_query": q,
+            "status_filter": status,
+        }
+    )
 
     return templates.TemplateResponse("admin/entity_list.html", context)
 
 
 # === Entity Create ===
+
 
 @router.get("/{type_name}/new", response_class=HTMLResponse)
 async def entity_new(
@@ -1570,12 +1760,14 @@ async def entity_new(
     relations = await _get_relation_options(type_name, None, db)
 
     context = await get_context(request, db, current_user, type_name)
-    context.update({
-        "type_name": type_name,
-        "content_type": content_type,
-        "entity": None,
-        "relations": relations,
-    })
+    context.update(
+        {
+            "type_name": type_name,
+            "content_type": content_type,
+            "entity": None,
+            "relations": relations,
+        }
+    )
 
     return templates.TemplateResponse("admin/entity_form.html", context)
 
@@ -1600,6 +1792,7 @@ async def entity_create(
 
     # Build entity data from form
     import json as json_module
+
     data = {}
     for field in content_type.fields:
         value = form_data.get(field.name)
@@ -1626,6 +1819,7 @@ async def entity_create(
 
         # Handle relations
         from ..services.relation import RelationService
+
         relation_svc = RelationService(db)
 
         for rel in content_type.relations:
@@ -1659,17 +1853,20 @@ async def entity_create(
     except ValueError as e:
         relations = await _get_relation_options(type_name, None, db)
         context = await get_context(request, db, current_user, type_name)
-        context.update({
-            "type_name": type_name,
-            "content_type": content_type,
-            "entity": data,
-            "relations": relations,
-            "error": str(e),
-        })
+        context.update(
+            {
+                "type_name": type_name,
+                "content_type": content_type,
+                "entity": data,
+                "relations": relations,
+                "error": str(e),
+            }
+        )
         return templates.TemplateResponse("admin/entity_form.html", context)
 
 
 # === Entity Edit ===
+
 
 @router.get("/{type_name}/{entity_id}/edit", response_class=HTMLResponse)
 async def entity_edit(
@@ -1693,13 +1890,15 @@ async def entity_edit(
     relations = await _get_relation_options(type_name, entity_id, db)
 
     context = await get_context(request, db, current_user, type_name)
-    context.update({
-        "type_name": type_name,
-        "content_type": content_type,
-        "entity": entity,
-        "relations": relations,
-        "message": request.query_params.get("message"),
-    })
+    context.update(
+        {
+            "type_name": type_name,
+            "content_type": content_type,
+            "entity": entity,
+            "relations": relations,
+            "message": request.query_params.get("message"),
+        }
+    )
 
     return templates.TemplateResponse("admin/entity_form.html", context)
 
@@ -1729,6 +1928,7 @@ async def entity_update(
 
     # Build entity data from form
     import json as json_module
+
     data = {}
     for field in content_type.fields:
         value = form_data.get(field.name)
@@ -1760,6 +1960,7 @@ async def entity_update(
 
         # Handle relations
         from ..services.relation import RelationService
+
         relation_svc = RelationService(db)
 
         for rel in content_type.relations:
@@ -1799,17 +2000,20 @@ async def entity_update(
         relations = await _get_relation_options(type_name, entity_id, db)
 
         context = await get_context(request, db, current_user, type_name)
-        context.update({
-            "type_name": type_name,
-            "content_type": content_type,
-            "entity": entity,
-            "relations": relations,
-            "error": str(e),
-        })
+        context.update(
+            {
+                "type_name": type_name,
+                "content_type": content_type,
+                "entity": entity,
+                "relations": relations,
+                "error": str(e),
+            }
+        )
         return templates.TemplateResponse("admin/entity_form.html", context)
 
 
 # === Entity Delete ===
+
 
 @router.delete("/{type_name}/{entity_id}")
 async def entity_delete(
@@ -1854,6 +2058,7 @@ async def entity_delete(
 
 
 # === Bulk Actions ===
+
 
 @router.post("/{type_name}/bulk")
 async def entity_bulk_action(
@@ -1910,6 +2115,7 @@ async def entity_bulk_action(
 
 # === Helper Functions ===
 
+
 async def _get_relation_options(
     type_name: str,
     entity_id: str | None,
@@ -1922,6 +2128,7 @@ async def _get_relation_options(
 
     entity_svc = EntityService(db)
     from ..services.relation import RelationService
+
     relation_svc = RelationService(db)
 
     relations = []
@@ -1944,23 +2151,28 @@ async def _get_relation_options(
         for target in target_entities:
             target_data = entity_svc.serialize(target)
             label = target_data.get("name") or target_data.get("title") or target.id[:8]
-            options.append({
-                "id": target.id,
-                "label": label,
-                "selected": target.id in current_ids,
-            })
+            options.append(
+                {
+                    "id": target.id,
+                    "label": label,
+                    "selected": target.id in current_ids,
+                }
+            )
 
-        relations.append({
-            "name": rel.type,
-            "label": rel_def.label if rel_def.label else rel.type,
-            "multiple": rel_def.type in ("many_to_many", "one_to_many"),
-            "options": options,
-        })
+        relations.append(
+            {
+                "name": rel.type,
+                "label": rel_def.label if rel_def.label else rel.type,
+                "multiple": rel_def.type in ("many_to_many", "one_to_many"),
+                "options": options,
+            }
+        )
 
     return relations
 
 
 # === Update Check ===
+
 
 @router.get("/api/update-check")
 async def check_for_updates(

@@ -19,6 +19,7 @@ from ..config import settings
 @dataclass
 class OAuthUserInfo:
     """User info from OAuth provider."""
+
     provider: str
     provider_id: str
     email: str
@@ -29,6 +30,7 @@ class OAuthUserInfo:
 @dataclass
 class OAuthConnection:
     """OAuth provider connection."""
+
     id: str
     user_id: str
     provider: str
@@ -44,6 +46,7 @@ class OAuthConnection:
 @dataclass
 class MergeResult:
     """Result of user account merge."""
+
     source_user_id: str
     target_user_id: str
     entities_transferred: int
@@ -79,42 +82,40 @@ class OAuthService:
 
         if google_client_id and google_client_secret:
             self.oauth.register(
-                name='google',
+                name="google",
                 client_id=google_client_id,
                 client_secret=google_client_secret,
-                server_metadata_url='https://accounts.google.com/.well-known/openid-configuration',
-                client_kwargs={
-                    'scope': 'openid email profile'
-                }
+                server_metadata_url="https://accounts.google.com/.well-known/openid-configuration",
+                client_kwargs={"scope": "openid email profile"},
             )
             self._configured = True
 
         # GitHub
-        github_client_id = getattr(settings.oauth, 'github_client_id', None)
-        github_client_secret = getattr(settings.oauth, 'github_client_secret', None)
+        github_client_id = getattr(settings.oauth, "github_client_id", None)
+        github_client_secret = getattr(settings.oauth, "github_client_secret", None)
 
         if github_client_id and github_client_secret:
             self.oauth.register(
-                name='github',
+                name="github",
                 client_id=github_client_id,
                 client_secret=github_client_secret,
-                authorize_url='https://github.com/login/oauth/authorize',
-                access_token_url='https://github.com/login/oauth/access_token',
-                api_base_url='https://api.github.com/',
-                client_kwargs={'scope': 'user:email'},
+                authorize_url="https://github.com/login/oauth/authorize",
+                access_token_url="https://github.com/login/oauth/access_token",
+                api_base_url="https://api.github.com/",
+                client_kwargs={"scope": "user:email"},
             )
 
-    def is_configured(self, provider: str = 'google') -> bool:
+    def is_configured(self, provider: str = "google") -> bool:
         """Check if a provider is configured."""
         return hasattr(self.oauth, provider)
 
     def get_available_providers(self) -> list[str]:
         """Get list of configured providers."""
         providers = []
-        if hasattr(self.oauth, 'google'):
-            providers.append('google')
-        if hasattr(self.oauth, 'github'):
-            providers.append('github')
+        if hasattr(self.oauth, "google"):
+            providers.append("google")
+        if hasattr(self.oauth, "github"):
+            providers.append("github")
         return providers
 
     async def get_authorization_url(
@@ -143,34 +144,34 @@ class OAuthService:
             client = getattr(self.oauth, provider)
             token = await client.authorize_access_token(request)
 
-            if provider == 'google':
-                user_info = token.get('userinfo')
+            if provider == "google":
+                user_info = token.get("userinfo")
                 if user_info:
                     return OAuthUserInfo(
-                        provider='google',
-                        provider_id=user_info.get('sub'),
-                        email=user_info.get('email'),
-                        name=user_info.get('name'),
-                        picture=user_info.get('picture'),
+                        provider="google",
+                        provider_id=user_info.get("sub"),
+                        email=user_info.get("email"),
+                        name=user_info.get("name"),
+                        picture=user_info.get("picture"),
                     )
 
-            elif provider == 'github':
-                resp = await client.get('user')
+            elif provider == "github":
+                resp = await client.get("user")
                 profile = resp.json()
                 # Get email separately
-                email_resp = await client.get('user/emails')
+                email_resp = await client.get("user/emails")
                 emails = email_resp.json()
                 primary_email = next(
-                    (e['email'] for e in emails if e.get('primary')),
-                    emails[0]['email'] if emails else None
+                    (e["email"] for e in emails if e.get("primary")),
+                    emails[0]["email"] if emails else None,
                 )
 
                 return OAuthUserInfo(
-                    provider='github',
-                    provider_id=str(profile.get('id')),
-                    email=primary_email or '',
-                    name=profile.get('name') or profile.get('login'),
-                    picture=profile.get('avatar_url'),
+                    provider="github",
+                    provider_id=str(profile.get("id")),
+                    email=primary_email or "",
+                    name=profile.get("name") or profile.get("login"),
+                    picture=profile.get("avatar_url"),
                 )
 
         except Exception as e:
@@ -233,6 +234,7 @@ class OAuthAccountManager:
 
         # Create connection
         from .entity import EntityService
+
         entity_service = EntityService(self.db)
 
         entity = await entity_service.create(
@@ -288,6 +290,7 @@ class OAuthAccountManager:
             return False
 
         from .entity import EntityService
+
         entity_service = EntityService(self.db)
         await entity_service.delete(connection.id, user_id=user_id)
 
@@ -319,7 +322,9 @@ class OAuthAccountManager:
 
         return connections
 
-    async def find_by_provider(self, provider: str, provider_user_id: str) -> OAuthConnection | None:
+    async def find_by_provider(
+        self, provider: str, provider_user_id: str
+    ) -> OAuthConnection | None:
         """Find connection by provider credentials."""
         from ..models import Entity
 
@@ -334,7 +339,10 @@ class OAuthAccountManager:
 
         for entity in entities:
             values = await self._get_entity_values(entity.id)
-            if values.get("provider") == provider and values.get("provider_user_id") == provider_user_id:
+            if (
+                values.get("provider") == provider
+                and values.get("provider_user_id") == provider_user_id
+            ):
                 return self._to_connection(entity, values)
 
         return None
@@ -371,6 +379,7 @@ class OAuthAccountManager:
             connections = await self.list_connections(source_user_id)
             for conn in connections:
                 from ..models import EntityValue
+
                 query = select(EntityValue).where(
                     and_(
                         EntityValue.entity_id == conn.id,
@@ -386,6 +395,7 @@ class OAuthAccountManager:
             # Delete source user
             if delete_source:
                 from .entity import EntityService
+
                 entity_service = EntityService(self.db)
                 await entity_service.delete(source_user_id, user_id=target_user_id)
 
@@ -419,6 +429,7 @@ class OAuthAccountManager:
     ) -> bool:
         """Update OAuth tokens for a connection."""
         from .entity import EntityService
+
         entity_service = EntityService(self.db)
 
         values = {
@@ -468,15 +479,18 @@ class OAuthAccountManager:
             refresh_token=values.get("refresh_token"),
             token_expires_at=(
                 datetime.fromisoformat(values["token_expires_at"])
-                if values.get("token_expires_at") else None
+                if values.get("token_expires_at")
+                else None
             ),
             connected_at=(
                 datetime.fromisoformat(values["connected_at"])
-                if values.get("connected_at") else entity.created_at
+                if values.get("connected_at")
+                else entity.created_at
             ),
             last_used_at=(
                 datetime.fromisoformat(values["last_used_at"])
-                if values.get("last_used_at") else None
+                if values.get("last_used_at")
+                else None
             ),
         )
 

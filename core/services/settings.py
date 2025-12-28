@@ -177,7 +177,7 @@ class SettingsService:
 
         for key, value in all_settings.items():
             if key.startswith(prefix):
-                short_key = key[len(prefix):]
+                short_key = key[len(prefix) :]
                 result[short_key] = value
 
         return result

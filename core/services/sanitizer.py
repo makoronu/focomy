@@ -11,23 +11,57 @@ from typing import Any
 # Allowed HTML tags and their attributes
 ALLOWED_TAGS = {
     # Headings
-    "h1", "h2", "h3", "h4", "h5", "h6",
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
     # Text formatting
-    "p", "br", "hr",
-    "b", "strong", "i", "em", "u", "s", "strike", "del",
-    "sup", "sub", "mark", "small",
+    "p",
+    "br",
+    "hr",
+    "b",
+    "strong",
+    "i",
+    "em",
+    "u",
+    "s",
+    "strike",
+    "del",
+    "sup",
+    "sub",
+    "mark",
+    "small",
     # Lists
-    "ul", "ol", "li",
+    "ul",
+    "ol",
+    "li",
     # Links and media
-    "a", "img", "figure", "figcaption",
+    "a",
+    "img",
+    "figure",
+    "figcaption",
     # Tables
-    "table", "thead", "tbody", "tfoot", "tr", "th", "td",
+    "table",
+    "thead",
+    "tbody",
+    "tfoot",
+    "tr",
+    "th",
+    "td",
     # Code
-    "pre", "code",
+    "pre",
+    "code",
     # Quotes
-    "blockquote", "q", "cite",
+    "blockquote",
+    "q",
+    "cite",
     # Semantic
-    "div", "span", "section", "article",
+    "div",
+    "span",
+    "section",
+    "article",
 }
 
 ALLOWED_ATTRIBUTES = {
@@ -45,9 +79,22 @@ DANGEROUS_SCHEMES = {"javascript", "vbscript", "data"}
 
 # Allowed CSS properties (limited for security)
 ALLOWED_STYLES = {
-    "color", "background-color", "text-align", "font-weight", "font-style",
-    "text-decoration", "margin", "padding", "border", "width", "height",
-    "max-width", "max-height", "display", "float", "clear",
+    "color",
+    "background-color",
+    "text-align",
+    "font-weight",
+    "font-style",
+    "text-decoration",
+    "margin",
+    "padding",
+    "border",
+    "width",
+    "height",
+    "max-width",
+    "max-height",
+    "display",
+    "float",
+    "clear",
 }
 
 
@@ -121,6 +168,7 @@ class SanitizerService:
 
     def _sanitize_urls(self, content: str) -> str:
         """Remove dangerous URL schemes from href/src attributes."""
+
         def replace_url(match: re.Match) -> str:
             attr = match.group(1)
             quote = match.group(2)
@@ -130,7 +178,7 @@ class SanitizerService:
             url_lower = url.lower().strip()
             for scheme in DANGEROUS_SCHEMES:
                 if url_lower.startswith(f"{scheme}:"):
-                    return f'{attr}={quote}#{quote}'
+                    return f"{attr}={quote}#{quote}"
 
             return match.group(0)
 
@@ -140,6 +188,7 @@ class SanitizerService:
 
     def _sanitize_styles(self, content: str) -> str:
         """Sanitize inline style attributes."""
+
         def replace_style(match: re.Match) -> str:
             quote = match.group(1)
             style = match.group(2)
@@ -217,10 +266,7 @@ class SanitizerService:
 
             elif block_type == "table":
                 content = data.get("content", [])
-                data["content"] = [
-                    [self.sanitize(cell) for cell in row]
-                    for row in content
-                ]
+                data["content"] = [[self.sanitize(cell) for cell in row] for row in content]
 
             elif block_type == "image":
                 # Validate image URL
@@ -238,10 +284,12 @@ class SanitizerService:
                 # Only allow trusted embed sources
                 data["caption"] = self.sanitize(data.get("caption", ""))
 
-            sanitized.append({
-                "type": block_type,
-                "data": data,
-            })
+            sanitized.append(
+                {
+                    "type": block_type,
+                    "data": data,
+                }
+            )
 
         return sanitized
 

@@ -14,6 +14,7 @@ from .entity import EntityService
 @dataclass
 class BulkResult:
     """Result of bulk operation."""
+
     success_count: int
     error_count: int
     errors: list[dict]
@@ -76,10 +77,12 @@ class BulkOperationService:
                 )
                 success_count += 1
             except Exception as e:
-                errors.append({
-                    "entity_id": entity_id,
-                    "error": str(e),
-                })
+                errors.append(
+                    {
+                        "entity_id": entity_id,
+                        "error": str(e),
+                    }
+                )
 
         return BulkResult(
             success_count=success_count,
@@ -117,15 +120,19 @@ class BulkOperationService:
                 if result:
                     success_count += 1
                 else:
-                    errors.append({
-                        "entity_id": entity_id,
-                        "error": "Entity not found",
-                    })
+                    errors.append(
+                        {
+                            "entity_id": entity_id,
+                            "error": "Entity not found",
+                        }
+                    )
             except Exception as e:
-                errors.append({
-                    "entity_id": entity_id,
-                    "error": str(e),
-                })
+                errors.append(
+                    {
+                        "entity_id": entity_id,
+                        "error": str(e),
+                    }
+                )
 
         return BulkResult(
             success_count=success_count,
@@ -160,15 +167,19 @@ class BulkOperationService:
                 if result:
                     success_count += 1
                 else:
-                    errors.append({
-                        "entity_id": entity_id,
-                        "error": "Entity not found or not deleted",
-                    })
+                    errors.append(
+                        {
+                            "entity_id": entity_id,
+                            "error": "Entity not found or not deleted",
+                        }
+                    )
             except Exception as e:
-                errors.append({
-                    "entity_id": entity_id,
-                    "error": str(e),
-                })
+                errors.append(
+                    {
+                        "entity_id": entity_id,
+                        "error": str(e),
+                    }
+                )
 
         return BulkResult(
             success_count=success_count,
@@ -205,11 +216,13 @@ class BulkOperationService:
                 )
                 success_count += 1
             except Exception as e:
-                errors.append({
-                    "index": i,
-                    "data": data,
-                    "error": str(e),
-                })
+                errors.append(
+                    {
+                        "index": i,
+                        "data": data,
+                        "error": str(e),
+                    }
+                )
 
         return BulkResult(
             success_count=success_count,

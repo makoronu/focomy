@@ -128,9 +128,7 @@ class AuthService:
         session = Session(
             id=session_token,
             user_id=user_auth.entity_id,
-            expires_at=datetime.utcnow() + timedelta(
-                seconds=settings.security.session_expire
-            ),
+            expires_at=datetime.utcnow() + timedelta(seconds=settings.security.session_expire),
         )
         self.db.add(session)
 
@@ -285,9 +283,7 @@ class AuthService:
         """Invalidate all sessions for a user."""
         from sqlalchemy import delete
 
-        result = await self.db.execute(
-            delete(Session).where(Session.user_id == user_id)
-        )
+        result = await self.db.execute(delete(Session).where(Session.user_id == user_id))
         await self.db.commit()
         return result.rowcount
 
@@ -297,12 +293,16 @@ class AuthService:
 
         Returns list of session info dicts.
         """
-        query = select(Session).where(
-            and_(
-                Session.user_id == user_id,
-                Session.expires_at > datetime.utcnow(),
+        query = (
+            select(Session)
+            .where(
+                and_(
+                    Session.user_id == user_id,
+                    Session.expires_at > datetime.utcnow(),
+                )
             )
-        ).order_by(Session.created_at.desc())
+            .order_by(Session.created_at.desc())
+        )
 
         result = await self.db.execute(query)
         sessions = result.scalars().all()
@@ -345,12 +345,16 @@ class AuthService:
         from sqlalchemy import delete
 
         # Get current sessions ordered by creation (oldest first)
-        query = select(Session).where(
-            and_(
-                Session.user_id == user_id,
-                Session.expires_at > datetime.utcnow(),
+        query = (
+            select(Session)
+            .where(
+                and_(
+                    Session.user_id == user_id,
+                    Session.expires_at > datetime.utcnow(),
+                )
             )
-        ).order_by(Session.created_at.asc())
+            .order_by(Session.created_at.asc())
+        )
 
         result = await self.db.execute(query)
         sessions = result.scalars().all()
@@ -363,9 +367,7 @@ class AuthService:
         sessions_to_remove = sessions[:excess]
         ids_to_remove = [s.id for s in sessions_to_remove]
 
-        await self.db.execute(
-            delete(Session).where(Session.id.in_(ids_to_remove))
-        )
+        await self.db.execute(delete(Session).where(Session.id.in_(ids_to_remove)))
         await self.db.commit()
 
         return excess
@@ -412,9 +414,7 @@ class AuthService:
         session = Session(
             id=session_token,
             user_id=user.id,
-            expires_at=datetime.utcnow() + timedelta(
-                seconds=settings.security.session_expire
-            ),
+            expires_at=datetime.utcnow() + timedelta(seconds=settings.security.session_expire),
         )
         self.db.add(session)
 

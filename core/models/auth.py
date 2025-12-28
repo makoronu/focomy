@@ -20,6 +20,7 @@ class UserAuth(Base):
     Separate from Entity for security reasons.
     Password hashes and TOTP secrets should be in their own table.
     """
+
     __tablename__ = "user_auth"
 
     entity_id: Mapped[str] = mapped_column(
@@ -82,6 +83,7 @@ class Session(Base):
 
     Server-side session storage for security.
     """
+
     __tablename__ = "sessions"
 
     id: Mapped[str] = mapped_column(
@@ -104,9 +106,7 @@ class Session(Base):
         default=datetime.utcnow,
     )
 
-    __table_args__ = (
-        Index("idx_sessions_expires", "expires_at"),
-    )
+    __table_args__ = (Index("idx_sessions_expires", "expires_at"),)
 
     def __repr__(self) -> str:
         return f"<Session(id={self.id}, user_id={self.user_id})>"
@@ -118,6 +118,7 @@ class LoginLog(Base):
 
     For security monitoring and audit.
     """
+
     __tablename__ = "login_log"
 
     id: Mapped[int] = mapped_column(

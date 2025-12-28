@@ -9,6 +9,7 @@ from typing import Any
 @dataclass
 class ACFFieldGroup:
     """Represents an ACF field group."""
+
     key: str
     title: str
     fields: list["ACFField"]
@@ -21,6 +22,7 @@ class ACFFieldGroup:
 @dataclass
 class ACFField:
     """Represents an ACF field definition."""
+
     key: str
     name: str
     label: str
@@ -43,6 +45,7 @@ class ACFField:
 @dataclass
 class FocomyField:
     """Focomy field definition."""
+
     name: str
     type: str
     label: str
@@ -70,18 +73,15 @@ ACF_TYPE_MAP = {
     "email": "email",
     "url": "url",
     "password": "password",
-
     # Content
     "wysiwyg": "richtext",
     "oembed": "embed",
-
     # Choice
     "select": "select",
     "checkbox": "multiselect",
     "radio": "select",
     "button_group": "select",
     "true_false": "boolean",
-
     # Relational
     "link": "link",
     "post_object": "relation",
@@ -89,14 +89,12 @@ ACF_TYPE_MAP = {
     "relationship": "relation",
     "taxonomy": "taxonomy",
     "user": "user",
-
     # jQuery
     "google_map": "map",
     "date_picker": "date",
     "date_time_picker": "datetime",
     "time_picker": "time",
     "color_picker": "color",
-
     # Layout
     "message": "message",
     "accordion": "accordion",
@@ -104,12 +102,10 @@ ACF_TYPE_MAP = {
     "group": "group",
     "repeater": "repeater",
     "flexible_content": "flexible",
-
     # Media
     "image": "image",
     "file": "file",
     "gallery": "gallery",
-
     # Pro fields
     "clone": "clone",
 }
@@ -218,13 +214,15 @@ class ACFConverter:
                 if parsed:
                     layout_fields.append(parsed)
 
-            layouts.append({
-                "key": layout_data.get("key", ""),
-                "name": layout_data.get("name", ""),
-                "label": layout_data.get("label", ""),
-                "display": layout_data.get("display", "block"),
-                "fields": layout_fields,
-            })
+            layouts.append(
+                {
+                    "key": layout_data.get("key", ""),
+                    "name": layout_data.get("name", ""),
+                    "label": layout_data.get("label", ""),
+                    "display": layout_data.get("display", "block"),
+                    "fields": layout_fields,
+                }
+            )
 
         return ACFField(
             key=key,
@@ -265,13 +263,15 @@ class ACFConverter:
                 if focomy_field:
                     fields.append(self._field_to_dict(focomy_field))
 
-            result.append({
-                "name": self._slugify(group.title),
-                "label": group.title,
-                "fields": fields,
-                "_acf_key": group.key,
-                "_acf_location": group.location,
-            })
+            result.append(
+                {
+                    "name": self._slugify(group.title),
+                    "label": group.title,
+                    "fields": fields,
+                    "_acf_key": group.key,
+                    "_acf_location": group.location,
+                }
+            )
 
         return result
 
@@ -316,17 +316,17 @@ class ACFConverter:
                     if converted:
                         layout_fields.append(self._field_to_dict(converted))
 
-                focomy_field.layouts.append({
-                    "name": layout["name"],
-                    "label": layout["label"],
-                    "fields": layout_fields,
-                })
+                focomy_field.layouts.append(
+                    {
+                        "name": layout["name"],
+                        "label": layout["label"],
+                        "fields": layout_fields,
+                    }
+                )
 
         # Convert conditional logic
         if acf_field.conditional_logic:
-            focomy_field.conditions = self._convert_conditional_logic(
-                acf_field.conditional_logic
-            )
+            focomy_field.conditions = self._convert_conditional_logic(acf_field.conditional_logic)
 
         return focomy_field
 
@@ -356,11 +356,13 @@ class ACFConverter:
                     "==contains": "contains",
                 }
 
-                and_conditions.append({
-                    "field": self._key_to_name(field_key),
-                    "operator": op_map.get(operator, "equals"),
-                    "value": value,
-                })
+                and_conditions.append(
+                    {
+                        "field": self._key_to_name(field_key),
+                        "operator": op_map.get(operator, "equals"),
+                        "value": value,
+                    }
+                )
 
             if and_conditions:
                 conditions.append({"all": and_conditions})

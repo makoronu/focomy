@@ -16,6 +16,7 @@ T = TypeVar("T")
 @dataclass
 class PageInfo:
     """Pagination metadata."""
+
     page: int
     per_page: int
     total: int
@@ -26,6 +27,7 @@ class PageInfo:
 
 class PaginatedResult(BaseModel, Generic[T]):
     """Standard paginated response."""
+
     items: list
     page: int
     per_page: int
@@ -63,13 +65,14 @@ class PaginatedResult(BaseModel, Generic[T]):
                 "total_pages": self.total_pages,
                 "has_next": self.has_next,
                 "has_prev": self.has_prev,
-            }
+            },
         }
 
 
 @dataclass
 class CursorInfo:
     """Cursor-based pagination metadata."""
+
     cursor: str | None
     limit: int
     has_more: bool
@@ -78,6 +81,7 @@ class CursorInfo:
 
 class CursorPaginatedResult(BaseModel, Generic[T]):
     """Cursor-based paginated response."""
+
     items: list
     limit: int
     has_more: bool
@@ -118,7 +122,7 @@ class CursorPaginatedResult(BaseModel, Generic[T]):
                 "limit": self.limit,
                 "has_more": self.has_more,
                 "next_cursor": self.next_cursor,
-            }
+            },
         }
 
 
@@ -140,6 +144,7 @@ def decode_cursor(cursor: str) -> str | None:
 
 class PaginationParams(BaseModel):
     """Standard pagination parameters."""
+
     page: int = 1
     per_page: int = 20
     cursor: str | None = None

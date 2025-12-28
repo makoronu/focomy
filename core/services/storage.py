@@ -15,6 +15,7 @@ from typing import BinaryIO, Optional
 try:
     import boto3
     from botocore.exceptions import ClientError
+
     S3_AVAILABLE = True
 except ImportError:
     S3_AVAILABLE = False
@@ -23,6 +24,7 @@ except ImportError:
 @dataclass
 class StoredFile:
     """Information about a stored file."""
+
     key: str  # Storage key/path
     url: str  # Public URL
     size: int

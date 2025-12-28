@@ -18,6 +18,7 @@ from typing import Any, Optional, TypeVar
 
 try:
     import redis.asyncio as aioredis
+
     REDIS_AVAILABLE = True
 except ImportError:
     REDIS_AVAILABLE = False
@@ -97,6 +98,7 @@ class InMemoryBackend(CacheBackend):
     async def delete_pattern(self, pattern: str) -> int:
         """Delete keys matching glob pattern."""
         import fnmatch
+
         async with self._lock:
             to_delete = [k for k in self._cache.keys() if fnmatch.fnmatch(k, pattern)]
             for key in to_delete:
@@ -359,6 +361,7 @@ def cached(prefix: str, ttl: int = 300):
         async def get_page(slug):
             ...
     """
+
     def decorator(func):
         @wraps(func)
         async def wrapper(*args, **kwargs):
@@ -377,10 +380,13 @@ def cached(prefix: str, ttl: int = 300):
 
         # Add invalidation helpers
         wrapper.cache_key = lambda *a, **kw: f"{prefix}:{make_cache_key(*a, **kw)}"
-        wrapper.invalidate = lambda *a, **kw: cache_service.delete(f"{prefix}:{make_cache_key(*a, **kw)}")
+        wrapper.invalidate = lambda *a, **kw: cache_service.delete(
+            f"{prefix}:{make_cache_key(*a, **kw)}"
+        )
         wrapper.invalidate_all = lambda: cache_service.invalidate_pattern(f"{prefix}:*")
 
         return wrapper
+
     return decorator
 
 

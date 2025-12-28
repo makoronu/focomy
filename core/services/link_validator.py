@@ -53,14 +53,16 @@ class LinkValidatorService:
 
             # Check if the target exists
             if not await self._internal_link_exists(target_path, internal_pages):
-                broken_links.append({
-                    "source_url": link["source_url"],
-                    "source_title": link["source_title"],
-                    "source_id": link["source_id"],
-                    "target_url": target_path,
-                    "type": "internal",
-                    "status": "not_found",
-                })
+                broken_links.append(
+                    {
+                        "source_url": link["source_url"],
+                        "source_title": link["source_title"],
+                        "source_id": link["source_id"],
+                        "target_url": target_path,
+                        "type": "internal",
+                        "status": "not_found",
+                    }
+                )
 
         # Check external links if requested
         if check_external:
@@ -107,13 +109,15 @@ class LinkValidatorService:
                 continue
 
             if page_url not in linked_urls:
-                orphans.append({
-                    "id": page["id"],
-                    "title": page["title"],
-                    "url": page_url,
-                    "type": page["type"],
-                    "created_at": page.get("created_at", ""),
-                })
+                orphans.append(
+                    {
+                        "id": page["id"],
+                        "title": page["title"],
+                        "url": page_url,
+                        "type": page["type"],
+                        "created_at": page.get("created_at", ""),
+                    }
+                )
 
         return orphans
 
@@ -132,11 +136,13 @@ class LinkValidatorService:
 
         for link in links["internal"]:
             if not await self._internal_link_exists(link["href"], internal_pages):
-                broken.append({
-                    "target_url": link["href"],
-                    "type": "internal",
-                    "status": "not_found",
-                })
+                broken.append(
+                    {
+                        "target_url": link["href"],
+                        "type": "internal",
+                        "status": "not_found",
+                    }
+                )
 
         return {
             "entity_id": entity_id,
@@ -164,28 +170,32 @@ class LinkValidatorService:
                 slug = data.get("slug", entity.id)
                 path_prefix = ct.path_prefix.strip("/") if ct.path_prefix else ct_name
 
-                pages.append({
-                    "id": entity.id,
-                    "type": ct_name,
-                    "title": data.get("title", data.get("name", "Untitled")),
-                    "url": f"/{path_prefix}/{slug}",
-                    "data": data,
-                    "created_at": data.get("created_at", ""),
-                })
+                pages.append(
+                    {
+                        "id": entity.id,
+                        "type": ct_name,
+                        "title": data.get("title", data.get("name", "Untitled")),
+                        "url": f"/{path_prefix}/{slug}",
+                        "data": data,
+                        "created_at": data.get("created_at", ""),
+                    }
+                )
 
         # Also add category pages
         categories = await self.entity_svc.find("category", limit=1000)
         for cat in categories:
             data = self.entity_svc.serialize(cat)
             slug = data.get("slug", cat.id)
-            pages.append({
-                "id": cat.id,
-                "type": "category",
-                "title": data.get("name", "Untitled"),
-                "url": f"/category/{slug}",
-                "data": data,
-                "created_at": data.get("created_at", ""),
-            })
+            pages.append(
+                {
+                    "id": cat.id,
+                    "type": "category",
+                    "title": data.get("name", "Untitled"),
+                    "url": f"/category/{slug}",
+                    "data": data,
+                    "created_at": data.get("created_at", ""),
+                }
+            )
 
         return pages
 
@@ -329,7 +339,7 @@ class LinkValidatorService:
         """Normalize a path for comparison."""
         # Remove site URL prefix
         if self.site_url and href.startswith(self.site_url):
-            href = href[len(self.site_url):]
+            href = href[len(self.site_url) :]
 
         # Ensure starts with /
         if not href.startswith("/"):
@@ -397,38 +407,46 @@ class LinkValidatorService:
                 try:
                     response = await client.head(href)
                     if response.status_code >= 400:
-                        results.append({
+                        results.append(
+                            {
+                                "source_url": link["source_url"],
+                                "source_title": link["source_title"],
+                                "source_id": link["source_id"],
+                                "target_url": href,
+                                "type": "external",
+                                "status": f"http_{response.status_code}",
+                            }
+                        )
+                    else:
+                        results.append(
+                            {
+                                "target_url": href,
+                                "type": "external",
+                                "status": "ok",
+                            }
+                        )
+                except httpx.TimeoutException:
+                    results.append(
+                        {
                             "source_url": link["source_url"],
                             "source_title": link["source_title"],
                             "source_id": link["source_id"],
                             "target_url": href,
                             "type": "external",
-                            "status": f"http_{response.status_code}",
-                        })
-                    else:
-                        results.append({
+                            "status": "timeout",
+                        }
+                    )
+                except httpx.RequestError:
+                    results.append(
+                        {
+                            "source_url": link["source_url"],
+                            "source_title": link["source_title"],
+                            "source_id": link["source_id"],
                             "target_url": href,
                             "type": "external",
-                            "status": "ok",
-                        })
-                except httpx.TimeoutException:
-                    results.append({
-                        "source_url": link["source_url"],
-                        "source_title": link["source_title"],
-                        "source_id": link["source_id"],
-                        "target_url": href,
-                        "type": "external",
-                        "status": "timeout",
-                    })
-                except httpx.RequestError:
-                    results.append({
-                        "source_url": link["source_url"],
-                        "source_title": link["source_title"],
-                        "source_id": link["source_id"],
-                        "target_url": href,
-                        "type": "external",
-                        "status": "connection_error",
-                    })
+                            "status": "connection_error",
+                        }
+                    )
 
                 # Rate limit
                 await asyncio.sleep(0.1)

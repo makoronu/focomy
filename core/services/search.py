@@ -17,6 +17,7 @@ from .field import field_service
 @dataclass
 class SearchResult:
     """Search result item."""
+
     entity_id: str
     entity_type: str
     title: str
@@ -109,10 +110,7 @@ class SearchService:
     def _get_searchable_types(self) -> list[str]:
         """Get content types marked as searchable."""
         content_types = field_service.get_all_content_types()
-        return [
-            name for name, ct in content_types.items()
-            if ct.searchable
-        ]
+        return [name for name, ct in content_types.items() if ct.searchable]
 
     def _get_searchable_fields(self, types: list[str]) -> dict[str, list[str]]:
         """Get searchable fields for each content type."""
@@ -152,7 +150,8 @@ class SearchService:
             all_fields.update(fields)
 
         # Search in entity_values using trigram similarity
-        sql = text("""
+        sql = text(
+            """
             WITH search_matches AS (
                 SELECT DISTINCT
                     e.id as entity_id,
@@ -174,7 +173,8 @@ class SearchService:
             FROM search_matches sm
             ORDER BY sm.score DESC
             LIMIT :limit OFFSET :offset
-        """)
+        """
+        )
 
         try:
             result = await self.db.execute(
@@ -185,14 +185,12 @@ class SearchService:
                     "fields": list(all_fields),
                     "limit": limit,
                     "offset": offset,
-                }
+                },
             )
             rows = result.fetchall()
         except Exception:
             # pg_trgm might not be available, fall back to LIKE
-            return await self._fallback_search(
-                query, types, searchable_fields, limit, offset
-            )
+            return await self._fallback_search(query, types, searchable_fields, limit, offset)
 
         # Build search results
         results = []
@@ -201,15 +199,17 @@ class SearchService:
             entity = await self.entity_svc.get(entity_id)
             if entity:
                 data = self.entity_svc.serialize(entity)
-                results.append(SearchResult(
-                    entity_id=entity_id,
-                    entity_type=entity_type,
-                    title=data.get("title") or data.get("name") or "",
-                    excerpt=self._generate_excerpt(data, query),
-                    score=float(score),
-                    url=self._get_entity_url(entity_type, data),
-                    data=data,
-                ))
+                results.append(
+                    SearchResult(
+                        entity_id=entity_id,
+                        entity_type=entity_type,
+                        title=data.get("title") or data.get("name") or "",
+                        excerpt=self._generate_excerpt(data, query),
+                        score=float(score),
+                        url=self._get_entity_url(entity_type, data),
+                        data=data,
+                    )
+                )
 
         return results
 
@@ -229,7 +229,8 @@ class SearchService:
         # Use ILIKE for case-insensitive matching
         like_pattern = f"%{query}%"
 
-        sql = text("""
+        sql = text(
+            """
             SELECT DISTINCT
                 e.id as entity_id,
                 e.type as entity_type
@@ -241,7 +242,8 @@ class SearchService:
                 AND ev.value_text ILIKE :pattern
             ORDER BY e.updated_at DESC
             LIMIT :limit OFFSET :offset
-        """)
+        """
+        )
 
         result = await self.db.execute(
             sql,
@@ -251,7 +253,7 @@ class SearchService:
                 "pattern": like_pattern,
                 "limit": limit,
                 "offset": offset,
-            }
+            },
         )
         rows = result.fetchall()
 
@@ -261,15 +263,17 @@ class SearchService:
             entity = await self.entity_svc.get(entity_id)
             if entity:
                 data = self.entity_svc.serialize(entity)
-                results.append(SearchResult(
-                    entity_id=entity_id,
-                    entity_type=entity_type,
-                    title=data.get("title") or data.get("name") or "",
-                    excerpt=self._generate_excerpt(data, query),
-                    score=1.0,
-                    url=self._get_entity_url(entity_type, data),
-                    data=data,
-                ))
+                results.append(
+                    SearchResult(
+                        entity_id=entity_id,
+                        entity_type=entity_type,
+                        title=data.get("title") or data.get("name") or "",
+                        excerpt=self._generate_excerpt(data, query),
+                        score=1.0,
+                        url=self._get_entity_url(entity_type, data),
+                        data=data,
+                    )
+                )
 
         return results
 
@@ -286,7 +290,8 @@ class SearchService:
             all_fields.update(fields)
 
         try:
-            sql = text("""
+            sql = text(
+                """
                 SELECT COUNT(DISTINCT e.id)
                 FROM entities e
                 JOIN entity_values ev ON e.id = ev.entity_id
@@ -295,7 +300,8 @@ class SearchService:
                     AND ev.field_name = ANY(:fields)
                     AND ev.value_text IS NOT NULL
                     AND ev.value_text % :query
-            """)
+            """
+            )
 
             result = await self.db.execute(
                 sql,
@@ -303,12 +309,13 @@ class SearchService:
                     "query": query,
                     "types": types,
                     "fields": list(all_fields),
-                }
+                },
             )
             return result.scalar() or 0
         except Exception:
             # Fallback to LIKE count
-            sql = text("""
+            sql = text(
+                """
                 SELECT COUNT(DISTINCT e.id)
                 FROM entities e
                 JOIN entity_values ev ON e.id = ev.entity_id
@@ -316,7 +323,8 @@ class SearchService:
                     AND e.type = ANY(:types)
                     AND ev.field_name = ANY(:fields)
                     AND ev.value_text ILIKE :pattern
-            """)
+            """
+            )
 
             result = await self.db.execute(
                 sql,
@@ -324,7 +332,7 @@ class SearchService:
                     "types": types,
                     "fields": list(all_fields),
                     "pattern": f"%{query}%",
-                }
+                },
             )
             return result.scalar() or 0
 
@@ -402,12 +410,16 @@ class SearchService:
 
         # Create GIN index on value_text for trigram ops
         try:
-            await self.db.execute(text("""
+            await self.db.execute(
+                text(
+                    """
                 CREATE INDEX IF NOT EXISTS idx_entity_values_text_trgm
                 ON entity_values
                 USING gin (value_text gin_trgm_ops)
                 WHERE value_text IS NOT NULL
-            """))
+            """
+                )
+            )
             await self.db.commit()
             created.append("idx_entity_values_text_trgm")
         except Exception:
@@ -430,7 +442,8 @@ async def get_search_suggestions(
     if not query or len(query) < 2:
         return []
 
-    sql = text("""
+    sql = text(
+        """
         SELECT DISTINCT ev.value_text
         FROM entity_values ev
         JOIN entities e ON e.id = ev.entity_id
@@ -439,11 +452,9 @@ async def get_search_suggestions(
             AND ev.value_text ILIKE :pattern
         ORDER BY ev.value_text
         LIMIT :limit
-    """)
-
-    result = await db.execute(
-        sql,
-        {"pattern": f"{query}%", "limit": limit}
+    """
     )
+
+    result = await db.execute(sql, {"pattern": f"{query}%", "limit": limit})
 
     return [row[0] for row in result.fetchall()]
