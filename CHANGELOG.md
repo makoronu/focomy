@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.12] - 2025-12-29
+
+### Fixed
+- `/api/health` エンドポイントのルート順序修正
+
 ## [0.1.11] - 2025-12-29
 
 ### Fixed

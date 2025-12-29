@@ -446,10 +446,13 @@ app.include_router(comments.router, prefix="/api")
 app.include_router(forms.router)
 app.include_router(seo.router)
 app.include_router(admin.router)
-app.include_router(engine.router)
 
 
 @app.get("/api/health")
 async def api_health():
     """Health check endpoint for monitoring."""
     return {"status": "healthy"}
+
+
+# Engine router must be last (has catch-all routes)
+app.include_router(engine.router)
