@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.4] - 2025-12-29
+
+### Fixed
+- デフォルトテーマのテンプレート名修正（index.html → home.html）
+- 欠落テンプレート追加（category.html, archive.html, search.html）
+
 ## [0.1.3] - 2025-12-29
 
 ### Fixed
