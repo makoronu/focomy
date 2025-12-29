@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.7] - 2025-12-29
+
+### Fixed
+- テンプレートに `site` 変数追加（全ページエラー修正）
+- `focomy makemigrations` のAlembic自動初期化
+
 ## [0.1.6] - 2025-12-29
 
 ### Fixed

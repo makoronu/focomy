@@ -177,3 +177,96 @@ AttributeError: 'str' object has no attribute 'name'
 
 ### 対応
 - cli.py: `for ct in content_types:` → `for ct in content_types.values():`
+
+---
+
+## [ERR-008] 既存サイトにuser.yaml/テンプレートがない
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.6 |
+| ステータス | 保留 |
+| 対応バージョン | - |
+
+### 症状
+既存サイトのアップグレード時に、新バージョンで追加されたファイルがコピーされない
+
+### 原因
+`focomy update` はpipバージョンチェックのみ。ファイル同期機能がない。
+
+### 対応
+（検討）`focomy update --sync` オプション追加を検討
+
+---
+
+## [ERR-009] makemigrations: No 'script_location' key found
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.6 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.7 |
+
+### 症状
+```
+$ focomy makemigrations -m "init"
+alembic.util.exc.CommandError: No 'script_location' key found in configuration.
+```
+
+### 原因
+alembic.ini が存在しない場合、Alembic設定が作成されない
+
+### 対応
+- cli.py: makemigrationsでAlembic未初期化の場合、自動初期化
+- migrations/, env.py, script.py.mako を自動生成
+
+---
+
+## [ERR-010] migrate: No migrations directory found
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.6 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.7 |
+
+### 症状
+```
+$ focomy migrate
+Error: No migrations directory found.
+Run 'focomy makemigrations' first to generate migrations.
+```
+
+### 原因
+ERR-009と同根。makemigrationsが動かないためmigrateも詰む。
+
+### 対応
+ERR-009の修正で解決
+
+---
+
+## [ERR-011] テンプレートでsite未定義
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.6 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.7 |
+
+### 症状
+全ページでテンプレートエラー（`site` 変数未定義）
+
+### 原因
+`get_seo_settings()` が `site` 変数を返していない
+
+### 対応
+- routes.py: `get_seo_settings()` に `site` dict追加
+- site.name, site.tagline, site.language を含める

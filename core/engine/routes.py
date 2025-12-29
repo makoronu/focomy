@@ -86,6 +86,11 @@ async def get_seo_settings(db: AsyncSession, site_url: str = "") -> dict:
     site_json_ld = seo_svc.render_site_json_ld()
 
     return {
+        "site": {
+            "name": site_name,
+            "tagline": site_settings.get("tagline", ""),
+            "language": site_settings.get("language", "ja"),
+        },
         "seo_settings": {
             "ga4_id": seo_settings.get("ga4_id", ""),
             "gtm_id": seo_settings.get("gtm_id", ""),
