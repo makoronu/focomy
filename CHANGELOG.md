@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.9] - 2025-12-29
+
+### Fixed
+- テンプレートに `now` 関数追加
+- `psycopg2-binary` 依存追加（migrate用）
+
 ## [0.1.8] - 2025-12-29
 
 ### Added

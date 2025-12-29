@@ -273,3 +273,50 @@ ERR-009の修正で解決
 ### 対応
 - routes.py: `get_seo_settings()` に `site` dict追加
 - site.name, site.tagline, site.language を含める
+
+---
+
+## [ERR-012] 'now' is undefined
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.8 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.9 |
+
+### 症状
+```
+jinja2.exceptions.UndefinedError: 'now' is undefined
+File "themes/default/templates/base.html", line 27
+```
+
+### 原因
+Jinja2環境に `now` 関数が登録されていない
+
+### 対応
+- theme.py: `env.globals["now"] = datetime.now` 追加
+
+---
+
+## [ERR-013] ModuleNotFoundError: No module named 'psycopg2'
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.8 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.9 |
+
+### 症状
+```
+ModuleNotFoundError: No module named 'psycopg2'
+```
+
+### 原因
+Alembicマイグレーション実行時にpsycopg2が必要だが、依存関係に含まれていない
+
+### 対応
+- pyproject.toml: `psycopg2-binary>=2.9.0` 追加

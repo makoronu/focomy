@@ -2,6 +2,7 @@
 
 import json
 import re
+from datetime import datetime
 from typing import Any
 
 import yaml
@@ -618,6 +619,7 @@ body {
         env.globals["asset_url"] = get_asset_url
         env.globals["upload_url"] = get_upload_url
         env.globals["static_url"] = get_static_url
+        env.globals["now"] = datetime.now
 
         return env
 
