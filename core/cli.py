@@ -10,7 +10,7 @@ from importlib import resources
 from pathlib import Path
 
 # Version
-__version__ = "0.1.5"
+__version__ = "0.1.6"
 
 GITHUB_REPO = "focomy/focomy"
 PYPI_PACKAGE = "focomy"
@@ -336,7 +336,7 @@ def cmd_validate(args):
     errors = []
     content_types = field_service.get_all_content_types()
 
-    for ct in content_types:
+    for ct in content_types.values():
         print(f"  Checking {ct.name}...")
         # Basic validation
         if not ct.fields:

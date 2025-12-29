@@ -151,3 +151,29 @@ Alembic設定で `script_location` が指定されていない
 
 ### 対応
 （検討）`focomy update --sync-themes` オプション追加を検討
+
+---
+
+## [ERR-007] 'str' object has no attribute 'name'
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.5 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.6 |
+
+### 症状
+```
+$ focomy validate
+Validating content type definitions...
+  Checking {ct.name}...
+AttributeError: 'str' object has no attribute 'name'
+```
+
+### 原因
+`get_all_content_types()` は `dict[str, ContentType]` を返すが、`for ct in content_types:` でキー（文字列）をイテレートしていた
+
+### 対応
+- cli.py: `for ct in content_types:` → `for ct in content_types.values():`

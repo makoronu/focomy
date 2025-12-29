@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.6] - 2025-12-29
+
+### Fixed
+- `focomy validate` のイテレーションエラー修正
+
 ## [0.1.5] - 2025-12-29
 
 ### Fixed
