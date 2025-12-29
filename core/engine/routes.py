@@ -379,8 +379,10 @@ async def view_category(
     total = len(list(post_ids))  # Simplified count
     total_pages = (total + per_page - 1) // per_page
 
-    # Get menus
+    # Get menus and site context
+    site_url = str(request.base_url).rstrip("/")
     menus_ctx = await get_menus_context(db)
+    seo_ctx = await get_seo_settings(db, site_url)
 
     html = await render_theme(
         db,
@@ -391,6 +393,7 @@ async def view_category(
             "page": page,
             "total_pages": total_pages,
             **menus_ctx,
+            **seo_ctx,
         },
     )
 
@@ -440,8 +443,10 @@ async def view_archive(
         if created and created[:7] == f"{year:04d}-{month:02d}":
             posts.append(data)
 
-    # Get menus
+    # Get menus and site context
+    site_url = str(request.base_url).rstrip("/")
     menus_ctx = await get_menus_context(db)
+    seo_ctx = await get_seo_settings(db, site_url)
 
     html = await render_theme(
         db,
@@ -452,6 +457,7 @@ async def view_archive(
             "posts": posts,
             "page": page,
             **menus_ctx,
+            **seo_ctx,
         },
     )
 
@@ -501,8 +507,10 @@ async def search(
 
     total_pages = (total + 9) // 10 if total > 0 else 0
 
-    # Get menus
+    # Get menus and site context
+    site_url = str(request.base_url).rstrip("/")
     menus_ctx = await get_menus_context(db)
+    seo_ctx = await get_seo_settings(db, site_url)
 
     html = await render_theme(
         db,
@@ -514,6 +522,7 @@ async def search(
             "page": page,
             "total_pages": total_pages,
             **menus_ctx,
+            **seo_ctx,
         },
     )
 

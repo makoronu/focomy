@@ -320,3 +320,28 @@ Alembicマイグレーション実行時にpsycopg2が必要だが、依存関�
 
 ### 対応
 - pyproject.toml: `psycopg2-binary>=2.9.0` 追加
+
+---
+
+## [ERR-014] /search, /category, /archiveでsite未定義
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.9 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.10 |
+
+### 症状
+```
+jinja2.exceptions.UndefinedError: 'site' is undefined
+File "themes/default/templates/search.html"
+```
+
+### 原因
+`search`、`view_category`、`view_archive` ルートが `get_seo_settings()` を呼び出していないため、`site` 変数がテンプレートに渡されていない
+
+### 対応
+- routes.py: 3ルートに `seo_ctx = await get_seo_settings(db, site_url)` 追加
+- テンプレートコンテキストに `**seo_ctx` 展開
