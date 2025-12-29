@@ -32,6 +32,7 @@ PyPI関連のバグの場合、以下を確認:
 → 2_fix/migration.md
 → 2_fix/apply.md
 → 3_verify/verify.md
+→ 4_report/github.md
 ```
 
 ---
