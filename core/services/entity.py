@@ -78,7 +78,7 @@ class EntityService:
             await self.db.refresh(entity)
 
             # Invalidate cache for this content type
-            self._invalidate_cache(type_name)
+            await self._invalidate_cache(type_name)
 
             return entity
 
@@ -161,7 +161,7 @@ class EntityService:
             await self.db.refresh(entity)
 
             # Invalidate cache for this content type
-            self._invalidate_cache(entity.type)
+            await self._invalidate_cache(entity.type)
 
             return entity
 
@@ -213,7 +213,7 @@ class EntityService:
             await self.db.commit()
 
             # Invalidate cache for this content type
-            self._invalidate_cache(entity_type)
+            await self._invalidate_cache(entity_type)
 
             return True
 
@@ -297,7 +297,7 @@ class EntityService:
 
         await self.db.commit()
 
-        self._invalidate_cache(entity.type)
+        await self._invalidate_cache(entity.type)
         return entity
 
     async def list_deleted(
@@ -372,17 +372,17 @@ class EntityService:
 
         return result.rowcount
 
-    def _invalidate_cache(self, type_name: str) -> None:
+    async def _invalidate_cache(self, type_name: str) -> None:
         """Invalidate page cache for a content type."""
         # Invalidate home page (shows recent posts)
-        cache_service.delete("page:home")
+        await cache_service.delete("page:home")
 
         # Invalidate type-specific pages
-        cache_service.invalidate_pattern(f"page:{type_name}")
+        await cache_service.invalidate_pattern(f"page:{type_name}")
 
         # Invalidate listings
-        cache_service.invalidate_pattern("page:category")
-        cache_service.invalidate_pattern("page:archive")
+        await cache_service.invalidate_pattern("page:category")
+        await cache_service.invalidate_pattern("page:archive")
 
     async def get(
         self,

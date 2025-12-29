@@ -2,6 +2,21 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.3] - 2025-12-29
+
+### Fixed
+- cache_serviceの非同期メソッドにawait追加（coroutineエラー修正）
+
+## [0.1.2] - 2025-12-29
+
+### Fixed
+- テンプレートパスをパッケージ内絶対パスに変更
+
+## [0.1.1] - 2025-12-28
+
+### Fixed
+- PyPIパッケージでサーバー起動できない問題を修正
+
 ## [0.1.0] - 2025-12-28
 
 ### Added
