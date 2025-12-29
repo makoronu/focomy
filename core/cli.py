@@ -730,6 +730,16 @@ def cmd_createuser(args):
     """Create a new user."""
     import getpass
 
+    # Ensure user.yaml exists
+    user_yaml = Path("content_types/user.yaml")
+    if not user_yaml.exists():
+        scaffold_path = _get_scaffold_path()
+        scaffold_user = scaffold_path / "content_types" / "user.yaml"
+        if scaffold_user.exists():
+            user_yaml.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy(scaffold_user, user_yaml)
+            print(f"Created: {user_yaml}")
+
     email = args.email
     name = args.name
     role = args.role

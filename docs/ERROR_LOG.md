@@ -345,3 +345,50 @@ File "themes/default/templates/search.html"
 ### 対応
 - routes.py: 3ルートに `seo_ctx = await get_seo_settings(db, site_url)` 追加
 - テンプレートコンテキストに `**seo_ctx` 展開
+
+---
+
+## [ERR-015] createuserでUnknown content type: user
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.10 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.11 |
+
+### 症状
+```
+$ focomy createuser -e admin@example.com -n Admin -r admin -p password
+Error: Validation failed: [ValidationError(field='type', message='Unknown content type: user')]
+```
+
+### 原因
+既存サイト（v0.1.5以前作成）に `content_types/user.yaml` がない
+
+### 対応
+- cli.py: createuser実行時にuser.yamlがなければscaffoldから自動コピー
+
+---
+
+## [ERR-016] /api/health 404（要望）
+
+| 項目 | 内容 |
+|------|------|
+| 報告日 | 2025-12-29 |
+| 報告者 | GitHub Issue #1 Comment |
+| バージョン | v0.1.10 |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.11 |
+
+### 症状
+```
+GET /api/health → 404 Not Found
+```
+
+### 原因
+ヘルスチェックAPIが未実装
+
+### 対応
+- main.py: `/api/health` エンドポイント追加（{"status": "healthy"}を返す）
