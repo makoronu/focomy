@@ -1,0 +1,31 @@
+name: user
+label: ユーザー
+label_plural: ユーザー一覧
+admin_menu: false
+searchable: false
+
+fields:
+  - name: name
+    type: string
+    label: 名前
+    required: true
+  - name: email
+    type: email
+    label: メールアドレス
+    required: true
+    unique: true
+  - name: role
+    type: select
+    label: 権限
+    options:
+      - value: admin
+        label: 管理者
+      - value: editor
+        label: 編集者
+      - value: author
+        label: 投稿者
+    default: author
+  - name: password
+    type: string
+    label: パスワード（ハッシュ）
+    admin_hidden: true

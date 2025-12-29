@@ -612,6 +612,7 @@ body {
         env.filters["asset_url"] = get_asset_url
         env.filters["upload_url"] = get_upload_url
         env.filters["static_url"] = get_static_url
+        env.filters["date"] = self._date_filter
 
         # Add global functions
         env.globals["asset_url"] = get_asset_url
@@ -619,6 +620,21 @@ body {
         env.globals["static_url"] = get_static_url
 
         return env
+
+    def _date_filter(self, value: Any, format: str = "%Y-%m-%d") -> str:
+        """Format date/datetime value."""
+        if value is None:
+            return ""
+        if isinstance(value, str):
+            # Try to parse ISO format string
+            try:
+                from datetime import datetime
+                value = datetime.fromisoformat(value.replace("Z", "+00:00"))
+            except (ValueError, AttributeError):
+                return value[:10] if len(value) >= 10 else value
+        if hasattr(value, "strftime"):
+            return value.strftime(format)
+        return str(value)
 
     def _excerpt(self, content: Any, length: int = 200) -> str:
         """Extract plain text excerpt from content."""

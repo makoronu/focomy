@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.5] - 2025-12-29
+
+### Fixed
+- Jinja2 `date` フィルター追加
+- `user` コンテンツタイプ追加（createuser修正）
+- `focomy migrate` のAlembic設定エラー修正
+
 ## [0.1.4] - 2025-12-29
 
 ### Fixed

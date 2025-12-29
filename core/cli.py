@@ -10,7 +10,7 @@ from importlib import resources
 from pathlib import Path
 
 # Version
-__version__ = "0.1.4"
+__version__ = "0.1.5"
 
 GITHUB_REPO = "focomy/focomy"
 PYPI_PACKAGE = "focomy"
@@ -242,7 +242,25 @@ def cmd_migrate(args):
 
     from alembic import command
 
-    alembic_cfg = Config("alembic.ini")
+    # Check if alembic.ini exists, otherwise create programmatic config
+    alembic_ini = Path("alembic.ini")
+    if alembic_ini.exists():
+        alembic_cfg = Config("alembic.ini")
+    else:
+        # Create programmatic configuration
+        alembic_cfg = Config()
+        migrations_dir = Path("migrations")
+        if not migrations_dir.exists():
+            print("Error: No migrations directory found.")
+            print("Run 'focomy makemigrations' first to generate migrations.")
+            sys.exit(1)
+        alembic_cfg.set_main_option("script_location", str(migrations_dir))
+
+        # Get database URL from settings
+        from .config import get_settings
+        settings = get_settings()
+        db_url = settings.database_url.replace("postgresql+asyncpg://", "postgresql://")
+        alembic_cfg.set_main_option("sqlalchemy.url", db_url)
 
     # Show history
     if args.history:
