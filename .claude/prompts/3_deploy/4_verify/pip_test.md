@@ -29,10 +29,24 @@ curl -s http://localhost:8000/api/health | head -5
 kill %1
 ```
 
+## テンプレート確認（必須）
+```bash
+# focomy init 後に実行
+ls themes/default/templates/
+# 以下が存在すること:
+# - base.html
+# - home.html
+# - post.html
+# - category.html
+# - archive.html
+# - search.html
+```
+
 ## 完了条件
 - [ ] インストール成功
 - [ ] `focomy version` 動作
 - [ ] `focomy init` でサイト作成成功
+- [ ] **テンプレート6種が全て存在**（home/post/category/archive/search/base）
 - [ ] `focomy serve` でサーバー起動
 - [ ] `/` トップページ表示
 - [ ] `/admin/login` ログイン画面表示（テンプレート解決）
