@@ -10,7 +10,7 @@ from importlib import resources
 from pathlib import Path
 
 # Version
-__version__ = "0.1.7"
+__version__ = "0.1.8"
 
 GITHUB_REPO = "focomy/focomy"
 PYPI_PACKAGE = "focomy"
@@ -68,6 +68,7 @@ def main():
     update_parser = subparsers.add_parser("update", help="Update Focomy to latest version")
     update_parser.add_argument("--check", action="store_true", help="Check for updates only")
     update_parser.add_argument("--force", action="store_true", help="Force update")
+    update_parser.add_argument("--sync", action="store_true", help="Sync missing files from scaffold")
 
     # build
     build_parser = subparsers.add_parser("build", help="Build static site")
@@ -458,6 +459,11 @@ def cmd_update(args):
     """Update Focomy to latest version."""
     import httpx
 
+    # Handle --sync option
+    if args.sync:
+        _sync_scaffold_files()
+        return
+
     print("Checking for updates...")
 
     try:
@@ -507,6 +513,49 @@ def cmd_update(args):
     except Exception as e:
         print(f"Error checking for updates: {e}")
         sys.exit(1)
+
+
+def _sync_scaffold_files():
+    """Sync missing files from scaffold to current site."""
+    scaffold_path = _get_scaffold_path()
+    synced = []
+
+    print("Syncing missing files from scaffold...")
+
+    # Sync content_types
+    ct_scaffold = scaffold_path / "content_types"
+    ct_local = Path("content_types")
+    if ct_scaffold.exists() and ct_local.exists():
+        for yaml_file in ct_scaffold.glob("*.yaml"):
+            local_file = ct_local / yaml_file.name
+            if not local_file.exists():
+                shutil.copy(yaml_file, local_file)
+                synced.append(f"content_types/{yaml_file.name}")
+
+    # Sync themes (only missing files, don't overwrite)
+    themes_scaffold = scaffold_path / "themes"
+    themes_local = Path("themes")
+    if themes_scaffold.exists() and themes_local.exists():
+        for theme_dir in themes_scaffold.iterdir():
+            if theme_dir.is_dir():
+                local_theme = themes_local / theme_dir.name
+                if local_theme.exists():
+                    # Sync missing template files
+                    for template in theme_dir.rglob("*"):
+                        if template.is_file():
+                            rel_path = template.relative_to(theme_dir)
+                            local_template = local_theme / rel_path
+                            if not local_template.exists():
+                                local_template.parent.mkdir(parents=True, exist_ok=True)
+                                shutil.copy(template, local_template)
+                                synced.append(f"themes/{theme_dir.name}/{rel_path}")
+
+    if synced:
+        print(f"\nSynced {len(synced)} files:")
+        for f in synced:
+            print(f"  + {f}")
+    else:
+        print("\nAll files are up to date.")
 
 
 def _check_github_release(args):

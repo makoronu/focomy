@@ -187,8 +187,8 @@ AttributeError: 'str' object has no attribute 'name'
 | 報告日 | 2025-12-29 |
 | 報告者 | GitHub Issue #1 Comment |
 | バージョン | v0.1.6 |
-| ステータス | 保留 |
-| 対応バージョン | - |
+| ステータス | 完了 |
+| 対応バージョン | v0.1.8 |
 
 ### 症状
 既存サイトのアップグレード時に、新バージョンで追加されたファイルがコピーされない
@@ -197,7 +197,10 @@ AttributeError: 'str' object has no attribute 'name'
 `focomy update` はpipバージョンチェックのみ。ファイル同期機能がない。
 
 ### 対応
-（検討）`focomy update --sync` オプション追加を検討
+- `focomy update --sync` オプション追加
+- 不足しているcontent_types/*.yamlをコピー
+- 不足しているthemes/*/templates/*をコピー
+- 既存ファイルは上書きしない（安全）
 
 ---
 

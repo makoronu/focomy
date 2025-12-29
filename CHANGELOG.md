@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.8] - 2025-12-29
+
+### Added
+- `focomy update --sync` で不足ファイルを同期
+
 ## [0.1.7] - 2025-12-29
 
 ### Fixed
