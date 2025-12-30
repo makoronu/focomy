@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.13] - 2025-12-30
+
+### Changed
+- メディアストレージをフラット構造に変更（`uploads/001_filename.webp`）
+- 命名規則を連番+元名に統一（通常アップロード・WordPress Import共通）
+
+### Added
+- WordPress Import機能（WXR/REST API対応）
+- WebP変換オプション
+- `file_hash`カラム追加（重複検知用）
+- category/tag/media/menuコンテンツタイプ
+
 ## [0.1.12] - 2025-12-29
 
 ### Fixed

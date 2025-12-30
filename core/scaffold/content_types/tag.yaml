@@ -1,0 +1,24 @@
+name: tag
+label: Tag
+icon: tag
+list_display:
+  - name
+  - slug
+fields:
+  - name: name
+    type: string
+    label: Name
+    required: true
+  - name: slug
+    type: slug
+    label: Slug
+    source: name
+    required: true
+    indexed: true
+  - name: description
+    type: text
+    label: Description
+  - name: wp_id
+    type: integer
+    label: WordPress ID
+    indexed: true

@@ -194,6 +194,18 @@ class WordPressAnalyzer:
             AnalysisReport with complete analysis
         """
         data = self.parser.parse(file_path)
+        return self.analyze_data(data)
+
+    def analyze_data(self, data: WXRData) -> AnalysisReport:
+        """
+        Analyze WXR data directly.
+
+        Args:
+            data: WXRData object
+
+        Returns:
+            AnalysisReport with complete analysis
+        """
         report = AnalysisReport()
 
         # Site info

@@ -1,5 +1,7 @@
 """Media Importer - Downloads and processes WordPress media files."""
 
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import io
@@ -76,6 +78,8 @@ class MediaImporter:
         timeout: int = 30,
         max_image_size: int = 2048,
         jpeg_quality: int = 85,
+        convert_to_webp: bool = False,
+        webp_quality: int = 85,
     ):
         """
         Initialize MediaImporter.
@@ -87,6 +91,8 @@ class MediaImporter:
             timeout: Request timeout in seconds
             max_image_size: Maximum image dimension (width/height)
             jpeg_quality: JPEG compression quality (1-100)
+            convert_to_webp: Convert all images to WebP format
+            webp_quality: WebP compression quality (1-100)
         """
         self.upload_dir = Path(upload_dir)
         self.base_url = base_url.rstrip("/")
@@ -94,6 +100,8 @@ class MediaImporter:
         self.timeout = timeout
         self.max_image_size = max_image_size
         self.jpeg_quality = jpeg_quality
+        self.convert_to_webp = convert_to_webp
+        self.webp_quality = webp_quality
 
         # Create upload directory
         self.upload_dir.mkdir(parents=True, exist_ok=True)
@@ -103,6 +111,16 @@ class MediaImporter:
 
         # Semaphore for concurrent downloads
         self._semaphore = asyncio.Semaphore(max_concurrent)
+
+    def _get_next_sequence(self) -> int:
+        """Get next sequence number from existing files in upload directory."""
+        max_seq = 0
+        for f in self.upload_dir.iterdir():
+            if f.is_file():
+                match = re.match(r"(\d+)_", f.name)
+                if match:
+                    max_seq = max(max_seq, int(match.group(1)))
+        return max_seq + 1
 
     async def import_media(
         self,
@@ -192,11 +210,15 @@ class MediaImporter:
 
                 # Process image if applicable
                 width, height = 0, 0
+                new_ext = None
                 if self._is_image(item.mime_type or item.filename):
-                    data, width, height = self._process_image(data, item.filename)
+                    data, width, height, new_ext = self._process_image(data, item.filename)
 
-                # Generate unique filename
-                filename = self._generate_filename(item.filename, file_hash)
+                # Get next sequence number
+                sequence = self._get_next_sequence()
+
+                # Generate unique filename (with new extension if converted)
+                filename = self._generate_filename(item.filename, sequence, new_ext)
 
                 # Save file
                 save_path = self._save_file(data, filename)
@@ -208,12 +230,19 @@ class MediaImporter:
                 if progress_callback:
                     progress_callback(index + 1, total, item)
 
+                # Determine MIME type (use guessed type for converted files)
+                if new_ext and new_ext != Path(item.filename).suffix.lower():
+                    # File was converted, use new MIME type
+                    mime_type = mimetypes.guess_type(filename)[0] or "application/octet-stream"
+                else:
+                    mime_type = item.mime_type or mimetypes.guess_type(filename)[0] or ""
+
                 return ImportedMedia(
                     original_url=item.original_url,
                     new_url=self._path_to_url(save_path),
                     new_path=save_path,
                     filename=filename,
-                    mime_type=item.mime_type or mimetypes.guess_type(filename)[0] or "",
+                    mime_type=mime_type,
                     width=width,
                     height=height,
                     file_size=len(data),
@@ -253,8 +282,12 @@ class MediaImporter:
         ext = Path(mime_or_filename).suffix.lower()
         return ext in {".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".tiff"}
 
-    def _process_image(self, data: bytes, filename: str) -> tuple[bytes, int, int]:
-        """Process and optimize image."""
+    def _process_image(self, data: bytes, filename: str) -> tuple[bytes, int, int, str]:
+        """Process and optimize image.
+
+        Returns:
+            Tuple of (data, width, height, new_extension)
+        """
         try:
             img = Image.open(io.BytesIO(data))
             width, height = img.size
@@ -267,32 +300,53 @@ class MediaImporter:
             # Convert and compress
             output = io.BytesIO()
             ext = Path(filename).suffix.lower()
+            new_ext = ext
 
-            if ext in {".jpg", ".jpeg"}:
+            # Convert to WebP if enabled (except GIF for animation support)
+            if self.convert_to_webp and ext in {".jpg", ".jpeg", ".png", ".bmp", ".tiff"}:
+                if img.mode in ("RGBA", "P"):
+                    # Keep transparency for PNG
+                    img.save(output, format="WEBP", quality=self.webp_quality, lossless=False)
+                else:
+                    img = img.convert("RGB")
+                    img.save(output, format="WEBP", quality=self.webp_quality)
+                new_ext = ".webp"
+            elif ext in {".jpg", ".jpeg"}:
                 if img.mode in ("RGBA", "P"):
                     img = img.convert("RGB")
                 img.save(output, format="JPEG", quality=self.jpeg_quality, optimize=True)
             elif ext == ".png":
                 img.save(output, format="PNG", optimize=True)
             elif ext == ".webp":
-                img.save(output, format="WEBP", quality=self.jpeg_quality)
+                img.save(output, format="WEBP", quality=self.webp_quality)
             elif ext == ".gif":
                 img.save(output, format="GIF")
             else:
                 # Keep original format
-                return data, width, height
+                return data, width, height, ext
 
-            return output.getvalue(), width, height
+            return output.getvalue(), width, height, new_ext
 
         except Exception:
             # Return original if processing fails
-            return data, 0, 0
+            return data, 0, 0, Path(filename).suffix.lower()
 
-    def _generate_filename(self, original_filename: str, file_hash: str) -> str:
-        """Generate unique filename."""
+    def _generate_filename(
+        self, original_filename: str, sequence: int, new_ext: str | None = None
+    ) -> str:
+        """Generate sequential filename.
+
+        Args:
+            original_filename: Original filename
+            sequence: Sequence number
+            new_ext: New extension to use (e.g., ".webp" for converted images)
+
+        Returns:
+            Unique filename with sequence prefix
+        """
         path = Path(original_filename)
         stem = path.stem
-        suffix = path.suffix.lower()
+        suffix = new_ext if new_ext else path.suffix.lower()
 
         # Sanitize filename
         stem = re.sub(r"[^\w\-]", "_", stem)
@@ -301,30 +355,24 @@ class MediaImporter:
         if not stem:
             stem = "file"
 
-        # Add hash prefix for uniqueness
-        short_hash = file_hash[:8]
-        return f"{short_hash}_{stem}{suffix}"
+        # Add sequence prefix for uniqueness
+        return f"{sequence:03d}_{stem}{suffix}"
 
     def _save_file(self, data: bytes, filename: str) -> str:
-        """Save file to upload directory."""
-        # Organize by year/month
-        from datetime import datetime
+        """Save file to upload directory (flat structure)."""
+        # Save directly to upload_dir (no subdirectories)
+        save_path = self.upload_dir / filename
 
-        now = datetime.now()
-        subdir = self.upload_dir / str(now.year) / f"{now.month:02d}"
-        subdir.mkdir(parents=True, exist_ok=True)
-
-        # Handle filename conflicts
-        save_path = subdir / filename
+        # Handle filename conflicts (increment sequence in filename)
         counter = 1
         while save_path.exists():
             stem = Path(filename).stem
             suffix = Path(filename).suffix
-            save_path = subdir / f"{stem}_{counter}{suffix}"
+            save_path = self.upload_dir / f"{stem}_{counter}{suffix}"
             counter += 1
 
         save_path.write_bytes(data)
-        return str(save_path.relative_to(self.upload_dir))
+        return save_path.name  # Just the filename, no subdirectory
 
     def _path_to_url(self, path: str) -> str:
         """Convert file path to URL."""

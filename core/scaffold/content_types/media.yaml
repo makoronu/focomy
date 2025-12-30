@@ -1,0 +1,46 @@
+name: media
+label: Media
+icon: image
+list_display:
+  - title
+  - filename
+  - mime_type
+fields:
+  - name: title
+    type: string
+    label: Title
+  - name: filename
+    type: string
+    label: Filename
+    indexed: true
+  - name: stored_path
+    type: string
+    label: Stored Path
+  - name: mime_type
+    type: string
+    label: MIME Type
+  - name: size
+    type: integer
+    label: File Size (bytes)
+  - name: width
+    type: integer
+    label: Width
+  - name: height
+    type: integer
+    label: Height
+  - name: alt_text
+    type: string
+    label: Alt Text
+  - name: caption
+    type: text
+    label: Caption
+  - name: description
+    type: text
+    label: Description
+  - name: source_url
+    type: string
+    label: Original Source URL
+  - name: wp_id
+    type: integer
+    label: WordPress ID
+    indexed: true

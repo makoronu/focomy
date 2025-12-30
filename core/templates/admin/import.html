@@ -1,0 +1,705 @@
+{% extends "admin/base.html" %}
+
+{% block title %}Import - Focomy{% endblock %}
+
+{% block header_title %}WordPress Import{% endblock %}
+
+{% block content %}
+<div class="import-container">
+    <!-- Source Selection -->
+    <div class="card" id="source-card">
+        <div class="card-header">
+            <h2 class="card-title">Import Source</h2>
+        </div>
+        <div class="card-body">
+            <div class="source-tabs">
+                <button class="source-tab active" data-source="file" onclick="selectSource('file')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                        <polyline points="14 2 14 8 20 8"/>
+                    </svg>
+                    WXR File Upload
+                </button>
+                <button class="source-tab" data-source="url" onclick="selectSource('url')">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="10"/>
+                        <line x1="2" y1="12" x2="22" y2="12"/>
+                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    REST API (URL)
+                </button>
+            </div>
+
+            <!-- File Upload -->
+            <div id="file-source" class="source-content">
+                <div class="upload-area" id="upload-area">
+                    <input type="file" id="wxr-file" accept=".xml" hidden>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                    <p>Drop your WordPress export file here</p>
+                    <p class="text-muted">or click to browse (.xml)</p>
+                    <p id="file-name" class="file-name"></p>
+                </div>
+                <p class="help-text">
+                    Export your WordPress site: WordPress Admin &rarr; Tools &rarr; Export &rarr; All Content
+                </p>
+            </div>
+
+            <!-- URL Input -->
+            <div id="url-source" class="source-content hidden">
+                <div class="form-group">
+                    <label class="form-label" for="wp-url">WordPress Site URL</label>
+                    <input type="url" id="wp-url" class="form-input" placeholder="https://your-wordpress-site.com">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="wp-username">Username</label>
+                    <input type="text" id="wp-username" class="form-input" placeholder="admin">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="wp-password">Application Password</label>
+                    <input type="password" id="wp-password" class="form-input" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx">
+                    <p class="help-text">
+                        Create in WordPress: Users &rarr; Your Profile &rarr; Application Passwords
+                    </p>
+                </div>
+                <button class="btn btn-secondary" onclick="testConnection()">
+                    Test Connection
+                </button>
+                <span id="connection-status"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Options -->
+    <div class="card" id="options-card">
+        <div class="card-header">
+            <h2 class="card-title">Import Options</h2>
+        </div>
+        <div class="card-body">
+            <div class="option-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="opt-media" checked>
+                    <span>Import media metadata</span>
+                </label>
+            </div>
+            <div class="option-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="opt-download-media">
+                    <span>Download media files (slower, requires storage)</span>
+                </label>
+            </div>
+            <div class="option-group media-sub-option hidden" id="webp-options">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="opt-webp">
+                    <span>Convert images to WebP format</span>
+                </label>
+                <div class="sub-option" id="webp-quality-option" style="margin-left: 28px; margin-top: 8px; display: none;">
+                    <label class="form-label" style="font-size: 0.875rem;">WebP Quality: <span id="webp-quality-value">85</span>%</label>
+                    <input type="range" id="opt-webp-quality" min="50" max="100" value="85" style="width: 200px;">
+                </div>
+            </div>
+            <div class="option-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="opt-drafts" checked>
+                    <span>Include draft posts</span>
+                </label>
+            </div>
+            <div class="option-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="opt-comments" checked>
+                    <span>Import comments</span>
+                </label>
+            </div>
+            <div class="option-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="opt-menus" checked>
+                    <span>Import navigation menus</span>
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="action-buttons">
+        <button class="btn btn-secondary btn-lg" onclick="startAnalysis()">
+            Analyze
+        </button>
+        <button class="btn btn-primary btn-lg" id="import-btn" onclick="startImport()" disabled>
+            Start Import
+        </button>
+    </div>
+
+    <!-- Analysis Results -->
+    <div class="card hidden" id="analysis-card">
+        <div class="card-header">
+            <h2 class="card-title">Analysis Results</h2>
+        </div>
+        <div class="card-body" id="analysis-content">
+            <!-- Populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="card hidden" id="progress-card">
+        <div class="card-header">
+            <h2 class="card-title">Import Progress</h2>
+        </div>
+        <div class="card-body">
+            <div class="progress-bar">
+                <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="progress-info">
+                <span id="progress-phase">Initializing...</span>
+                <span id="progress-percent">0%</span>
+            </div>
+            <p id="progress-message" class="progress-message"></p>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="card hidden" id="results-card">
+        <div class="card-header">
+            <h2 class="card-title">Import Complete</h2>
+        </div>
+        <div class="card-body" id="results-content">
+            <!-- Populated by JavaScript -->
+        </div>
+    </div>
+</div>
+
+<style>
+.import-container {
+    max-width: 800px;
+    margin: 0 auto;
+}
+
+.source-tabs {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.source-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 1.5rem;
+    border: 2px solid var(--border);
+    border-radius: 8px;
+    background: var(--bg);
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.source-tab:hover {
+    border-color: var(--primary);
+}
+
+.source-tab.active {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.source-content {
+    padding: 1rem 0;
+}
+
+.source-content.hidden {
+    display: none;
+}
+
+.upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 3rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.upload-area:hover {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.upload-area.dragover {
+    border-color: var(--primary);
+    background: var(--primary-light);
+}
+
+.upload-area svg {
+    margin-bottom: 1rem;
+    color: var(--muted);
+}
+
+.file-name {
+    margin-top: 1rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.help-text {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin-top: 0.5rem;
+}
+
+.option-group {
+    margin-bottom: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 1.25rem;
+    height: 1.25rem;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin: 1.5rem 0;
+}
+
+.btn-lg {
+    padding: 0.75rem 2rem;
+    font-size: 1rem;
+}
+
+.progress-bar {
+    height: 24px;
+    background: var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: var(--primary);
+    transition: width 0.3s ease;
+}
+
+.progress-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 0.5rem;
+    font-size: 0.875rem;
+}
+
+.progress-message {
+    margin-top: 1rem;
+    color: var(--muted);
+}
+
+.analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.analysis-stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.analysis-stat .number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.analysis-stat .label {
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+.warning-list {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+}
+
+.warning-list h4 {
+    color: #b45309;
+    margin-bottom: 0.5rem;
+}
+
+.warning-list ul {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.results-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+}
+
+.result-stat {
+    text-align: center;
+    padding: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 8px;
+}
+
+.result-stat .number {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--success);
+}
+
+.result-stat .label {
+    font-size: 0.75rem;
+    color: var(--muted);
+}
+
+#connection-status {
+    margin-left: 1rem;
+}
+
+#connection-status.success {
+    color: var(--success);
+}
+
+#connection-status.error {
+    color: var(--danger);
+}
+</style>
+
+<script>
+let currentSource = 'file';
+let selectedFile = null;
+let currentJobId = null;
+let pollInterval = null;
+
+function selectSource(source) {
+    currentSource = source;
+    document.querySelectorAll('.source-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.source === source);
+    });
+    document.getElementById('file-source').classList.toggle('hidden', source !== 'file');
+    document.getElementById('url-source').classList.toggle('hidden', source !== 'url');
+}
+
+// File upload handling
+const uploadArea = document.getElementById('upload-area');
+const fileInput = document.getElementById('wxr-file');
+
+uploadArea.addEventListener('click', () => fileInput.click());
+
+uploadArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    uploadArea.classList.add('dragover');
+});
+
+uploadArea.addEventListener('dragleave', () => {
+    uploadArea.classList.remove('dragover');
+});
+
+uploadArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    uploadArea.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file && file.name.endsWith('.xml')) {
+        handleFile(file);
+    }
+});
+
+fileInput.addEventListener('change', (e) => {
+    if (e.target.files[0]) {
+        handleFile(e.target.files[0]);
+    }
+});
+
+function handleFile(file) {
+    selectedFile = file;
+    document.getElementById('file-name').textContent = file.name;
+}
+
+// Media download and WebP options handling
+const downloadMediaCheckbox = document.getElementById('opt-download-media');
+const webpOptionsDiv = document.getElementById('webp-options');
+const webpCheckbox = document.getElementById('opt-webp');
+const webpQualityOption = document.getElementById('webp-quality-option');
+const webpQualitySlider = document.getElementById('opt-webp-quality');
+const webpQualityValue = document.getElementById('webp-quality-value');
+
+downloadMediaCheckbox.addEventListener('change', () => {
+    webpOptionsDiv.classList.toggle('hidden', !downloadMediaCheckbox.checked);
+    if (!downloadMediaCheckbox.checked) {
+        webpCheckbox.checked = false;
+        webpQualityOption.style.display = 'none';
+    }
+});
+
+webpCheckbox.addEventListener('change', () => {
+    webpQualityOption.style.display = webpCheckbox.checked ? 'block' : 'none';
+});
+
+webpQualitySlider.addEventListener('input', () => {
+    webpQualityValue.textContent = webpQualitySlider.value;
+});
+
+async function testConnection() {
+    const url = document.getElementById('wp-url').value;
+    const username = document.getElementById('wp-username').value;
+    const password = document.getElementById('wp-password').value;
+    const status = document.getElementById('connection-status');
+
+    if (!url) {
+        status.textContent = 'Please enter a URL';
+        status.className = 'error';
+        return;
+    }
+
+    status.textContent = 'Testing...';
+    status.className = '';
+
+    try {
+        const response = await fetch('/admin/import/test-connection', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url, username, password })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            status.textContent = `Connected: ${data.site_name}`;
+            status.className = 'success';
+        } else {
+            status.textContent = data.message || 'Connection failed';
+            status.className = 'error';
+        }
+    } catch (e) {
+        status.textContent = 'Connection error';
+        status.className = 'error';
+    }
+}
+
+async function startAnalysis() {
+    const formData = new FormData();
+
+    if (currentSource === 'file') {
+        if (!selectedFile) {
+            alert('Please select a WXR file');
+            return;
+        }
+        formData.append('file', selectedFile);
+        formData.append('source_type', 'wxr');
+    } else {
+        const url = document.getElementById('wp-url').value;
+        if (!url) {
+            alert('Please enter a WordPress URL');
+            return;
+        }
+        formData.append('source_type', 'rest_api');
+        formData.append('url', url);
+        formData.append('username', document.getElementById('wp-username').value);
+        formData.append('password', document.getElementById('wp-password').value);
+    }
+
+    // Add options
+    formData.append('import_media', document.getElementById('opt-media').checked);
+    formData.append('download_media', document.getElementById('opt-download-media').checked);
+    formData.append('convert_to_webp', document.getElementById('opt-webp').checked);
+    formData.append('webp_quality', document.getElementById('opt-webp-quality').value);
+    formData.append('include_drafts', document.getElementById('opt-drafts').checked);
+    formData.append('import_comments', document.getElementById('opt-comments').checked);
+    formData.append('import_menus', document.getElementById('opt-menus').checked);
+
+    try {
+        const response = await fetch('/admin/import/analyze', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            currentJobId = data.job_id;
+            showAnalysis(data.analysis);
+            document.getElementById('import-btn').disabled = false;
+        } else {
+            alert('Analysis failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Analysis error: ' + e.message);
+    }
+}
+
+function showAnalysis(analysis) {
+    const card = document.getElementById('analysis-card');
+    const content = document.getElementById('analysis-content');
+
+    let html = `
+        <div class="analysis-grid">
+            <div class="analysis-stat">
+                <div class="number">${analysis.posts?.total || 0}</div>
+                <div class="label">Posts</div>
+            </div>
+            <div class="analysis-stat">
+                <div class="number">${analysis.pages?.total || 0}</div>
+                <div class="label">Pages</div>
+            </div>
+            <div class="analysis-stat">
+                <div class="number">${analysis.media?.total_count || 0}</div>
+                <div class="label">Media</div>
+            </div>
+            <div class="analysis-stat">
+                <div class="number">${analysis.categories_count || 0}</div>
+                <div class="label">Categories</div>
+            </div>
+            <div class="analysis-stat">
+                <div class="number">${analysis.tags_count || 0}</div>
+                <div class="label">Tags</div>
+            </div>
+            <div class="analysis-stat">
+                <div class="number">${analysis.users_count || 0}</div>
+                <div class="label">Users</div>
+            </div>
+        </div>
+        <p><strong>Estimated Time:</strong> ${analysis.estimated_time || 'Unknown'}</p>
+        <p><strong>Estimated Storage:</strong> ${analysis.estimated_storage || 'Unknown'}</p>
+    `;
+
+    if (analysis.warnings && analysis.warnings.length > 0) {
+        html += `
+            <div class="warning-list">
+                <h4>Warnings</h4>
+                <ul>
+                    ${analysis.warnings.map(w => `<li>[${w.code}] ${w.message}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    content.innerHTML = html;
+    card.classList.remove('hidden');
+}
+
+async function startImport() {
+    if (!currentJobId) {
+        alert('Please analyze first');
+        return;
+    }
+
+    document.getElementById('import-btn').disabled = true;
+    document.getElementById('progress-card').classList.remove('hidden');
+
+    try {
+        const response = await fetch(`/admin/import/${currentJobId}/start`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            startPolling();
+        } else {
+            alert('Import failed to start: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Import error: ' + e.message);
+    }
+}
+
+function startPolling() {
+    pollInterval = setInterval(pollProgress, 2000);
+}
+
+async function pollProgress() {
+    if (!currentJobId) return;
+
+    try {
+        const response = await fetch(`/admin/import/${currentJobId}/status`);
+        const data = await response.json();
+
+        updateProgress(data);
+
+        if (data.status === 'completed' || data.status === 'failed') {
+            clearInterval(pollInterval);
+            showResults(data);
+        }
+    } catch (e) {
+        console.error('Poll error:', e);
+    }
+}
+
+function updateProgress(data) {
+    const fill = document.getElementById('progress-fill');
+    const phase = document.getElementById('progress-phase');
+    const percent = document.getElementById('progress-percent');
+    const message = document.getElementById('progress-message');
+
+    const pct = data.progress?.percent || 0;
+    fill.style.width = pct + '%';
+    percent.textContent = pct + '%';
+    phase.textContent = data.phase || 'Processing';
+    message.textContent = data.progress?.message || '';
+}
+
+function showResults(data) {
+    document.getElementById('progress-card').classList.add('hidden');
+    const card = document.getElementById('results-card');
+    const content = document.getElementById('results-content');
+
+    if (data.status === 'completed') {
+        const results = data.results || {};
+        content.innerHTML = `
+            <div class="results-grid">
+                <div class="result-stat">
+                    <div class="number">${results.posts || 0}</div>
+                    <div class="label">Posts</div>
+                </div>
+                <div class="result-stat">
+                    <div class="number">${results.pages || 0}</div>
+                    <div class="label">Pages</div>
+                </div>
+                <div class="result-stat">
+                    <div class="number">${results.media || 0}</div>
+                    <div class="label">Media</div>
+                </div>
+                <div class="result-stat">
+                    <div class="number">${results.categories || 0}</div>
+                    <div class="label">Categories</div>
+                </div>
+                <div class="result-stat">
+                    <div class="number">${results.tags || 0}</div>
+                    <div class="label">Tags</div>
+                </div>
+                <div class="result-stat">
+                    <div class="number">${results.authors || 0}</div>
+                    <div class="label">Authors</div>
+                </div>
+            </div>
+            <p style="text-align: center; margin-top: 1rem;">
+                <a href="/admin/post" class="btn btn-primary">View Posts</a>
+            </p>
+        `;
+    } else {
+        content.innerHTML = `
+            <div style="text-align: center; color: var(--danger);">
+                <h3>Import Failed</h3>
+                <p>${data.errors?.join('<br>') || 'Unknown error'}</p>
+            </div>
+        `;
+    }
+
+    card.classList.remove('hidden');
+}
+</script>
+{% endblock %}

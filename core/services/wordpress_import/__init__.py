@@ -14,12 +14,17 @@ Complete WordPress site migration with:
 from .acf import ACFConverter
 from .analyzer import WordPressAnalyzer
 from .importer import WordPressImporter
+from .import_service import WordPressImportService
 from .media import MediaImporter
 from .redirects import RedirectGenerator
+from .rest_client import RESTClientConfig, WordPressRESTClient
 from .wxr_parser import WXRParser
 
 __all__ = [
     "WordPressImporter",
+    "WordPressImportService",
+    "WordPressRESTClient",
+    "RESTClientConfig",
     "WXRParser",
     "WordPressAnalyzer",
     "MediaImporter",

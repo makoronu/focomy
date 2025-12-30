@@ -1,0 +1,24 @@
+name: menu
+label: Menu
+icon: menu
+list_display:
+  - name
+  - slug
+fields:
+  - name: name
+    type: string
+    label: Name
+    required: true
+  - name: slug
+    type: slug
+    label: Slug
+    source: name
+    required: true
+    indexed: true
+  - name: items
+    type: json
+    label: Menu Items
+  - name: wp_id
+    type: integer
+    label: WordPress ID
+    indexed: true

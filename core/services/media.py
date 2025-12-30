@@ -2,6 +2,7 @@
 
 import hashlib
 import mimetypes
+import re
 from datetime import datetime
 from pathlib import Path
 from typing import BinaryIO
@@ -30,6 +31,33 @@ class MediaService:
         self.upload_dir = settings.base_dir / "uploads"
         self.upload_dir.mkdir(exist_ok=True)
 
+    def _get_next_sequence(self) -> int:
+        """Get next sequence number from existing files in upload directory."""
+        max_seq = 0
+        for f in self.upload_dir.iterdir():
+            if f.is_file():
+                match = re.match(r"(\d+)_", f.name)
+                if match:
+                    max_seq = max(max_seq, int(match.group(1)))
+        return max_seq + 1
+
+    def _sanitize_filename(self, filename: str) -> str:
+        """Sanitize filename for safe storage."""
+        stem = Path(filename).stem
+        # Replace non-word characters with underscore
+        stem = re.sub(r"[^\w\-]", "_", stem)
+        # Collapse multiple underscores
+        stem = re.sub(r"_+", "_", stem).strip("_")
+        # Ensure not empty
+        if not stem:
+            stem = "file"
+        return stem
+
+    def _generate_filename(self, original: str, sequence: int, ext: str) -> str:
+        """Generate sequential filename."""
+        stem = self._sanitize_filename(original)
+        return f"{sequence:03d}_{stem}{ext}"
+
     async def upload(
         self,
         file: BinaryIO,
@@ -43,8 +71,8 @@ class MediaService:
         Images are automatically:
         - Converted to WebP
         - Resized to max 1920px on longest side
-        - Named with SHA256 hash
-        - Stored in date-based folders
+        - Named with sequential number + original name
+        - Stored in flat uploads/ directory
         """
         # Read file content
         content = file.read()
@@ -56,13 +84,11 @@ class MediaService:
             if not content_type:
                 content_type = "application/octet-stream"
 
-        # Generate hash-based filename
-        file_hash = hashlib.sha256(content).hexdigest()[:16]
+        # Generate hash for duplicate detection
+        file_hash = hashlib.sha256(content).hexdigest()
 
-        # Determine storage path (date-based)
-        date_path = datetime.utcnow().strftime("%Y/%m/%d")
-        storage_dir = self.upload_dir / date_path
-        storage_dir.mkdir(parents=True, exist_ok=True)
+        # Get next sequence number
+        sequence = self._get_next_sequence()
 
         # Process images
         is_image = content_type.startswith("image/")
@@ -78,9 +104,16 @@ class MediaService:
                 img = self._resize_image(img)
                 width, height = img.size
 
-            # Convert to WebP
-            stored_filename = f"{file_hash}.webp"
-            stored_path = storage_dir / stored_filename
+            # Generate filename with .webp extension
+            stored_filename = self._generate_filename(filename, sequence, ".webp")
+            stored_path = self.upload_dir / stored_filename
+
+            # Handle collision
+            while stored_path.exists():
+                sequence += 1
+                stored_filename = self._generate_filename(filename, sequence, ".webp")
+                stored_path = self.upload_dir / stored_filename
+
             img.save(stored_path, "WEBP", quality=self.WEBP_QUALITY)
             content_type = "image/webp"
 
@@ -89,16 +122,22 @@ class MediaService:
         else:
             # Non-image file - store as-is
             ext = Path(filename).suffix.lower()
-            stored_filename = f"{file_hash}{ext}"
-            stored_path = storage_dir / stored_filename
+            stored_filename = self._generate_filename(filename, sequence, ext)
+            stored_path = self.upload_dir / stored_filename
+
+            # Handle collision
+            while stored_path.exists():
+                sequence += 1
+                stored_filename = self._generate_filename(filename, sequence, ext)
+                stored_path = self.upload_dir / stored_filename
 
             with open(stored_path, "wb") as f:
                 f.write(content)
 
             size = len(content)
 
-        # Store relative path from uploads directory
-        relative_path = f"{date_path}/{stored_filename}"
+        # Store just filename (flat structure)
+        relative_path = stored_filename
 
         # Upload to S3 if configured
         cdn_config = settings.media.cdn
@@ -118,6 +157,7 @@ class MediaService:
             size=size,
             width=width,
             height=height,
+            file_hash=file_hash,
             created_by=user_id,
         )
         self.db.add(media)
