@@ -10,7 +10,7 @@ from importlib import resources
 from pathlib import Path
 
 # Version
-__version__ = "0.1.22"
+__version__ = "0.1.23"
 
 GITHUB_REPO = "focomy/focomy"
 PYPI_PACKAGE = "focomy"
@@ -87,6 +87,9 @@ def main():
     createuser_parser = subparsers.add_parser("createuser", help="Create a new user")
     createuser_parser.add_argument("--email", "-e", required=True, help="User email")
     createuser_parser.add_argument("--name", "-n", default="Admin", help="User name")
+    createuser_parser.add_argument(
+        "--password", "-p", help="Password (prompted if not provided)"
+    )
     createuser_parser.add_argument(
         "--role", "-r", default="admin", choices=["admin", "editor", "author"], help="User role"
     )
@@ -766,11 +769,13 @@ def cmd_createuser(args):
     name = args.name
     role = args.role
 
-    password = getpass.getpass("Password: ")
-    password_confirm = getpass.getpass("Confirm password: ")
-    if password != password_confirm:
-        print("Error: Passwords do not match")
-        sys.exit(1)
+    password = args.password
+    if not password:
+        password = getpass.getpass("Password: ")
+        password_confirm = getpass.getpass("Confirm password: ")
+        if password != password_confirm:
+            print("Error: Passwords do not match")
+            sys.exit(1)
 
     if len(password) < 12:
         print("Error: Password must be at least 12 characters")

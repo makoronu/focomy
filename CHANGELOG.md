@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.23] - 2026-01-01
+
+### Fixed
+- CLI createuser: --passwordオプション復活（指定時は使用、未指定時はgetpass） (#36)
+
 ## [0.1.22] - 2026-01-01
 
 ### Fixed
