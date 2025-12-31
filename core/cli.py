@@ -643,15 +643,21 @@ def cmd_backup(args):
                     text=True,
                 )
 
-                if result.returncode == 0:
-                    zf.write(tmp_path, "database.sql")
-                    print("  Added: database.sql")
+                if result.returncode != 0:
+                    print(f"\nError: pg_dump failed", file=sys.stderr)
+                    if result.stderr:
+                        print(f"  {result.stderr.strip()}", file=sys.stderr)
+                    print("\nBackup aborted. Database dump is required when --include-db is specified.", file=sys.stderr)
                     os.unlink(tmp_path)
-                else:
-                    print(f"  Warning: pg_dump failed: {result.stderr}")
+                    sys.exit(1)
+
+                zf.write(tmp_path, "database.sql")
+                print("  Added: database.sql")
+                os.unlink(tmp_path)
 
             except Exception as e:
-                print(f"  Warning: Database backup failed: {e}")
+                print(f"\nError: Database backup failed: {e}", file=sys.stderr)
+                sys.exit(1)
 
         # Backup uploads
         uploads_dir = Path("uploads")

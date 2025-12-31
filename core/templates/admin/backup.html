@@ -1,0 +1,91 @@
+{% extends "admin/base.html" %}
+
+{% block title %}バックアップ{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>バックアップ</h1>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>バックアップ一覧</h3>
+    </div>
+    <div class="card-body">
+        {% if backups %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>ファイル名</th>
+                    <th>サイズ</th>
+                    <th>作成日時</th>
+                    <th>操作</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for backup in backups %}
+                <tr>
+                    <td>{{ backup.name }}</td>
+                    <td>{{ "%.2f"|format(backup.size / 1024 / 1024) }} MB</td>
+                    <td>{{ backup.created.strftime('%Y-%m-%d %H:%M') }}</td>
+                    <td>
+                        <a href="/admin/backup/download/{{ backup.name }}" class="btn btn-sm btn-outline-primary">
+                            ダウンロード
+                        </a>
+                    </td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p class="text-muted">バックアップがありません。</p>
+        <p>CLIからバックアップを作成してください:</p>
+        <code>focomy backup --include-db -o backups/backup_$(date +%Y%m%d).zip</code>
+        {% endif %}
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        <h3>バックアップの作成</h3>
+    </div>
+    <div class="card-body">
+        <p>バックアップはコマンドラインから作成します:</p>
+        <table class="table table-sm">
+            <tbody>
+                <tr>
+                    <td><code>focomy backup -o backup.zip</code></td>
+                    <td>ファイルのみバックアップ</td>
+                </tr>
+                <tr>
+                    <td><code>focomy backup --include-db -o backup.zip</code></td>
+                    <td>データベースを含むフルバックアップ</td>
+                </tr>
+                <tr>
+                    <td><code>focomy restore backup.zip</code></td>
+                    <td>バックアップから復元</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h3>バックアップ対象</h3>
+    </div>
+    <div class="card-body">
+        <ul>
+            <li><code>uploads/</code> - アップロードファイル</li>
+            <li><code>content_types/</code> - コンテンツタイプ定義</li>
+            <li><code>themes/</code> - テーマファイル</li>
+            <li><code>config.yaml</code> - サイト設定</li>
+            <li><code>relations.yaml</code> - リレーション定義</li>
+            <li><code>database.sql</code> - データベース (--include-db 指定時)</li>
+        </ul>
+        <p class="text-muted mt-3">
+            バックアップ保存先: <code>{{ backups_dir }}</code>
+        </p>
+    </div>
+</div>
+{% endblock %}

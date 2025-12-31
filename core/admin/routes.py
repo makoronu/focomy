@@ -1721,6 +1721,69 @@ async def system_info(
     return templates.TemplateResponse("admin/system.html", context)
 
 
+# === Backup ===
+
+
+@router.get("/backup", response_class=HTMLResponse)
+async def backup_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Backup management page."""
+    from datetime import datetime as dt
+
+    from ..config import get_settings
+
+    context = await get_context(request, db, current_user, "backup")
+    settings = get_settings()
+    backups_dir = settings.base_dir / "backups"
+
+    backups = []
+    if backups_dir.exists():
+        for f in sorted(backups_dir.glob("*.zip"), reverse=True):
+            stat = f.stat()
+            backups.append({
+                "name": f.name,
+                "size": stat.st_size,
+                "created": dt.fromtimestamp(stat.st_mtime),
+            })
+
+    context.update({
+        "backups": backups[:20],  # Show last 20 backups
+        "backups_dir": str(backups_dir),
+    })
+    return templates.TemplateResponse("admin/backup.html", context)
+
+
+@router.get("/backup/download/{filename}")
+async def download_backup(
+    filename: str,
+    current_user: Entity = Depends(require_admin),
+):
+    """Download a backup file."""
+    from fastapi.responses import FileResponse
+
+    from ..config import get_settings
+
+    settings = get_settings()
+    backups_dir = settings.base_dir / "backups"
+    file_path = backups_dir / filename
+
+    # Security: prevent path traversal
+    if ".." in filename or "/" in filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail="Backup not found")
+
+    return FileResponse(
+        file_path,
+        filename=filename,
+        media_type="application/zip",
+    )
+
+
 # === WordPress Import ===
 
 
