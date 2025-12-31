@@ -114,6 +114,56 @@ class SEOConfig(BaseModel):
     default_og_image: str = ""
 
 
+class FeaturesConfig(BaseModel):
+    """Feature flags for phased stabilization."""
+
+    # Phase 1: Core (always enabled)
+    core: bool = True
+
+    # Phase 2: Media
+    media: bool = False
+
+    # Phase 3: ACF Alternative
+    acf_alternative: bool = False
+
+    # Phase 4: Auxiliary features
+    menu: bool = False
+    widget: bool = False
+    revision: bool = False
+    preview: bool = False
+    workflow: bool = False
+    edit_lock: bool = False
+    bulk: bool = False
+    search: bool = False
+    redirect: bool = False
+    routing: bool = False
+    audit: bool = False
+    sentry: bool = False
+    link_validator: bool = False
+
+    # Phase 5: Extended features
+    comment: bool = False
+    form: bool = False
+    api_auth: bool = False
+    oauth: bool = False
+    mail: bool = False
+    invite: bool = False
+    schedule: bool = False
+    export: bool = False
+    cleanup: bool = False
+    i18n: bool = False
+
+    # Phase 6: Plugin/Theme
+    plugin: bool = False
+    marketplace: bool = False
+    theme_inheritance: bool = False
+    update: bool = False
+    deployment: bool = False
+
+    # Phase 7: WordPress Import
+    wordpress_import: bool = False
+
+
 class MenuItemConfig(BaseModel):
     label: str
     url: str = "#"
@@ -144,6 +194,7 @@ class Settings(BaseSettings):
     seo: SEOConfig = SEOConfig()
     oauth: OAuthConfig = OAuthConfig()
     menus: MenusConfig = MenusConfig()
+    features: FeaturesConfig = FeaturesConfig()
 
     class Config:
         env_file = ".env"
@@ -205,6 +256,8 @@ def get_settings() -> Settings:
             if location in menus_config:
                 parsed_menus[location] = [_parse_menu_item(item) for item in menus_config[location]]
         settings.menus = MenusConfig(**parsed_menus)
+    if "features" in yaml_config:
+        settings.features = FeaturesConfig(**yaml_config["features"])
 
     return settings
 

@@ -37,3 +37,52 @@ seo:
   title_separator: " | "
   default_description: ""
   default_og_image: ""
+
+# Feature flags for phased stabilization
+# See docs/STABILIZATION_PLAN.md for details
+features:
+  # Phase 1: Core (always enabled)
+  core: true
+
+  # Phase 2: Media
+  media: false
+
+  # Phase 3: ACF Alternative
+  acf_alternative: false
+
+  # Phase 4: Auxiliary features
+  menu: false
+  widget: false
+  revision: false
+  preview: false
+  workflow: false
+  edit_lock: false
+  bulk: false
+  search: false
+  redirect: false
+  routing: false
+  audit: false
+  sentry: false
+  link_validator: false
+
+  # Phase 5: Extended features
+  comment: false
+  form: false
+  api_auth: false
+  oauth: false
+  mail: false
+  invite: false
+  schedule: false
+  export: false
+  cleanup: false
+  i18n: false
+
+  # Phase 6: Plugin/Theme
+  plugin: false
+  marketplace: false
+  theme_inheritance: false
+  update: false
+  deployment: false
+
+  # Phase 7: WordPress Import
+  wordpress_import: false

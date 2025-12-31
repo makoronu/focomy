@@ -22,6 +22,7 @@ from ..schemas.import_schema import (
     ConnectionTestResponse,
     ErrorResponse,
 )
+from ..utils import require_feature
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -525,6 +526,7 @@ async def media_list(
     current_user: Entity = Depends(require_admin),
 ):
     """Media library page."""
+    require_feature("media")
     from ..services.media import MediaService
 
     media_svc = MediaService(db)
@@ -567,6 +569,7 @@ async def widgets_page(
     current_user: Entity = Depends(require_admin),
 ):
     """Widget management page."""
+    require_feature("widget")
     from ..services.widget import WidgetService
 
     widget_svc = WidgetService(db)
@@ -606,6 +609,7 @@ async def widget_create(
     current_user: Entity = Depends(require_admin),
 ):
     """Create a new widget."""
+    require_feature("widget")
     from ..services.widget import WidgetService
 
     widget_svc = WidgetService(db)
@@ -639,6 +643,7 @@ async def widget_update(
     current_user: Entity = Depends(require_admin),
 ):
     """Update a widget."""
+    require_feature("widget")
     from ..services.widget import WidgetService
 
     widget_svc = WidgetService(db)
@@ -669,6 +674,7 @@ async def widget_delete(
     current_user: Entity = Depends(require_admin),
 ):
     """Delete a widget."""
+    require_feature("widget")
     from ..services.widget import WidgetService
 
     widget_svc = WidgetService(db)
@@ -686,6 +692,7 @@ async def widgets_reorder(
     current_user: Entity = Depends(require_admin),
 ):
     """Reorder widgets."""
+    require_feature("widget")
     from ..services.widget import WidgetService
 
     widget_svc = WidgetService(db)
@@ -964,6 +971,7 @@ async def menu_list(
     current_user: Entity = Depends(require_admin),
 ):
     """Menu management page."""
+    require_feature("menu")
     from ..services.menu import MenuService
 
     menu_svc = MenuService(db)
@@ -1000,6 +1008,7 @@ async def menu_import_yaml(
     current_user: Entity = Depends(require_admin),
 ):
     """Import menu items from YAML config to database."""
+    require_feature("menu")
     from ..services.menu import MenuService
 
     menu_svc = MenuService(db)
@@ -1029,6 +1038,7 @@ async def menu_item_create(
     current_user: Entity = Depends(require_admin),
 ):
     """Create a new menu item."""
+    require_feature("menu")
     from ..services.menu import MenuService
 
     menu_svc = MenuService(db)
@@ -1069,6 +1079,7 @@ async def menu_item_update(
     current_user: Entity = Depends(require_admin),
 ):
     """Update a menu item."""
+    require_feature("menu")
     from ..services.menu import MenuService
 
     menu_svc = MenuService(db)
@@ -1102,6 +1113,7 @@ async def menu_item_delete(
     current_user: Entity = Depends(require_admin),
 ):
     """Delete a menu item."""
+    require_feature("menu")
     from ..services.menu import MenuService
 
     menu_svc = MenuService(db)
@@ -1119,6 +1131,7 @@ async def menu_reorder(
     current_user: Entity = Depends(require_admin),
 ):
     """Reorder menu items via AJAX."""
+    require_feature("menu")
     from ..services.menu import MenuService
 
     menu_svc = MenuService(db)
@@ -1301,6 +1314,7 @@ async def link_validator_page(
     current_user: Entity = Depends(require_admin),
 ):
     """Link validator page."""
+    require_feature("link_validator")
     context = await get_context(request, db, current_user, "tools")
     return templates.TemplateResponse("admin/link_validator.html", context)
 
@@ -1313,6 +1327,7 @@ async def validate_links(
     current_user: Entity = Depends(require_admin),
 ):
     """Run link validation."""
+    require_feature("link_validator")
     from ..services.link_validator import LinkValidatorService
 
     site_url = str(request.base_url).rstrip("/")
