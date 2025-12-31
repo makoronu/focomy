@@ -13,7 +13,7 @@
 | 検証 | `.claude/prompts/1_audit/_main.md` |
 | デプロイ | `.claude/prompts/3_deploy/_main.md` |
 | 振り返り | `.claude/prompts/4_retrospective/_main.md` |
-| デバッグ | `.claude/prompts/5_debug/_main.md` |
+| インポート修正 | `.claude/prompts/2_dev/1_import/_main.md` |
 | 緊急 | `.claude/prompts/emergency.md` |
 
 ---

@@ -1665,6 +1665,278 @@ async def comment_delete(
     return HTMLResponse(content="", status_code=200)
 
 
+# === Update Check ===
+
+
+@router.get("/api/update-check")
+async def check_for_updates(
+    request: Request,
+    current_user: Entity = Depends(require_admin),
+    force: bool = False,
+):
+    """Check for Focomy updates."""
+    from ..services.update import update_service
+
+    update_info = await update_service.check_for_updates(force=force)
+
+    return {
+        "current_version": update_info.current_version,
+        "latest_version": update_info.latest_version,
+        "has_update": update_info.has_update,
+        "release_url": update_info.release_url,
+    }
+
+
+@router.get("/system", response_class=HTMLResponse)
+async def system_info(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """System information page."""
+    import platform
+    import sys
+
+    from ..services.update import update_service
+
+    context = await get_context(request, db, current_user, "system")
+    update_info = await update_service.check_for_updates()
+
+    context["system"] = {
+        "python_version": sys.version,
+        "platform": platform.platform(),
+        "focomy_version": update_info.current_version,
+        "latest_version": update_info.latest_version,
+        "has_update": update_info.has_update,
+        "release_url": update_info.release_url,
+    }
+
+    return templates.TemplateResponse("admin/system.html", context)
+
+
+# === WordPress Import ===
+
+
+@router.get("/import", response_class=HTMLResponse)
+async def import_page(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """WordPress import page."""
+    context = await get_context(request, db, current_user, "import")
+    return templates.TemplateResponse("admin/import.html", context)
+
+
+@router.post("/import/test-connection")
+async def test_wp_connection(
+    request: Request,
+    current_user: Entity = Depends(require_admin),
+):
+    """Test WordPress REST API connection."""
+    from ..services.wordpress_import import RESTClientConfig, WordPressRESTClient
+
+    try:
+        data = await request.json()
+        url = data.get("url", "")
+        username = data.get("username", "")
+        password = data.get("password", "")
+
+        if not url:
+            return {"success": False, "message": "URL is required"}
+
+        config = RESTClientConfig(
+            site_url=url,
+            username=username,
+            password=password,
+        )
+
+        async with WordPressRESTClient(config) as client:
+            result = await client.test_connection()
+
+            return {
+                "success": result.success,
+                "message": result.message,
+                "site_name": result.site_name,
+                "authenticated": result.authenticated,
+                "errors": result.errors,
+            }
+
+    except Exception as e:
+        return {"success": False, "message": str(e)}
+
+
+@router.post("/import/analyze")
+async def analyze_import(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Analyze WordPress data for import."""
+    import tempfile
+    from pathlib import Path
+
+    from ..services.wordpress_import import WordPressImportService
+
+    try:
+        form = await request.form()
+        source_type = form.get("source_type", "wxr")
+
+        import_svc = WordPressImportService(db)
+
+        # Determine upload directory and base URL
+        upload_dir = Path("uploads")
+        upload_dir.mkdir(parents=True, exist_ok=True)
+        base_url = str(request.base_url).rstrip("/")
+
+        config = {
+            "import_media": form.get("import_media") == "true",
+            "download_media": form.get("download_media") == "true",
+            "convert_to_webp": form.get("convert_to_webp") == "true",
+            "webp_quality": int(form.get("webp_quality", "85")),
+            "include_drafts": form.get("include_drafts") == "true",
+            "import_comments": form.get("import_comments") == "true",
+            "import_menus": form.get("import_menus") == "true",
+            "upload_dir": str(upload_dir),
+            "base_url": base_url,
+        }
+
+        source_url = None
+        source_file = None
+
+        if source_type == "wxr":
+            # Handle file upload
+            file = form.get("file")
+            if not file:
+                return {"success": False, "error": "No file uploaded"}
+
+            # Save to temp file
+            temp_dir = Path(tempfile.gettempdir())
+            temp_file = temp_dir / f"wp_import_{file.filename}"
+            content = await file.read()
+            temp_file.write_bytes(content)
+            source_file = str(temp_file)
+
+        else:
+            # REST API
+            source_url = form.get("url")
+            config["username"] = form.get("username", "")
+            config["password"] = form.get("password", "")
+
+            if not source_url:
+                return {"success": False, "error": "URL is required"}
+
+        # Create job
+        entity_svc = EntityService(db)
+        user_data = entity_svc.serialize(current_user)
+
+        job = await import_svc.create_job(
+            source_type=source_type,
+            source_url=source_url,
+            source_file=source_file,
+            config=config,
+            user_id=user_data.get("id"),
+        )
+
+        # Run analysis
+        analysis = await import_svc.analyze(job.id)
+
+        if not analysis:
+            return {"success": False, "error": "Analysis failed"}
+
+        return {
+            "success": True,
+            "job_id": job.id,
+            "analysis": analysis,
+        }
+
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/import/{job_id}/start")
+async def start_import(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Start WordPress import job."""
+    import asyncio
+
+    from ..services.wordpress_import import WordPressImportService
+
+    try:
+        import_svc = WordPressImportService(db)
+        job = await import_svc.get_job(job_id)
+
+        if not job:
+            return {"success": False, "error": "Job not found"}
+
+        # Start import in background
+        asyncio.create_task(_run_import_background(job_id))
+
+        return {"success": True, "job_id": job_id}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+async def _run_import_background(job_id: str):
+    """Run import in background."""
+    from ..database import async_session
+    from ..services.wordpress_import import WordPressImportService
+
+    async with async_session() as db:
+        import_svc = WordPressImportService(db)
+        await import_svc.run_import(job_id)
+
+
+@router.get("/import/{job_id}/status")
+async def get_import_status(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Get import job status for polling."""
+    from ..services.wordpress_import import WordPressImportService
+
+    try:
+        import_svc = WordPressImportService(db)
+        job = await import_svc.get_job(job_id)
+
+        if not job:
+            return {"success": False, "error": "Job not found"}
+
+        return job.to_dict()
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
+@router.post("/import/{job_id}/cancel")
+async def cancel_import(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Cancel import job."""
+    from ..services.wordpress_import import WordPressImportService
+
+    try:
+        import_svc = WordPressImportService(db)
+        success = await import_svc.cancel_job(job_id)
+
+        return {"success": success}
+
+    except Exception as e:
+        return {"success": False, "error": str(e)}
+
+
 # === Entity List ===
 
 
@@ -2177,275 +2449,3 @@ async def _get_relation_options(
         )
 
     return relations
-
-
-# === Update Check ===
-
-
-@router.get("/api/update-check")
-async def check_for_updates(
-    request: Request,
-    current_user: Entity = Depends(require_admin),
-    force: bool = False,
-):
-    """Check for Focomy updates."""
-    from ..services.update import update_service
-
-    update_info = await update_service.check_for_updates(force=force)
-
-    return {
-        "current_version": update_info.current_version,
-        "latest_version": update_info.latest_version,
-        "has_update": update_info.has_update,
-        "release_url": update_info.release_url,
-    }
-
-
-@router.get("/system", response_class=HTMLResponse)
-async def system_info(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    current_user: Entity = Depends(require_admin),
-):
-    """System information page."""
-    import platform
-    import sys
-
-    from ..services.update import update_service
-
-    context = await get_context(request, db, current_user, "system")
-    update_info = await update_service.check_for_updates()
-
-    context["system"] = {
-        "python_version": sys.version,
-        "platform": platform.platform(),
-        "focomy_version": update_info.current_version,
-        "latest_version": update_info.latest_version,
-        "has_update": update_info.has_update,
-        "release_url": update_info.release_url,
-    }
-
-    return templates.TemplateResponse("admin/system.html", context)
-
-
-# === WordPress Import ===
-
-
-@router.get("/import", response_class=HTMLResponse)
-async def import_page(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    current_user: Entity = Depends(require_admin),
-):
-    """WordPress import page."""
-    context = await get_context(request, db, current_user, "import")
-    return templates.TemplateResponse("admin/import.html", context)
-
-
-@router.post("/import/test-connection")
-async def test_wp_connection(
-    request: Request,
-    current_user: Entity = Depends(require_admin),
-):
-    """Test WordPress REST API connection."""
-    from ..services.wordpress_import import RESTClientConfig, WordPressRESTClient
-
-    try:
-        data = await request.json()
-        url = data.get("url", "")
-        username = data.get("username", "")
-        password = data.get("password", "")
-
-        if not url:
-            return {"success": False, "message": "URL is required"}
-
-        config = RESTClientConfig(
-            site_url=url,
-            username=username,
-            password=password,
-        )
-
-        async with WordPressRESTClient(config) as client:
-            result = await client.test_connection()
-
-            return {
-                "success": result.success,
-                "message": result.message,
-                "site_name": result.site_name,
-                "authenticated": result.authenticated,
-                "errors": result.errors,
-            }
-
-    except Exception as e:
-        return {"success": False, "message": str(e)}
-
-
-@router.post("/import/analyze")
-async def analyze_import(
-    request: Request,
-    db: AsyncSession = Depends(get_db),
-    current_user: Entity = Depends(require_admin),
-):
-    """Analyze WordPress data for import."""
-    import tempfile
-    from pathlib import Path
-
-    from ..services.wordpress_import import WordPressImportService
-
-    try:
-        form = await request.form()
-        source_type = form.get("source_type", "wxr")
-
-        import_svc = WordPressImportService(db)
-
-        # Determine upload directory and base URL
-        upload_dir = Path("uploads")
-        upload_dir.mkdir(parents=True, exist_ok=True)
-        base_url = str(request.base_url).rstrip("/")
-
-        config = {
-            "import_media": form.get("import_media") == "true",
-            "download_media": form.get("download_media") == "true",
-            "convert_to_webp": form.get("convert_to_webp") == "true",
-            "webp_quality": int(form.get("webp_quality", "85")),
-            "include_drafts": form.get("include_drafts") == "true",
-            "import_comments": form.get("import_comments") == "true",
-            "import_menus": form.get("import_menus") == "true",
-            "upload_dir": str(upload_dir),
-            "base_url": base_url,
-        }
-
-        source_url = None
-        source_file = None
-
-        if source_type == "wxr":
-            # Handle file upload
-            file = form.get("file")
-            if not file:
-                return {"success": False, "error": "No file uploaded"}
-
-            # Save to temp file
-            temp_dir = Path(tempfile.gettempdir())
-            temp_file = temp_dir / f"wp_import_{file.filename}"
-            content = await file.read()
-            temp_file.write_bytes(content)
-            source_file = str(temp_file)
-
-        else:
-            # REST API
-            source_url = form.get("url")
-            config["username"] = form.get("username", "")
-            config["password"] = form.get("password", "")
-
-            if not source_url:
-                return {"success": False, "error": "URL is required"}
-
-        # Create job
-        entity_svc = EntityService(db)
-        user_data = entity_svc.serialize(current_user)
-
-        job = await import_svc.create_job(
-            source_type=source_type,
-            source_url=source_url,
-            source_file=source_file,
-            config=config,
-            user_id=user_data.get("id"),
-        )
-
-        # Run analysis
-        analysis = await import_svc.analyze(job.id)
-
-        if not analysis:
-            return {"success": False, "error": "Analysis failed"}
-
-        return {
-            "success": True,
-            "job_id": job.id,
-            "analysis": analysis,
-        }
-
-    except Exception as e:
-        import traceback
-        traceback.print_exc()
-        return {"success": False, "error": str(e)}
-
-
-@router.post("/import/{job_id}/start")
-async def start_import(
-    request: Request,
-    job_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: Entity = Depends(require_admin),
-):
-    """Start WordPress import job."""
-    import asyncio
-
-    from ..services.wordpress_import import WordPressImportService
-
-    try:
-        import_svc = WordPressImportService(db)
-        job = await import_svc.get_job(job_id)
-
-        if not job:
-            return {"success": False, "error": "Job not found"}
-
-        # Start import in background
-        asyncio.create_task(_run_import_background(job_id))
-
-        return {"success": True, "job_id": job_id}
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-async def _run_import_background(job_id: str):
-    """Run import in background."""
-    from ..database import async_session
-    from ..services.wordpress_import import WordPressImportService
-
-    async with async_session() as db:
-        import_svc = WordPressImportService(db)
-        await import_svc.run_import(job_id)
-
-
-@router.get("/import/{job_id}/status")
-async def get_import_status(
-    request: Request,
-    job_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: Entity = Depends(require_admin),
-):
-    """Get import job status for polling."""
-    from ..services.wordpress_import import WordPressImportService
-
-    try:
-        import_svc = WordPressImportService(db)
-        job = await import_svc.get_job(job_id)
-
-        if not job:
-            return {"success": False, "error": "Job not found"}
-
-        return job.to_dict()
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
-
-
-@router.post("/import/{job_id}/cancel")
-async def cancel_import(
-    request: Request,
-    job_id: str,
-    db: AsyncSession = Depends(get_db),
-    current_user: Entity = Depends(require_admin),
-):
-    """Cancel import job."""
-    from ..services.wordpress_import import WordPressImportService
-
-    try:
-        import_svc = WordPressImportService(db)
-        success = await import_svc.cancel_job(job_id)
-
-        return {"success": success}
-
-    except Exception as e:
-        return {"success": False, "error": str(e)}
