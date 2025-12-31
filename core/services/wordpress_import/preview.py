@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...models import Entity, EntityValue, ImportJob
 from ..entity import EntityService
+from .constants import WP_STATUS_MAP
 from .content_sanitizer import ContentSanitizer
 from .wxr_parser import WXRData
 
@@ -141,16 +142,6 @@ class PreviewService:
                     content_result = self.sanitizer.sanitize(post.content or "")
                     excerpt_result = self.sanitizer.sanitize(post.excerpt or "")
 
-                    # Map status
-                    status_map = {
-                        "publish": "published",
-                        "draft": "draft",
-                        "pending": "pending",
-                        "private": "private",
-                        "future": "scheduled",
-                        "trash": "archived",
-                    }
-
                     # Create entity
                     entity = await self.entity_svc.create(
                         "post",
@@ -159,7 +150,7 @@ class PreviewService:
                             "slug": post.slug,
                             "content": content_result.content,
                             "excerpt": excerpt_result.content,
-                            "status": status_map.get(post.status, "draft"),
+                            "status": WP_STATUS_MAP.get(post.status, "draft"),
                             "wp_id": post.id,
                             "preview": True,  # Mark as preview
                         },

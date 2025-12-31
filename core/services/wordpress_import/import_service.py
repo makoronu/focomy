@@ -17,6 +17,7 @@ from ..entity import EntityService
 from ..field import field_service
 from .analyzer import WordPressAnalyzer
 from .content_sanitizer import ContentSanitizer, SanitizeResult
+from .constants import WP_STATUS_MAP
 from .importer import ImportConfig, ImportProgress, ImportResult, WordPressImporter
 from .link_fixer import InternalLinkFixer, URLMapBuilder
 from .media import MediaImporter
@@ -661,16 +662,6 @@ class WordPressImportService:
         # Checkpoint key: "posts" or "pages"
         checkpoint_key = "posts" if post_type == "post" else "pages"
 
-        # Map status
-        status_map = {
-            "publish": "published",
-            "draft": "draft",
-            "pending": "pending",
-            "private": "private",
-            "future": "scheduled",
-            "trash": "archived",
-        }
-
         for i, post in enumerate(posts):
             try:
                 # Skip if already processed in previous run
@@ -704,7 +695,7 @@ class WordPressImportService:
                     "slug": post.slug,
                     "content": content_result.content,
                     "excerpt": excerpt_result.content,
-                    "status": status_map.get(post.status, "draft"),
+                    "status": WP_STATUS_MAP.get(post.status, "draft"),
                     "wp_id": post.id,
                     "wp_author_id": post.author_id,
                     "created_at": post.created_at.isoformat(),
@@ -1233,16 +1224,6 @@ class WordPressImportService:
             imported = []
             preview_ids = []
 
-            # Map status
-            status_map = {
-                "publish": "published",
-                "draft": "draft",
-                "pending": "pending",
-                "private": "private",
-                "future": "scheduled",
-                "trash": "archived",
-            }
-
             for post in preview_posts:
                 try:
                     existing = await self._find_by_wp_id("post", post.id)
@@ -1523,15 +1504,6 @@ class WordPressImportService:
         tags_map = {t.id: t for t in wxr_data.tags}
         authors_map = {a.id: a for a in wxr_data.authors}
 
-        status_map = {
-            "publish": "published",
-            "draft": "draft",
-            "pending": "pending",
-            "private": "private",
-            "future": "scheduled",
-            "trash": "archived",
-        }
-
         # Import new posts
         for item in diff_data.get("new", {}).get("posts", []):
             wp_id = item["wp_id"]
@@ -1549,7 +1521,7 @@ class WordPressImportService:
                         "slug": post.slug,
                         "content": content_result.content,
                         "excerpt": excerpt_result.content,
-                        "status": status_map.get(post.status, "draft"),
+                        "status": WP_STATUS_MAP.get(post.status, "draft"),
                         "wp_id": post.id,
                         "wp_modified": post.modified_at.isoformat() if post.modified_at else None,
                     })
@@ -1572,7 +1544,7 @@ class WordPressImportService:
                         "title": page.title,
                         "slug": page.slug,
                         "content": content_result.content,
-                        "status": status_map.get(page.status, "draft"),
+                        "status": WP_STATUS_MAP.get(page.status, "draft"),
                         "wp_id": page.id,
                         "wp_modified": page.modified_at.isoformat() if page.modified_at else None,
                     })
@@ -1628,15 +1600,6 @@ class WordPressImportService:
         cats_map = {c.id: c for c in wxr_data.categories}
         tags_map = {t.id: t for t in wxr_data.tags}
 
-        status_map = {
-            "publish": "published",
-            "draft": "draft",
-            "pending": "pending",
-            "private": "private",
-            "future": "scheduled",
-            "trash": "archived",
-        }
-
         # Update posts
         for item in diff_data.get("updated", {}).get("posts", []):
             wp_id = item["wp_id"]
@@ -1656,7 +1619,7 @@ class WordPressImportService:
                             "slug": post.slug,
                             "content": content_result.content,
                             "excerpt": excerpt_result.content,
-                            "status": status_map.get(post.status, "draft"),
+                            "status": WP_STATUS_MAP.get(post.status, "draft"),
                             "wp_modified": post.modified_at.isoformat() if post.modified_at else None,
                         })
                         results["updated"] += 1
@@ -1680,7 +1643,7 @@ class WordPressImportService:
                             "title": page.title,
                             "slug": page.slug,
                             "content": content_result.content,
-                            "status": status_map.get(page.status, "draft"),
+                            "status": WP_STATUS_MAP.get(page.status, "draft"),
                             "wp_modified": page.modified_at.isoformat() if page.modified_at else None,
                         })
                         results["updated"] += 1

@@ -10,6 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from .acf import ACFConverter
+from .constants import WP_STATUS_MAP
 from .analyzer import AnalysisReport, WordPressAnalyzer
 from .media import MediaImporter, MediaImportResult, MediaItem
 from .redirects import RedirectGenerator, RedirectReport
@@ -511,23 +512,13 @@ class WordPressImporter:
 
     def _transform_post(self, post: WXRPost) -> dict:
         """Transform WXR post to Focomy format."""
-        # Map status
-        status_map = {
-            "publish": "published",
-            "draft": "draft",
-            "pending": "pending",
-            "private": "private",
-            "future": "scheduled",
-            "trash": "archived",
-        }
-
         return {
             "wp_id": post.id,
             "title": post.title,
             "slug": post.slug,
             "content": post.content,
             "excerpt": post.excerpt,
-            "status": status_map.get(post.status, "draft"),
+            "status": WP_STATUS_MAP.get(post.status, "draft"),
             "author_wp_id": post.author_id,
             "created_at": post.created_at.isoformat(),
             "updated_at": post.modified_at.isoformat(),

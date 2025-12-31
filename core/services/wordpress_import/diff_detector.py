@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...models import Entity, EntityValue
 from ..entity import EntityService
+from .constants import WP_STATUS_MAP
 from .wxr_parser import WXRData, WXRPost, WXRTerm, WXRAuthor
 
 logger = logging.getLogger(__name__)
@@ -526,15 +527,7 @@ class DiffDetector:
             return True
 
         # Check status change
-        status_map = {
-            "publish": "published",
-            "draft": "draft",
-            "pending": "pending",
-            "private": "private",
-            "future": "scheduled",
-            "trash": "archived",
-        }
-        expected_status = status_map.get(wp_post.status, "draft")
+        expected_status = WP_STATUS_MAP.get(wp_post.status, "draft")
         if entity_data.get("status") != expected_status:
             return True
 
