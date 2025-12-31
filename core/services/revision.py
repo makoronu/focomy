@@ -1,6 +1,6 @@
 """RevisionService - version history management."""
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -111,7 +111,7 @@ class RevisionService:
         - One autosave per hour for older ones
         - Maximum MAX_REVISIONS_PER_ENTITY total
         """
-        cutoff = datetime.utcnow() - timedelta(hours=self.AUTOSAVE_CLEANUP_HOURS)
+        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.AUTOSAVE_CLEANUP_HOURS)
 
         # Get all autosaves older than cutoff
         query = (

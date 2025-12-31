@@ -1,6 +1,6 @@
 """Public routes - theme-based content rendering."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import HTMLResponse, Response
@@ -253,7 +253,7 @@ async def home(
     )
 
     # Filter by published_at (scheduled posts)
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     posts_data = []
     for p in posts:
         data = entity_svc.serialize(p)
@@ -832,7 +832,7 @@ async def content_type_listing(
     )
 
     # Filter by published_at for scheduled posts
-    now = datetime.utcnow()
+    now = datetime.now(timezone.utc)
     posts_data = []
     for e in entities:
         data = entity_svc.serialize(e)
@@ -917,7 +917,7 @@ async def view_content_by_path(
     published_at = entity_data.get("published_at")
     if published_at:
         pub_date = datetime.fromisoformat(published_at.replace("Z", ""))
-        if pub_date > datetime.utcnow():
+        if pub_date > datetime.now(timezone.utc):
             raise HTTPException(status_code=404, detail="Content not found")
 
     # Get site URL and contexts

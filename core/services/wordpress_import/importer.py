@@ -5,7 +5,7 @@ from __future__ import annotations
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -184,7 +184,7 @@ class WordPressImporter:
         Returns:
             ImportResult with complete import statistics
         """
-        start_time = datetime.utcnow()
+        start_time = datetime.now(timezone.utc)
         result = ImportResult()
 
         try:
@@ -268,7 +268,7 @@ class WordPressImporter:
             result.errors.append(str(e))
 
         # Calculate duration
-        result.duration_seconds = (datetime.utcnow() - start_time).total_seconds()
+        result.duration_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
 
         return result
 
@@ -712,7 +712,7 @@ class WordPressImporter:
             return
 
         self._checkpoint[phase] = progress
-        self._checkpoint["last_updated"] = datetime.utcnow().isoformat()
+        self._checkpoint["last_updated"] = datetime.now(timezone.utc).isoformat()
 
         self.config.checkpoint_file.write_text(
             json.dumps(

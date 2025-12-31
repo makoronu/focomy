@@ -1,7 +1,7 @@
 """EditLockService - concurrent edit prevention."""
 
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -55,7 +55,7 @@ class EditLockService:
 
         if existing:
             # Check if expired
-            if existing.expires_at < datetime.utcnow():
+            if existing.expires_at < datetime.now(timezone.utc):
                 # Lock expired, release it
                 await self.release_lock(entity_id, existing.user_id)
             elif existing.user_id != user_id:
@@ -67,7 +67,7 @@ class EditLockService:
                 return True, None
 
         # Create new lock
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expires_at = now + timedelta(seconds=self.LOCK_TIMEOUT_SECONDS)
 
         await self.entity_svc.create(
@@ -131,7 +131,7 @@ class EditLockService:
         )
 
         if locks:
-            new_expires = datetime.utcnow() + timedelta(seconds=self.LOCK_TIMEOUT_SECONDS)
+            new_expires = datetime.now(timezone.utc) + timedelta(seconds=self.LOCK_TIMEOUT_SECONDS)
             await self.entity_svc.update(
                 locks[0].id,
                 {"expires_at": new_expires.isoformat()},
@@ -197,7 +197,7 @@ class EditLockService:
             return False, None
 
         # Check if expired
-        if lock.expires_at < datetime.utcnow():
+        if lock.expires_at < datetime.now(timezone.utc):
             return False, None
 
         # Check if same user
@@ -218,7 +218,7 @@ class EditLockService:
             limit=1000,
         )
 
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         cleaned = 0
 
         for lock in locks:

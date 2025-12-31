@@ -10,7 +10,7 @@ import asyncio
 import signal
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -103,7 +103,7 @@ class DeploymentService:
         version_file = Path(self.VERSION_FILE)
         if version_file.exists():
             return datetime.fromtimestamp(version_file.stat().st_mtime)
-        return datetime.utcnow()
+        return datetime.now(timezone.utc)
 
     def register_health_check(
         self,
@@ -157,7 +157,7 @@ class DeploymentService:
             healthy=healthy,
             checks=checks,
             message="OK" if healthy else "Some checks failed",
-            timestamp=datetime.utcnow(),
+            timestamp=datetime.now(timezone.utc),
         )
 
     async def _check_database(self) -> bool:
@@ -210,9 +210,9 @@ class DeploymentService:
         self._shutting_down = True
 
         # Wait for active requests to complete
-        start = datetime.utcnow()
+        start = datetime.now(timezone.utc)
         while self._active_requests > 0:
-            elapsed = (datetime.utcnow() - start).total_seconds()
+            elapsed = (datetime.now(timezone.utc) - start).total_seconds()
             if elapsed > timeout:
                 return False
             await asyncio.sleep(0.5)

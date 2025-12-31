@@ -3,7 +3,7 @@
 import json
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Any
@@ -546,7 +546,7 @@ class ThemeCustomizer:
         return json.dumps(
             {
                 "theme_id": theme_id,
-                "exported_at": datetime.utcnow().isoformat(),
+                "exported_at": datetime.now(timezone.utc).isoformat(),
                 "customizations": values,
             },
             indent=2,

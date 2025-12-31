@@ -5,7 +5,7 @@ Detects media files that are no longer referenced by any entity.
 
 import os
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from sqlalchemy import and_, func, select
@@ -72,7 +72,7 @@ class MediaCleanupService:
         Returns:
             List of unused media files
         """
-        cutoff_date = datetime.utcnow() - timedelta(days=older_than_days)
+        cutoff_date = datetime.now(timezone.utc) - timedelta(days=older_than_days)
 
         # Get all media entities
         media_query = select(Entity).where(
@@ -102,7 +102,7 @@ class MediaCleanupService:
                             path=file_info.get("path", ""),
                             size=file_info.get("size", 0),
                             created_at=media.created_at,
-                            last_reference_check=datetime.utcnow(),
+                            last_reference_check=datetime.now(timezone.utc),
                         )
                     )
 
@@ -245,7 +245,7 @@ class MediaCleanupService:
                 # Soft delete the entity
                 entity = await self.db.get(Entity, media.id)
                 if entity:
-                    entity.deleted_at = datetime.utcnow()
+                    entity.deleted_at = datetime.now(timezone.utc)
 
                 deleted_count += 1
                 deleted_size += media.size

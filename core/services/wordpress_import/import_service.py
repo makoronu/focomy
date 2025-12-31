@@ -5,7 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -239,7 +239,7 @@ class WordPressImportService:
                     job_id,
                     status=ImportJobStatus.IMPORTING.value,
                     phase=ImportJobPhase.CONNECT.value,
-                    started_at=datetime.utcnow(),
+                    started_at=datetime.now(timezone.utc),
                     progress_message="Starting import...",
                 )
 
@@ -340,7 +340,7 @@ class WordPressImportService:
                 job_id,
                 status=ImportJobStatus.COMPLETED.value,
                 phase=ImportJobPhase.COMPLETE.value,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 posts_imported=result.posts_imported,
                 pages_imported=result.pages_imported,
                 media_imported=result.media_imported,
@@ -358,7 +358,7 @@ class WordPressImportService:
             await self.update_job(
                 job_id,
                 status=ImportJobStatus.FAILED.value,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 errors=[str(e)],
                 progress_message=f"Import failed: {str(e)}",
             )
@@ -934,7 +934,7 @@ class WordPressImportService:
         await self.update_job(
             job_id,
             status=ImportJobStatus.CANCELLED.value,
-            completed_at=datetime.utcnow(),
+            completed_at=datetime.now(timezone.utc),
             progress_message="Import cancelled by user",
         )
         return True
@@ -1452,7 +1452,7 @@ class WordPressImportService:
                 job_id,
                 status=ImportJobStatus.IMPORTING.value,
                 phase=ImportJobPhase.POSTS.value,
-                started_at=datetime.utcnow(),
+                started_at=datetime.now(timezone.utc),
                 progress_message="Starting diff import...",
             )
 
@@ -1484,7 +1484,7 @@ class WordPressImportService:
                 job_id,
                 status=ImportJobStatus.COMPLETED.value,
                 phase=ImportJobPhase.COMPLETE.value,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 progress_message="Diff import complete",
             )
 
@@ -1498,7 +1498,7 @@ class WordPressImportService:
             await self.update_job(
                 job_id,
                 status=ImportJobStatus.FAILED.value,
-                completed_at=datetime.utcnow(),
+                completed_at=datetime.now(timezone.utc),
                 errors=[str(e)],
                 progress_message=f"Diff import failed: {str(e)}",
             )

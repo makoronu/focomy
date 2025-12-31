@@ -8,7 +8,7 @@ Provides a unified interface for file storage that can use:
 import mimetypes
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import BinaryIO, Optional
 
@@ -102,7 +102,7 @@ class LocalStorageBackend(StorageBackend):
             url=self.get_url(key),
             size=len(content),
             content_type=content_type,
-            last_modified=datetime.utcnow(),
+            last_modified=datetime.now(timezone.utc),
         )
 
     async def get(self, key: str) -> bytes | None:
@@ -204,7 +204,7 @@ class S3StorageBackend(StorageBackend):
             url=self.get_url(key),
             size=len(content),
             content_type=content_type,
-            last_modified=datetime.utcnow(),
+            last_modified=datetime.now(timezone.utc),
         )
 
     async def get(self, key: str) -> bytes | None:

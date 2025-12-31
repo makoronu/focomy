@@ -6,7 +6,7 @@ import asyncio
 import base64
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 from urllib.parse import urljoin, urlparse
 
@@ -525,7 +525,7 @@ class WordPressRESTClient:
     def _parse_date(self, date_str: str) -> datetime:
         """Parse ISO date string."""
         if not date_str:
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
 
         try:
             # Remove timezone suffix if present
@@ -533,7 +533,7 @@ class WordPressRESTClient:
                 date_str = date_str[:-1]
             return datetime.fromisoformat(date_str)
         except ValueError:
-            return datetime.utcnow()
+            return datetime.now(timezone.utc)
 
     async def fetch_all(
         self,

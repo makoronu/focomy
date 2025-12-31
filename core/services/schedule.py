@@ -1,7 +1,7 @@
 """ScheduleService - scheduled publish/unpublish management."""
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -160,7 +160,7 @@ class ScheduleService:
         )
 
         result = []
-        now = before or datetime.utcnow()
+        now = before or datetime.now(timezone.utc)
 
         for action in actions:
             data = self.entity_svc.serialize(action)
@@ -227,7 +227,7 @@ class ScheduleService:
                 action_id,
                 {
                     "status": "completed",
-                    "completed_at": datetime.utcnow().isoformat(),
+                    "completed_at": datetime.now(timezone.utc).isoformat(),
                 },
             )
 
@@ -250,7 +250,7 @@ class ScheduleService:
             entity_id,
             {
                 "status": "published",
-                "published_at": datetime.utcnow().isoformat(),
+                "published_at": datetime.now(timezone.utc).isoformat(),
             },
         )
 

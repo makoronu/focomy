@@ -309,6 +309,18 @@ async def lifespan(app: FastAPI):
     await init_db()
     logger.info("Database initialized")
 
+    # Security warnings
+    if settings.security.secret_key == "change-this-in-production":
+        logger.warning(
+            "SECURITY: secret_key is using default value. "
+            "Set FOCOMY_SECURITY__SECRET_KEY environment variable in production."
+        )
+    if "*" in settings.cors.allow_origins:
+        logger.warning(
+            "SECURITY: CORS allows all origins (*). "
+            "Set FOCOMY_CORS__ALLOW_ORIGINS to specific domains in production."
+        )
+
     # Configure OAuth
     from .services.oauth import oauth_service
 

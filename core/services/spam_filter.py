@@ -11,7 +11,7 @@ import hashlib
 import re
 from collections import defaultdict
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import httpx
 
@@ -136,7 +136,7 @@ class SpamFilterService:
         max_per_minute: int = 5,
     ) -> tuple[float, str | None]:
         """Check for rate limit violations."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         minute_ago = now - timedelta(minutes=1)
 
         # Clean old entries

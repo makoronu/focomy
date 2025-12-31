@@ -5,7 +5,7 @@ import logging
 import shutil
 import zipfile
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 
@@ -280,7 +280,7 @@ class ThemeManager:
         # Activate new theme
         self._active_theme_id = theme_id
         theme.state = ThemeState.ACTIVE
-        theme.activated_at = datetime.utcnow()
+        theme.activated_at = datetime.now(timezone.utc)
 
         self._save_state()
 
@@ -539,7 +539,7 @@ class ThemeManager:
         try:
             data = {
                 "active_theme": self._active_theme_id,
-                "updated_at": datetime.utcnow().isoformat(),
+                "updated_at": datetime.now(timezone.utc).isoformat(),
             }
             self._state_file.write_text(json.dumps(data, indent=2))
         except Exception as e:

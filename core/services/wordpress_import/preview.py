@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Any
 
 from sqlalchemy import select
@@ -327,7 +327,7 @@ class PreviewService:
                 entity = result.scalar_one_or_none()
                 if entity:
                     # Soft delete
-                    entity.deleted_at = datetime.utcnow()
+                    entity.deleted_at = datetime.now(timezone.utc)
                     deleted_count += 1
             except Exception as e:
                 logger.warning(f"Error deleting preview entity {entity_id}: {e}")

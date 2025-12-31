@@ -7,7 +7,7 @@ Handles cleanup of:
 - Old audit logs
 """
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import and_, delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -101,7 +101,7 @@ class CleanupService:
         Returns count of deleted records.
         """
         result = await self.db.execute(
-            delete(Session).where(Session.expires_at < datetime.utcnow())
+            delete(Session).where(Session.expires_at < datetime.now(timezone.utc))
         )
         await self.db.commit()
         return result.rowcount
@@ -115,7 +115,7 @@ class CleanupService:
 
         Returns count of deleted records.
         """
-        cutoff = datetime.utcnow() - timedelta(days=days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
 
         # First delete related EntityValues
         old_entity_ids = select(Entity.id).where(
@@ -148,7 +148,7 @@ class CleanupService:
 
         Returns list of unused media info (doesn't delete, just reports).
         """
-        cutoff = datetime.utcnow() - timedelta(days=days_old)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=days_old)
 
         # Get all media older than cutoff
         media_query = select(Media).where(Media.created_at < cutoff)

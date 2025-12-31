@@ -3,7 +3,7 @@
 import hashlib
 import mimetypes
 import re
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import BinaryIO
 
@@ -266,7 +266,7 @@ class MediaService:
                     f"(types: {', '.join(entity_types)}). Use force=True to delete anyway."
                 )
 
-        media.deleted_at = datetime.utcnow()
+        media.deleted_at = datetime.now(timezone.utc)
         if user_id:
             media.updated_by = user_id
         await self.db.commit()

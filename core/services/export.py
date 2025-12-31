@@ -8,7 +8,7 @@ import io
 import json
 import zipfile
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -86,7 +86,7 @@ class ExportService:
 
         result = {
             "version": "1.0",
-            "exported_at": datetime.utcnow().isoformat(),
+            "exported_at": datetime.now(timezone.utc).isoformat(),
             "generator": "Focomy CMS",
             "content_types": {},
         }
@@ -206,7 +206,7 @@ class ExportService:
     <title>Focomy Export</title>
     <link></link>
     <description>Exported from Focomy CMS</description>
-    <pubDate>{datetime.utcnow().strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
+    <pubDate>{datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
     <wp:wxr_version>1.2</wp:wxr_version>
 """
 

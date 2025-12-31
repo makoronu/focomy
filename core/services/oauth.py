@@ -7,7 +7,7 @@ Supports:
 """
 
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 
 from authlib.integrations.starlette_client import OAuth
 from sqlalchemy import and_, select
@@ -247,7 +247,7 @@ class OAuthAccountManager:
                 "access_token": access_token,
                 "refresh_token": refresh_token,
                 "token_expires_at": token_expires_at.isoformat() if token_expires_at else None,
-                "connected_at": datetime.utcnow().isoformat(),
+                "connected_at": datetime.now(timezone.utc).isoformat(),
             },
             user_id=user_id,
         )
@@ -261,7 +261,7 @@ class OAuthAccountManager:
             access_token=access_token,
             refresh_token=refresh_token,
             token_expires_at=token_expires_at,
-            connected_at=datetime.utcnow(),
+            connected_at=datetime.now(timezone.utc),
             last_used_at=None,
         )
 
@@ -434,7 +434,7 @@ class OAuthAccountManager:
 
         values = {
             "access_token": access_token,
-            "last_used_at": datetime.utcnow().isoformat(),
+            "last_used_at": datetime.now(timezone.utc).isoformat(),
         }
         if refresh_token:
             values["refresh_token"] = refresh_token

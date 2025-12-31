@@ -1,7 +1,7 @@
 """EntityService - unified CRUD for all content types."""
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy import and_, func, select
@@ -142,7 +142,7 @@ class EntityService:
                 )
 
             # Update entity
-            entity.updated_at = datetime.utcnow()
+            entity.updated_at = datetime.now(timezone.utc)
             entity.updated_by = user_id
             entity.version += 1  # Increment version for optimistic locking
 
@@ -192,7 +192,7 @@ class EntityService:
             return False
 
         entity_type = entity.type
-        deleted_at = datetime.utcnow()
+        deleted_at = datetime.now(timezone.utc)
 
         try:
             if hard:
@@ -292,7 +292,7 @@ class EntityService:
             return None
 
         entity.deleted_at = None
-        entity.updated_at = datetime.utcnow()
+        entity.updated_at = datetime.now(timezone.utc)
         entity.updated_by = user_id
 
         await self.db.commit()
@@ -358,7 +358,7 @@ class EntityService:
         """
         from sqlalchemy import delete as sql_delete
 
-        cutoff = datetime.utcnow() - timedelta(days=older_than_days)
+        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
 
         conditions = [
             Entity.deleted_at.isnot(None),

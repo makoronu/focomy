@@ -8,7 +8,7 @@ Features:
 """
 
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -269,7 +269,7 @@ class CommentService:
     async def _check_rate_limit(self, ip_address: str) -> bool:
         """Check if IP is within rate limit."""
         # Get recent comments from this IP
-        cutoff = (datetime.utcnow() - timedelta(seconds=self.RATE_WINDOW)).isoformat()
+        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=self.RATE_WINDOW)).isoformat()
 
         comments = await self.entity_svc.find(
             "comment",

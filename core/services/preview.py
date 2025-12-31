@@ -1,7 +1,7 @@
 """Preview Service - Generate preview tokens for draft content."""
 
 import secrets
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -55,8 +55,8 @@ class PreviewService:
         _preview_tokens[token] = {
             "entity_id": entity_id,
             "user_id": user_id,
-            "created_at": datetime.utcnow(),
-            "expires_at": datetime.utcnow() + timedelta(hours=expiry),
+            "created_at": datetime.now(timezone.utc),
+            "expires_at": datetime.now(timezone.utc) + timedelta(hours=expiry),
         }
 
         # Clean up expired tokens periodically
@@ -76,7 +76,7 @@ class PreviewService:
             return None
 
         # Check expiration
-        if datetime.utcnow() > token_data["expires_at"]:
+        if datetime.now(timezone.utc) > token_data["expires_at"]:
             del _preview_tokens[token]
             return None
 
@@ -118,7 +118,7 @@ class PreviewService:
 
     def _cleanup_expired_tokens(self):
         """Remove expired tokens."""
-        now = datetime.utcnow()
+        now = datetime.now(timezone.utc)
         expired = [t for t, data in _preview_tokens.items() if now > data["expires_at"]]
         for token in expired:
             del _preview_tokens[token]

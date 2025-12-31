@@ -1,7 +1,7 @@
 """WorkflowService - approval workflow management."""
 
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 import yaml
@@ -349,7 +349,7 @@ class WorkflowService:
             value = action.get("value")
 
             if value == "now":
-                value = datetime.utcnow().isoformat()
+                value = datetime.now(timezone.utc).isoformat()
 
             await self.entity_svc.update(
                 entity_id,
