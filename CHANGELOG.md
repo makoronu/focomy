@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.20] - 2026-01-01
+
+### Added
+- 機能フラグシステム実装（Phase 0）
+- FeaturesConfig設定クラス
+- `is_feature_enabled()`, `require_feature()` ヘルパー関数
+- STABILIZATION_PLAN.md（機能安定化計画）
+
+### Changed
+- APIルーターの条件付き登録（機能フラグに基づく）
+- 管理画面ルートにフラグチェック追加（media, widget, menu, link_validator）
+
 ## [0.1.19] - 2025-12-31
 
 ### Fixed
