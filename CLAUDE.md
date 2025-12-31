@@ -102,6 +102,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.15 | 2025-12-31 | [PyPI](https://pypi.org/project/focomy/0.1.15/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
 | v0.1.16 | 2025-12-31 | [PyPI](https://pypi.org/project/focomy/0.1.16/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
 | v0.1.17 | 2025-12-31 | [PyPI](https://pypi.org/project/focomy/0.1.17/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
+| v0.1.18 | 2025-12-31 | [PyPI](https://pypi.org/project/focomy/0.1.18/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
 
 ---
 
