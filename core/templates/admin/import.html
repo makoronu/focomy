@@ -682,7 +682,7 @@ async function startAnalysis() {
             alert('Please enter a WordPress URL');
             return;
         }
-        formData.append('source_type', 'rest_api');
+        formData.append('source_type', 'rest');
         formData.append('url', url);
         formData.append('username', document.getElementById('wp-username').value);
         formData.append('password', document.getElementById('wp-password').value);
