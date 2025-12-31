@@ -461,9 +461,10 @@ class WordPressRESTClient:
         # Extract meta
         postmeta = post.get("meta", {}) or {}
 
-        # ACF fields if available
-        if "acf" in post:
-            for key, value in post["acf"].items():
+        # ACF fields if available (must be dict, not list)
+        acf = post.get("acf")
+        if isinstance(acf, dict):
+            for key, value in acf.items():
                 postmeta[key] = value
 
         # Yoast SEO if available
