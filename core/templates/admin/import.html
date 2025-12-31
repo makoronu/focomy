@@ -474,7 +474,10 @@ async function testConnection() {
     try {
         const response = await fetch('/admin/import/test-connection', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '{{ csrf_token }}'
+            },
             body: JSON.stringify({ url, username, password })
         });
         const data = await response.json();
@@ -526,6 +529,9 @@ async function startAnalysis() {
     try {
         const response = await fetch('/admin/import/analyze', {
             method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            },
             body: formData
         });
         const data = await response.json();
@@ -603,7 +609,10 @@ async function startImport() {
 
     try {
         const response = await fetch(`/admin/import/${currentJobId}/start`, {
-            method: 'POST'
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            }
         });
         const data = await response.json();
 

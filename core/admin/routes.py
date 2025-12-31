@@ -2,8 +2,10 @@
 
 from pathlib import Path
 
-from fastapi import APIRouter, Depends, Form, HTTPException, Request
-from fastapi.responses import HTMLResponse, RedirectResponse
+import uuid
+
+from fastapi import APIRouter, Depends, Form, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -15,6 +17,11 @@ from ..services.auth import AuthService
 from ..services.entity import EntityService
 from ..services.field import field_service
 from ..services.rbac import Permission, RBACService
+from ..schemas.import_schema import (
+    ConnectionTestRequest,
+    ConnectionTestResponse,
+    ErrorResponse,
+)
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -1728,45 +1735,62 @@ async def import_page(
     return templates.TemplateResponse("admin/import.html", context)
 
 
-@router.post("/import/test-connection")
+@router.post(
+    "/import/test-connection",
+    response_model=ConnectionTestResponse,
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("10/minute")
 async def test_wp_connection(
     request: Request,
+    data: ConnectionTestRequest,
     current_user: Entity = Depends(require_admin),
 ):
     """Test WordPress REST API connection."""
     from ..services.wordpress_import import RESTClientConfig, WordPressRESTClient
 
+    request_id = str(uuid.uuid4())[:8]
+
     try:
-        data = await request.json()
-        url = data.get("url", "")
-        username = data.get("username", "")
-        password = data.get("password", "")
-
-        if not url:
-            return {"success": False, "message": "URL is required"}
-
         config = RESTClientConfig(
-            site_url=url,
-            username=username,
-            password=password,
+            site_url=str(data.url),
+            username=data.username,
+            password=data.password,
         )
 
         async with WordPressRESTClient(config) as client:
             result = await client.test_connection()
 
-            return {
-                "success": result.success,
-                "message": result.message,
-                "site_name": result.site_name,
-                "authenticated": result.authenticated,
-                "errors": result.errors,
-            }
+            return ConnectionTestResponse(
+                success=result.success,
+                message=result.message,
+                site_name=result.site_name,
+                authenticated=result.authenticated,
+                errors=result.errors,
+            )
 
     except Exception as e:
-        return {"success": False, "message": str(e)}
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="CONNECTION_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
 
 
-@router.post("/import/analyze")
+@router.post(
+    "/import/analyze",
+    responses={
+        400: {"model": ErrorResponse, "description": "Invalid request"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
 async def analyze_import(
     request: Request,
     db: AsyncSession = Depends(get_db),
@@ -1778,9 +1802,22 @@ async def analyze_import(
 
     from ..services.wordpress_import import WordPressImportService
 
+    request_id = str(uuid.uuid4())[:8]
+
     try:
         form = await request.form()
         source_type = form.get("source_type", "wxr")
+
+        # Validate source_type
+        if source_type not in ("wxr", "rest"):
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error="Invalid source_type. Must be 'wxr' or 'rest'",
+                    code="INVALID_SOURCE_TYPE",
+                    request_id=request_id,
+                ).model_dump(),
+            )
 
         import_svc = WordPressImportService(db)
 
@@ -1789,11 +1826,19 @@ async def analyze_import(
         upload_dir.mkdir(parents=True, exist_ok=True)
         base_url = str(request.base_url).rstrip("/")
 
+        # Validate webp_quality
+        try:
+            webp_quality = int(form.get("webp_quality", "85"))
+            if not 1 <= webp_quality <= 100:
+                webp_quality = 85
+        except ValueError:
+            webp_quality = 85
+
         config = {
             "import_media": form.get("import_media") == "true",
             "download_media": form.get("download_media") == "true",
             "convert_to_webp": form.get("convert_to_webp") == "true",
-            "webp_quality": int(form.get("webp_quality", "85")),
+            "webp_quality": webp_quality,
             "include_drafts": form.get("include_drafts") == "true",
             "import_comments": form.get("import_comments") == "true",
             "import_menus": form.get("import_menus") == "true",
@@ -1808,7 +1853,14 @@ async def analyze_import(
             # Handle file upload
             file = form.get("file")
             if not file:
-                return {"success": False, "error": "No file uploaded"}
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content=ErrorResponse(
+                        error="No file uploaded",
+                        code="NO_FILE",
+                        request_id=request_id,
+                    ).model_dump(),
+                )
 
             # Save to temp file
             temp_dir = Path(tempfile.gettempdir())
@@ -1824,7 +1876,14 @@ async def analyze_import(
             config["password"] = form.get("password", "")
 
             if not source_url:
-                return {"success": False, "error": "URL is required"}
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content=ErrorResponse(
+                        error="URL is required for REST API import",
+                        code="URL_REQUIRED",
+                        request_id=request_id,
+                    ).model_dump(),
+                )
 
         # Create job
         entity_svc = EntityService(db)
@@ -1842,21 +1901,43 @@ async def analyze_import(
         analysis = await import_svc.analyze(job.id)
 
         if not analysis:
-            return {"success": False, "error": "Analysis failed"}
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content=ErrorResponse(
+                    error="Analysis failed",
+                    code="ANALYSIS_FAILED",
+                    request_id=request_id,
+                ).model_dump(),
+            )
 
         return {
             "success": True,
             "job_id": job.id,
             "analysis": analysis,
+            "request_id": request_id,
         }
 
     except Exception as e:
         import traceback
         traceback.print_exc()
-        return {"success": False, "error": str(e)}
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
 
 
-@router.post("/import/{job_id}/start")
+@router.post(
+    "/import/{job_id}/start",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("3/minute")
 async def start_import(
     request: Request,
     job_id: str,
@@ -1868,20 +1949,36 @@ async def start_import(
 
     from ..services.wordpress_import import WordPressImportService
 
+    request_id = str(uuid.uuid4())[:8]
+
     try:
         import_svc = WordPressImportService(db)
         job = await import_svc.get_job(job_id)
 
         if not job:
-            return {"success": False, "error": "Job not found"}
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
 
         # Start import in background
         asyncio.create_task(_run_import_background(job_id))
 
-        return {"success": True, "job_id": job_id}
+        return {"success": True, "job_id": job_id, "request_id": request_id}
 
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
 
 
 async def _run_import_background(job_id: str):
@@ -1894,7 +1991,13 @@ async def _run_import_background(job_id: str):
         await import_svc.run_import(job_id)
 
 
-@router.get("/import/{job_id}/status")
+@router.get(
+    "/import/{job_id}/status",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
 async def get_import_status(
     request: Request,
     job_id: str,
@@ -1904,20 +2007,42 @@ async def get_import_status(
     """Get import job status for polling."""
     from ..services.wordpress_import import WordPressImportService
 
+    request_id = str(uuid.uuid4())[:8]
+
     try:
         import_svc = WordPressImportService(db)
         job = await import_svc.get_job(job_id)
 
         if not job:
-            return {"success": False, "error": "Job not found"}
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
 
         return job.to_dict()
 
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
 
 
-@router.post("/import/{job_id}/cancel")
+@router.post(
+    "/import/{job_id}/cancel",
+    responses={
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("10/minute")
 async def cancel_import(
     request: Request,
     job_id: str,
@@ -1927,14 +2052,23 @@ async def cancel_import(
     """Cancel import job."""
     from ..services.wordpress_import import WordPressImportService
 
+    request_id = str(uuid.uuid4())[:8]
+
     try:
         import_svc = WordPressImportService(db)
         success = await import_svc.cancel_job(job_id)
 
-        return {"success": success}
+        return {"success": success, "request_id": request_id}
 
     except Exception as e:
-        return {"success": False, "error": str(e)}
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
 
 
 # === Entity List ===
