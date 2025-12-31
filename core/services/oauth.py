@@ -14,6 +14,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
+from ..utils import utcnow
 
 
 @dataclass
@@ -304,7 +305,6 @@ class OAuthAccountManager:
     async def list_connections(self, user_id: str) -> list[OAuthConnection]:
         """List all OAuth connections for a user."""
         from ..models import Entity
-from ..utils import utcnow
 
         query = select(Entity).where(
             and_(
@@ -328,7 +328,6 @@ from ..utils import utcnow
     ) -> OAuthConnection | None:
         """Find connection by provider credentials."""
         from ..models import Entity
-from ..utils import utcnow
 
         query = select(Entity).where(
             and_(
@@ -361,7 +360,6 @@ from ..utils import utcnow
         Transfers content and OAuth connections.
         """
         from ..models import Entity
-from ..utils import utcnow
 
         try:
             entities_count = 0
@@ -382,7 +380,6 @@ from ..utils import utcnow
             connections = await self.list_connections(source_user_id)
             for conn in connections:
                 from ..models import EntityValue
-from ..utils import utcnow
 
                 query = select(EntityValue).where(
                     and_(
@@ -451,7 +448,6 @@ from ..utils import utcnow
     async def _user_has_password(self, user_id: str) -> bool:
         """Check if user has password authentication."""
         from ..models import EntityValue
-from ..utils import utcnow
 
         query = select(EntityValue).where(
             and_(
@@ -466,7 +462,6 @@ from ..utils import utcnow
     async def _get_entity_values(self, entity_id: str) -> dict:
         """Get all values for an entity."""
         from ..models import EntityValue
-from ..utils import utcnow
 
         query = select(EntityValue).where(EntityValue.entity_id == entity_id)
         result = await self.db.execute(query)
