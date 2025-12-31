@@ -282,7 +282,7 @@ class DryRunService:
                 result.skip_count += 1
             else:
                 # Check if URL is accessible
-                url = media.attachment_url or ""
+                url = media.guid or ""
                 if not url:
                     item = DryRunItem(
                         entity_type="media",

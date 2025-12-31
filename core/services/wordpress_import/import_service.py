@@ -372,7 +372,7 @@ class WordPressImportService:
             parser = WXRParser()
             return parser.parse(Path(job.source_file))
 
-        elif job.source_type == "rest_api":
+        elif job.source_type == "rest":
             if not job.source_url:
                 return None
 
@@ -1291,7 +1291,7 @@ class WordPressImportService:
             return {
                 "success": True,
                 "preview_count": len(imported),
-                "previews": imported,
+                "items": imported,
                 "preview_ids": preview_ids,
             }
 

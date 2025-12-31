@@ -39,10 +39,10 @@ class RedirectMiddleware(BaseHTTPMiddleware):
             return await call_next(request)
 
         try:
-            from .database import async_session_maker
+            from .database import async_session
             from .services.redirect import RedirectService
 
-            async with async_session_maker() as db:
+            async with async_session() as db:
                 redirect_svc = RedirectService(db)
                 query_string = str(request.url.query) if request.url.query else ""
                 redirect = await redirect_svc.find_redirect(path, query_string)
