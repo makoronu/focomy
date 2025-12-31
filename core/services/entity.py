@@ -8,6 +8,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, EntityValue
+from ..utils import utcnow
 from .cache import cache_service
 from .field import FieldService, field_service
 
@@ -142,7 +143,7 @@ class EntityService:
                 )
 
             # Update entity
-            entity.updated_at = datetime.now(timezone.utc)
+            entity.updated_at = utcnow()
             entity.updated_by = user_id
             entity.version += 1  # Increment version for optimistic locking
 
@@ -192,7 +193,7 @@ class EntityService:
             return False
 
         entity_type = entity.type
-        deleted_at = datetime.now(timezone.utc)
+        deleted_at = utcnow()
 
         try:
             if hard:
@@ -292,7 +293,7 @@ class EntityService:
             return None
 
         entity.deleted_at = None
-        entity.updated_at = datetime.now(timezone.utc)
+        entity.updated_at = utcnow()
         entity.updated_by = user_id
 
         await self.db.commit()
@@ -358,7 +359,7 @@ class EntityService:
         """
         from sqlalchemy import delete as sql_delete
 
-        cutoff = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+        cutoff = utcnow() - timedelta(days=older_than_days)
 
         conditions = [
             Entity.deleted_at.isnot(None),

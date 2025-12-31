@@ -139,7 +139,7 @@ class SpamFilterService:
         max_per_minute: int = 5,
     ) -> tuple[float, str | None]:
         """Check for rate limit violations."""
-        now = datetime.now(timezone.utc)
+        now = utcnow()
         minute_ago = now - timedelta(minutes=1)
 
         # Clean old entries

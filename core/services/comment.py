@@ -269,7 +269,7 @@ class CommentService:
     async def _check_rate_limit(self, ip_address: str) -> bool:
         """Check if IP is within rate limit."""
         # Get recent comments from this IP
-        cutoff = (datetime.now(timezone.utc) - timedelta(seconds=self.RATE_WINDOW)).isoformat()
+        cutoff = (utcnow() - timedelta(seconds=self.RATE_WINDOW)).isoformat()
 
         comments = await self.entity_svc.find(
             "comment",

@@ -13,6 +13,7 @@ from sqlalchemy import and_, delete, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, EntityValue, Media, Relation, Session
+from ..utils import utcnow
 
 
 class CleanupService:
@@ -101,7 +102,7 @@ class CleanupService:
         Returns count of deleted records.
         """
         result = await self.db.execute(
-            delete(Session).where(Session.expires_at < datetime.now(timezone.utc))
+            delete(Session).where(Session.expires_at < utcnow())
         )
         await self.db.commit()
         return result.rowcount
@@ -115,7 +116,7 @@ class CleanupService:
 
         Returns count of deleted records.
         """
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days)
+        cutoff = utcnow() - timedelta(days=days)
 
         # First delete related EntityValues
         old_entity_ids = select(Entity.id).where(
@@ -148,7 +149,7 @@ class CleanupService:
 
         Returns list of unused media info (doesn't delete, just reports).
         """
-        cutoff = datetime.now(timezone.utc) - timedelta(days=days_old)
+        cutoff = utcnow() - timedelta(days=days_old)
 
         # Get all media older than cutoff
         media_query = select(Media).where(Media.created_at < cutoff)

@@ -5,7 +5,7 @@ import tempfile
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 import aiohttp
 
@@ -222,7 +222,7 @@ class ThemeMarketplace:
         self,
         theme_id: str,
         license_key: str | None = None,
-        progress_callback: callable | None = None,
+        progress_callback: Callable | None = None,
     ) -> InstallResult:
         """
         Download and install a theme from marketplace.
@@ -421,7 +421,7 @@ class ThemeMarketplace:
         self,
         url: str,
         theme_id: str,
-        progress_callback: callable | None = None,
+        progress_callback: Callable | None = None,
     ) -> Path | None:
         """Download theme ZIP file."""
         zip_path = self.cache_dir / f"{theme_id}.zip"

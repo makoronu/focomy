@@ -11,6 +11,8 @@ from pathlib import Path
 
 import yaml
 
+from ..utils import utcnow
+
 logger = logging.getLogger(__name__)
 
 
@@ -280,7 +282,7 @@ class ThemeManager:
         # Activate new theme
         self._active_theme_id = theme_id
         theme.state = ThemeState.ACTIVE
-        theme.activated_at = datetime.now(timezone.utc)
+        theme.activated_at = utcnow()
 
         self._save_state()
 
@@ -539,7 +541,7 @@ class ThemeManager:
         try:
             data = {
                 "active_theme": self._active_theme_id,
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": utcnow().isoformat(),
             }
             self._state_file.write_text(json.dumps(data, indent=2))
         except Exception as e:

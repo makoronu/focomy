@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity
+from ..utils import utcnow
 
 
 @dataclass
@@ -90,7 +91,7 @@ class InviteService:
 
         # Check for pending invitation
         for invite in _invitations.values():
-            if invite.email == email and invite.expires_at > datetime.now(timezone.utc):
+            if invite.email == email and invite.expires_at > utcnow():
                 if invite.accepted_at is None:
                     raise ValueError("A pending invitation already exists for this email")
 
@@ -103,9 +104,9 @@ class InviteService:
             email=email,
             role=role,
             token=token,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=expiry),
+            expires_at=utcnow() + timedelta(days=expiry),
             created_by=invited_by,
-            created_at=datetime.now(timezone.utc),
+            created_at=utcnow(),
         )
 
         _invitations[token] = invitation
@@ -118,7 +119,7 @@ class InviteService:
             return None
 
         # Check expiration
-        if invitation.expires_at < datetime.now(timezone.utc):
+        if invitation.expires_at < utcnow():
             return None
 
         # Check if already accepted
@@ -164,7 +165,7 @@ class InviteService:
         )
 
         # Mark invitation as accepted
-        invitation.accepted_at = datetime.now(timezone.utc)
+        invitation.accepted_at = utcnow()
 
         return user
 
@@ -188,9 +189,9 @@ class InviteService:
             email=old_invite.email,
             role=old_invite.role,
             token=new_token,
-            expires_at=datetime.now(timezone.utc) + timedelta(days=self.EXPIRY_DAYS),
+            expires_at=utcnow() + timedelta(days=self.EXPIRY_DAYS),
             created_by=old_invite.created_by,
-            created_at=datetime.now(timezone.utc),
+            created_at=utcnow(),
         )
 
         # Remove old, add new
@@ -201,14 +202,14 @@ class InviteService:
 
     async def list_pending_invitations(self) -> list[Invitation]:
         """List all pending (non-expired, non-accepted) invitations."""
-        now = datetime.now(timezone.utc)
+        now = utcnow()
         return [
             inv for inv in _invitations.values() if inv.expires_at > now and inv.accepted_at is None
         ]
 
     async def cleanup_expired(self) -> int:
         """Remove expired invitations."""
-        now = datetime.now(timezone.utc)
+        now = utcnow()
         expired = [token for token, inv in _invitations.items() if inv.expires_at < now]
         for token in expired:
             del _invitations[token]

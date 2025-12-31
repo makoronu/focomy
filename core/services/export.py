@@ -16,6 +16,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, EntityValue, Relation
+from ..utils import utcnow
 
 ExportFormat = Literal["json", "csv", "wordpress", "markdown"]
 
@@ -86,7 +87,7 @@ class ExportService:
 
         result = {
             "version": "1.0",
-            "exported_at": datetime.now(timezone.utc).isoformat(),
+            "exported_at": utcnow().isoformat(),
             "generator": "Focomy CMS",
             "content_types": {},
         }
@@ -206,7 +207,7 @@ class ExportService:
     <title>Focomy Export</title>
     <link></link>
     <description>Exported from Focomy CMS</description>
-    <pubDate>{datetime.now(timezone.utc).strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
+    <pubDate>{utcnow().strftime('%a, %d %b %Y %H:%M:%S +0000')}</pubDate>
     <wp:wxr_version>1.2</wp:wxr_version>
 """
 

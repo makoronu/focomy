@@ -15,6 +15,7 @@ from ..services.seo import SEOService
 from ..services.settings import SettingsService
 from ..services.theme import theme_service
 from ..services.widget import WidgetService
+from ..utils import utcnow
 
 router = APIRouter(tags=["public"])
 
@@ -253,7 +254,7 @@ async def home(
     )
 
     # Filter by published_at (scheduled posts)
-    now = datetime.now(timezone.utc)
+    now = utcnow()
     posts_data = []
     for p in posts:
         data = entity_svc.serialize(p)
@@ -684,7 +685,7 @@ async def _generate_atom_feed(
         )
 
     title = ct.label_plural if ct else "Posts"
-    updated = entities[0].updated_at.isoformat() if entities else datetime.now(timezone.utc).isoformat()
+    updated = entities[0].updated_at.isoformat() if entities else utcnow().isoformat()
 
     atom = f"""<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
@@ -853,7 +854,7 @@ async def content_type_listing(
     )
 
     # Filter by published_at for scheduled posts
-    now = datetime.now(timezone.utc)
+    now = utcnow()
     posts_data = []
     for e in entities:
         data = entity_svc.serialize(e)
@@ -938,7 +939,7 @@ async def view_content_by_path(
     published_at = entity_data.get("published_at")
     if published_at:
         pub_date = datetime.fromisoformat(published_at.replace("Z", ""))
-        if pub_date > datetime.now(timezone.utc):
+        if pub_date > utcnow():
             raise HTTPException(status_code=404, detail="Content not found")
 
     # Get site URL and contexts

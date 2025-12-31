@@ -94,7 +94,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                 valid=False,
                 package_name="",
                 package_version="",
-                verified_at=datetime.now(timezone.utc),
+                verified_at=utcnow(),
                 error="Package file not found",
             )
 
@@ -106,7 +106,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                     valid=False,
                     package_name="",
                     package_version="",
-                    verified_at=datetime.now(timezone.utc),
+                    verified_at=utcnow(),
                     error="Package manifest not found",
                 )
 
@@ -116,7 +116,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                     valid=False,
                     package_name=manifest.name,
                     package_version=manifest.version,
-                    verified_at=datetime.now(timezone.utc),
+                    verified_at=utcnow(),
                     error="Checksum verification failed - package may be corrupted or tampered",
                 )
 
@@ -131,7 +131,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                         valid=False,
                         package_name=manifest.name,
                         package_version=manifest.version,
-                        verified_at=datetime.now(timezone.utc),
+                        verified_at=utcnow(),
                         error="Signature verification failed - package is not from official marketplace",
                     )
 
@@ -144,7 +144,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                 valid=True,
                 package_name=manifest.name,
                 package_version=manifest.version,
-                verified_at=datetime.now(timezone.utc),
+                verified_at=utcnow(),
                 warnings=warnings if warnings else None,
             )
 
@@ -153,7 +153,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
                 valid=False,
                 package_name="",
                 package_version="",
-                verified_at=datetime.now(timezone.utc),
+                verified_at=utcnow(),
                 error=f"Verification error: {str(e)}",
             )
 
@@ -276,7 +276,7 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA...
             type=package_type,
             author=author,
             checksum=checksum,
-            signed_at=datetime.now(timezone.utc),
+            signed_at=utcnow(),
             signature="",  # To be signed by marketplace
             files=files,
         )

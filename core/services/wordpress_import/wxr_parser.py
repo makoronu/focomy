@@ -4,6 +4,8 @@ import xml.etree.ElementTree as ET
 from collections.abc import Generator
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+
+from ...utils import utcnow
 from html import unescape
 from pathlib import Path
 from typing import Any
@@ -468,7 +470,7 @@ class WXRParser:
     def _parse_date(self, date_str: str | None) -> datetime:
         """Parse WordPress date string."""
         if not date_str or date_str == "0000-00-00 00:00:00":
-            return datetime.now(timezone.utc)
+            return utcnow()
 
         try:
             return datetime.strptime(date_str, "%Y-%m-%d %H:%M:%S")
@@ -476,4 +478,4 @@ class WXRParser:
             try:
                 return datetime.fromisoformat(date_str)
             except ValueError:
-                return datetime.now(timezone.utc)
+                return utcnow()

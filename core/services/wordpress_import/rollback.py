@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timedelta, timezone
 
+from ...utils import utcnow
+
 from sqlalchemy import select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -52,7 +54,7 @@ class RollbackService:
 
         # Check 30-day validity
         expires_at = job.completed_at + timedelta(days=ROLLBACK_VALIDITY_DAYS)
-        if datetime.now(timezone.utc) > expires_at:
+        if utcnow() > expires_at:
             return {
                 "can_rollback": False,
                 "reason": f"Rollback expired on {expires_at.isoformat()}",
@@ -144,7 +146,7 @@ class RollbackService:
                 count = 0
                 for entity in entities:
                     # Soft delete
-                    entity.deleted_at = datetime.now(timezone.utc)
+                    entity.deleted_at = utcnow()
                     count += 1
 
                 deleted_counts[entity_type] = count

@@ -103,7 +103,7 @@ class DeploymentService:
         version_file = Path(self.VERSION_FILE)
         if version_file.exists():
             return datetime.fromtimestamp(version_file.stat().st_mtime)
-        return datetime.now(timezone.utc)
+        return utcnow()
 
     def register_health_check(
         self,
@@ -157,7 +157,7 @@ class DeploymentService:
             healthy=healthy,
             checks=checks,
             message="OK" if healthy else "Some checks failed",
-            timestamp=datetime.now(timezone.utc),
+            timestamp=utcnow(),
         )
 
     async def _check_database(self) -> bool:
@@ -210,9 +210,9 @@ class DeploymentService:
         self._shutting_down = True
 
         # Wait for active requests to complete
-        start = datetime.now(timezone.utc)
+        start = utcnow()
         while self._active_requests > 0:
-            elapsed = (datetime.now(timezone.utc) - start).total_seconds()
+            elapsed = (utcnow() - start).total_seconds()
             if elapsed > timeout:
                 return False
             await asyncio.sleep(0.5)

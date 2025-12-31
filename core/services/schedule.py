@@ -160,7 +160,7 @@ class ScheduleService:
         )
 
         result = []
-        now = before or datetime.now(timezone.utc)
+        now = before or utcnow()
 
         for action in actions:
             data = self.entity_svc.serialize(action)
@@ -227,7 +227,7 @@ class ScheduleService:
                 action_id,
                 {
                     "status": "completed",
-                    "completed_at": datetime.now(timezone.utc).isoformat(),
+                    "completed_at": utcnow().isoformat(),
                 },
             )
 
@@ -250,7 +250,7 @@ class ScheduleService:
             entity_id,
             {
                 "status": "published",
-                "published_at": datetime.now(timezone.utc).isoformat(),
+                "published_at": utcnow().isoformat(),
             },
         )
 

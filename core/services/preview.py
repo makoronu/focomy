@@ -7,6 +7,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity
+from ..utils import utcnow
 
 # In-memory preview token storage (for simplicity)
 # In production, consider using Redis or database
@@ -55,8 +56,8 @@ class PreviewService:
         _preview_tokens[token] = {
             "entity_id": entity_id,
             "user_id": user_id,
-            "created_at": datetime.now(timezone.utc),
-            "expires_at": datetime.now(timezone.utc) + timedelta(hours=expiry),
+            "created_at": utcnow(),
+            "expires_at": utcnow() + timedelta(hours=expiry),
         }
 
         # Clean up expired tokens periodically
@@ -76,7 +77,7 @@ class PreviewService:
             return None
 
         # Check expiration
-        if datetime.now(timezone.utc) > token_data["expires_at"]:
+        if utcnow() > token_data["expires_at"]:
             del _preview_tokens[token]
             return None
 
@@ -118,7 +119,7 @@ class PreviewService:
 
     def _cleanup_expired_tokens(self):
         """Remove expired tokens."""
-        now = datetime.now(timezone.utc)
+        now = utcnow()
         expired = [t for t, data in _preview_tokens.items() if now > data["expires_at"]]
         for token in expired:
             del _preview_tokens[token]

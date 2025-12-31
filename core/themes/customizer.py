@@ -8,6 +8,8 @@ from enum import Enum
 from pathlib import Path
 from typing import Any
 
+from ..utils import utcnow
+
 logger = logging.getLogger(__name__)
 
 
@@ -546,7 +548,7 @@ class ThemeCustomizer:
         return json.dumps(
             {
                 "theme_id": theme_id,
-                "exported_at": datetime.now(timezone.utc).isoformat(),
+                "exported_at": utcnow().isoformat(),
                 "customizations": values,
             },
             indent=2,

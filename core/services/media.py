@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..models import Media
+from ..utils import utcnow
 from .assets import get_upload_url, s3_client
 
 
@@ -266,7 +267,7 @@ class MediaService:
                     f"(types: {', '.join(entity_types)}). Use force=True to delete anyway."
                 )
 
-        media.deleted_at = datetime.now(timezone.utc)
+        media.deleted_at = utcnow()
         if user_id:
             media.updated_by = user_id
         await self.db.commit()

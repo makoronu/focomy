@@ -11,6 +11,7 @@ from typing import Any
 from .base import Plugin, PluginMeta, PluginState
 from .hooks import HookRegistry, get_registry
 from .loader import PluginLoader
+from ..utils import utcnow
 
 logger = logging.getLogger(__name__)
 
@@ -177,7 +178,7 @@ class PluginManager:
             # Mark as active
             self._active_plugins.add(plugin_id)
             plugin.meta.state = PluginState.ACTIVATED
-            plugin.meta.activated_at = datetime.now(timezone.utc)
+            plugin.meta.activated_at = utcnow()
 
             # Save state
             self._save_state()
@@ -436,7 +437,7 @@ class PluginManager:
         try:
             data = {
                 "active_plugins": list(self._active_plugins),
-                "updated_at": datetime.now(timezone.utc).isoformat(),
+                "updated_at": utcnow().isoformat(),
             }
             self._state_file.write_text(json.dumps(data, indent=2))
         except Exception as e:

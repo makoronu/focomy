@@ -10,6 +10,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
 from ..models import Entity, LoginLog, Session, UserAuth
+from ..utils import utcnow
 from .entity import EntityService
 
 # TOTP configuration
@@ -97,10 +98,10 @@ class AuthService:
             raise ValueError("Invalid email or password")
 
         # Check lockout
-        if user_auth.locked_until and user_auth.locked_until > datetime.now(timezone.utc):
+        if user_auth.locked_until and user_auth.locked_until > utcnow():
             self.db.add(log)
             await self.db.commit()
-            remaining = (user_auth.locked_until - datetime.now(timezone.utc)).seconds
+            remaining = (user_auth.locked_until - utcnow()).seconds
             raise ValueError(f"Account locked. Try again in {remaining} seconds")
 
         # Verify password
@@ -110,7 +111,7 @@ class AuthService:
 
             # Lock if too many attempts
             if user_auth.login_attempts >= settings.security.login_attempts:
-                user_auth.locked_until = datetime.now(timezone.utc) + timedelta(
+                user_auth.locked_until = utcnow() + timedelta(
                     seconds=settings.security.lockout_duration
                 )
 
@@ -121,14 +122,14 @@ class AuthService:
         # Success - reset attempts
         user_auth.login_attempts = 0
         user_auth.locked_until = None
-        user_auth.last_login = datetime.now(timezone.utc)
+        user_auth.last_login = utcnow()
 
         # Create session
         session_token = secrets.token_urlsafe(32)
         session = Session(
             id=session_token,
             user_id=user_auth.entity_id,
-            expires_at=datetime.now(timezone.utc) + timedelta(seconds=settings.security.session_expire),
+            expires_at=utcnow() + timedelta(seconds=settings.security.session_expire),
         )
         self.db.add(session)
 
@@ -163,7 +164,7 @@ class AuthService:
         query = select(Session).where(
             and_(
                 Session.id == session_token,
-                Session.expires_at > datetime.now(timezone.utc),
+                Session.expires_at > utcnow(),
             )
         )
         result = await self.db.execute(query)
@@ -235,7 +236,7 @@ class AuthService:
         # Generate reset token
         reset_token = secrets.token_urlsafe(32)
         user_auth.reset_token = reset_token
-        user_auth.reset_token_expires = datetime.now(timezone.utc) + timedelta(hours=1)
+        user_auth.reset_token_expires = utcnow() + timedelta(hours=1)
 
         await self.db.commit()
         return reset_token
@@ -254,7 +255,7 @@ class AuthService:
         query = select(UserAuth).where(
             and_(
                 UserAuth.reset_token == token,
-                UserAuth.reset_token_expires > datetime.now(timezone.utc),
+                UserAuth.reset_token_expires > utcnow(),
             )
         )
         result = await self.db.execute(query)
@@ -298,7 +299,7 @@ class AuthService:
             .where(
                 and_(
                     Session.user_id == user_id,
-                    Session.expires_at > datetime.now(timezone.utc),
+                    Session.expires_at > utcnow(),
                 )
             )
             .order_by(Session.created_at.desc())
@@ -324,7 +325,7 @@ class AuthService:
             select(func.count(Session.id)).where(
                 and_(
                     Session.user_id == user_id,
-                    Session.expires_at > datetime.now(timezone.utc),
+                    Session.expires_at > utcnow(),
                 )
             )
         )
@@ -350,7 +351,7 @@ class AuthService:
             .where(
                 and_(
                     Session.user_id == user_id,
-                    Session.expires_at > datetime.now(timezone.utc),
+                    Session.expires_at > utcnow(),
                 )
             )
             .order_by(Session.created_at.asc())
@@ -381,7 +382,7 @@ class AuthService:
         from sqlalchemy import delete
 
         result = await self.db.execute(
-            delete(Session).where(Session.expires_at < datetime.now(timezone.utc))
+            delete(Session).where(Session.expires_at < utcnow())
         )
         await self.db.commit()
         return result.rowcount
@@ -396,10 +397,10 @@ class AuthService:
         result = await self.db.execute(query)
         session = result.scalar_one_or_none()
 
-        if not session or session.expires_at < datetime.now(timezone.utc):
+        if not session or session.expires_at < utcnow():
             return False
 
-        session.expires_at = datetime.now(timezone.utc) + timedelta(hours=hours)
+        session.expires_at = utcnow() + timedelta(hours=hours)
         await self.db.commit()
         return True
 
@@ -414,14 +415,14 @@ class AuthService:
         session = Session(
             id=session_token,
             user_id=user.id,
-            expires_at=datetime.now(timezone.utc) + timedelta(seconds=settings.security.session_expire),
+            expires_at=utcnow() + timedelta(seconds=settings.security.session_expire),
         )
         self.db.add(session)
 
         # Update last login
         user_auth = await self._get_user_auth(user.id)
         if user_auth:
-            user_auth.last_login = datetime.now(timezone.utc)
+            user_auth.last_login = utcnow()
 
         await self.db.commit()
 

@@ -55,7 +55,7 @@ class EditLockService:
 
         if existing:
             # Check if expired
-            if existing.expires_at < datetime.now(timezone.utc):
+            if existing.expires_at < utcnow():
                 # Lock expired, release it
                 await self.release_lock(entity_id, existing.user_id)
             elif existing.user_id != user_id:
@@ -67,7 +67,7 @@ class EditLockService:
                 return True, None
 
         # Create new lock
-        now = datetime.now(timezone.utc)
+        now = utcnow()
         expires_at = now + timedelta(seconds=self.LOCK_TIMEOUT_SECONDS)
 
         await self.entity_svc.create(
@@ -131,7 +131,7 @@ class EditLockService:
         )
 
         if locks:
-            new_expires = datetime.now(timezone.utc) + timedelta(seconds=self.LOCK_TIMEOUT_SECONDS)
+            new_expires = utcnow() + timedelta(seconds=self.LOCK_TIMEOUT_SECONDS)
             await self.entity_svc.update(
                 locks[0].id,
                 {"expires_at": new_expires.isoformat()},
@@ -197,7 +197,7 @@ class EditLockService:
             return False, None
 
         # Check if expired
-        if lock.expires_at < datetime.now(timezone.utc):
+        if lock.expires_at < utcnow():
             return False, None
 
         # Check if same user
@@ -218,7 +218,7 @@ class EditLockService:
             limit=1000,
         )
 
-        now = datetime.now(timezone.utc)
+        now = utcnow()
         cleaned = 0
 
         for lock in locks:

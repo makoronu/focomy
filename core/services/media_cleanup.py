@@ -12,6 +12,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Entity, EntityValue
+from ..utils import utcnow
 
 
 @dataclass
@@ -72,7 +73,7 @@ class MediaCleanupService:
         Returns:
             List of unused media files
         """
-        cutoff_date = datetime.now(timezone.utc) - timedelta(days=older_than_days)
+        cutoff_date = utcnow() - timedelta(days=older_than_days)
 
         # Get all media entities
         media_query = select(Entity).where(
@@ -102,7 +103,7 @@ class MediaCleanupService:
                             path=file_info.get("path", ""),
                             size=file_info.get("size", 0),
                             created_at=media.created_at,
-                            last_reference_check=datetime.now(timezone.utc),
+                            last_reference_check=utcnow(),
                         )
                     )
 
@@ -245,7 +246,7 @@ class MediaCleanupService:
                 # Soft delete the entity
                 entity = await self.db.get(Entity, media.id)
                 if entity:
-                    entity.deleted_at = datetime.now(timezone.utc)
+                    entity.deleted_at = utcnow()
 
                 deleted_count += 1
                 deleted_size += media.size

@@ -6,6 +6,7 @@ from sqlalchemy import and_, func, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models import Revision
+from ..utils import utcnow
 
 
 class RevisionService:
@@ -111,7 +112,7 @@ class RevisionService:
         - One autosave per hour for older ones
         - Maximum MAX_REVISIONS_PER_ENTITY total
         """
-        cutoff = datetime.now(timezone.utc) - timedelta(hours=self.AUTOSAVE_CLEANUP_HOURS)
+        cutoff = utcnow() - timedelta(hours=self.AUTOSAVE_CLEANUP_HOURS)
 
         # Get all autosaves older than cutoff
         query = (

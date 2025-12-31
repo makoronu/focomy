@@ -247,7 +247,7 @@ class OAuthAccountManager:
                 "access_token": access_token,
                 "refresh_token": refresh_token,
                 "token_expires_at": token_expires_at.isoformat() if token_expires_at else None,
-                "connected_at": datetime.now(timezone.utc).isoformat(),
+                "connected_at": utcnow().isoformat(),
             },
             user_id=user_id,
         )
@@ -261,7 +261,7 @@ class OAuthAccountManager:
             access_token=access_token,
             refresh_token=refresh_token,
             token_expires_at=token_expires_at,
-            connected_at=datetime.now(timezone.utc),
+            connected_at=utcnow(),
             last_used_at=None,
         )
 
@@ -304,6 +304,7 @@ class OAuthAccountManager:
     async def list_connections(self, user_id: str) -> list[OAuthConnection]:
         """List all OAuth connections for a user."""
         from ..models import Entity
+from ..utils import utcnow
 
         query = select(Entity).where(
             and_(
@@ -327,6 +328,7 @@ class OAuthAccountManager:
     ) -> OAuthConnection | None:
         """Find connection by provider credentials."""
         from ..models import Entity
+from ..utils import utcnow
 
         query = select(Entity).where(
             and_(
@@ -359,6 +361,7 @@ class OAuthAccountManager:
         Transfers content and OAuth connections.
         """
         from ..models import Entity
+from ..utils import utcnow
 
         try:
             entities_count = 0
@@ -379,6 +382,7 @@ class OAuthAccountManager:
             connections = await self.list_connections(source_user_id)
             for conn in connections:
                 from ..models import EntityValue
+from ..utils import utcnow
 
                 query = select(EntityValue).where(
                     and_(
@@ -434,7 +438,7 @@ class OAuthAccountManager:
 
         values = {
             "access_token": access_token,
-            "last_used_at": datetime.now(timezone.utc).isoformat(),
+            "last_used_at": utcnow().isoformat(),
         }
         if refresh_token:
             values["refresh_token"] = refresh_token
@@ -447,6 +451,7 @@ class OAuthAccountManager:
     async def _user_has_password(self, user_id: str) -> bool:
         """Check if user has password authentication."""
         from ..models import EntityValue
+from ..utils import utcnow
 
         query = select(EntityValue).where(
             and_(
@@ -461,6 +466,7 @@ class OAuthAccountManager:
     async def _get_entity_values(self, entity_id: str) -> dict:
         """Get all values for an entity."""
         from ..models import EntityValue
+from ..utils import utcnow
 
         query = select(EntityValue).where(EntityValue.entity_id == entity_id)
         result = await self.db.execute(query)

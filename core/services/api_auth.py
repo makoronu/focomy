@@ -14,6 +14,7 @@ from jose import JWTError, jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
+from ..utils import utcnow
 
 # JWT Configuration
 JWT_ALGORITHM = "HS256"
@@ -99,7 +100,7 @@ class APIAuthService:
             JWT token string
         """
         expiry = expiry_hours or JWT_EXPIRY_HOURS
-        now = datetime.now(timezone.utc)
+        now = utcnow()
 
         payload = {
             "sub": user_id,
@@ -140,7 +141,7 @@ class APIAuthService:
         expiry_days: int = 30,
     ) -> str:
         """Create a refresh token for obtaining new access tokens."""
-        now = datetime.now(timezone.utc)
+        now = utcnow()
 
         payload = {
             "sub": user_id,
@@ -202,7 +203,7 @@ class APIAuthService:
 
         expires_at = None
         if expires_in_days:
-            expires_at = datetime.now(timezone.utc) + timedelta(days=expires_in_days)
+            expires_at = utcnow() + timedelta(days=expires_in_days)
 
         api_key = APIKey(
             id=secrets.token_urlsafe(16),
@@ -211,7 +212,7 @@ class APIAuthService:
             prefix=prefix,
             scopes=scopes or [],
             user_id=user_id,
-            created_at=datetime.now(timezone.utc),
+            created_at=utcnow(),
             last_used_at=None,
             expires_at=expires_at,
         )
@@ -240,11 +241,11 @@ class APIAuthService:
                     return None
 
                 # Check expiration
-                if api_key.expires_at and api_key.expires_at < datetime.now(timezone.utc):
+                if api_key.expires_at and api_key.expires_at < utcnow():
                     return None
 
                 # Update last used
-                api_key.last_used_at = datetime.now(timezone.utc)
+                api_key.last_used_at = utcnow()
                 return api_key
 
         return None

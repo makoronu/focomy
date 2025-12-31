@@ -8,6 +8,7 @@ import yaml
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..config import settings
+from ..utils import utcnow
 from .entity import EntityService
 
 
@@ -349,7 +350,7 @@ class WorkflowService:
             value = action.get("value")
 
             if value == "now":
-                value = datetime.now(timezone.utc).isoformat()
+                value = utcnow().isoformat()
 
             await self.entity_svc.update(
                 entity_id,

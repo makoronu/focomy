@@ -2860,8 +2860,7 @@ async def rollback_preview(
     current_user: Entity = Depends(require_admin),
 ):
     """Rollback preview - delete imported items."""
-    from datetime import datetime, timezone
-
+    from ..utils import utcnow
     from ..services.wordpress_import.preview import (
         get_preview_entities,
         clear_preview_entities,
@@ -2890,7 +2889,7 @@ async def rollback_preview(
             )
             entity = result.scalar_one_or_none()
             if entity:
-                entity.deleted_at = datetime.now(timezone.utc)
+                entity.deleted_at = utcnow()
                 deleted_count += 1
 
         await db.commit()

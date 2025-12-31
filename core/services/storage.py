@@ -102,7 +102,7 @@ class LocalStorageBackend(StorageBackend):
             url=self.get_url(key),
             size=len(content),
             content_type=content_type,
-            last_modified=datetime.now(timezone.utc),
+            last_modified=utcnow(),
         )
 
     async def get(self, key: str) -> bytes | None:
@@ -204,7 +204,7 @@ class S3StorageBackend(StorageBackend):
             url=self.get_url(key),
             size=len(content),
             content_type=content_type,
-            last_modified=datetime.now(timezone.utc),
+            last_modified=utcnow(),
         )
 
     async def get(self, key: str) -> bytes | None:
