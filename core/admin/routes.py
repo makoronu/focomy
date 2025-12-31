@@ -3578,6 +3578,18 @@ async def entity_delete(
     return HTMLResponse(content="", status_code=200)
 
 
+@router.post("/{type_name}/{entity_id}/delete")
+async def entity_delete_post(
+    request: Request,
+    type_name: str,
+    entity_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Delete entity via POST (for HTML forms)."""
+    return await entity_delete(request, type_name, entity_id, db, current_user)
+
+
 # === Bulk Actions ===
 
 

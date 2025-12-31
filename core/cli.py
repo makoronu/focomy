@@ -10,7 +10,7 @@ from importlib import resources
 from pathlib import Path
 
 # Version
-__version__ = "0.1.21"
+__version__ = "0.1.22"
 
 GITHUB_REPO = "focomy/focomy"
 PYPI_PACKAGE = "focomy"
@@ -782,11 +782,15 @@ def cmd_createuser(args):
         from .database import async_session, init_db
         from .services.auth import AuthService
 
-        await init_db()
+        try:
+            await init_db()
+        except Exception as e:
+            print(f"Error: Database initialization failed: {e}")
+            sys.exit(1)
 
-        async with async_session() as db:
-            auth_service = AuthService(db)
-            try:
+        try:
+            async with async_session() as db:
+                auth_service = AuthService(db)
                 user = await auth_service.register(
                     email=email,
                     password=password,
@@ -798,9 +802,9 @@ def cmd_createuser(args):
                 print(f"  Email: {email}")
                 print(f"  Name: {name}")
                 print(f"  Role: {role}")
-            except ValueError as e:
-                print(f"Error: {e}")
-                sys.exit(1)
+        except Exception as e:
+            print(f"Error: {e}")
+            sys.exit(1)
 
     asyncio.run(create_user())
 

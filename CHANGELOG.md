@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.22] - 2026-01-01
+
+### Fixed
+- CLI createuser: 全例外キャッチでエラーメッセージ表示 (#36)
+- Admin: POST /admin/{type}/{id}/delete エンドポイント追加 (#39)
+
 ## [0.1.21] - 2026-01-01
 
 ### Fixed
