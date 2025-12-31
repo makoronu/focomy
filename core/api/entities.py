@@ -13,11 +13,23 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..models.entity import Entity
 from ..rate_limit import limiter
+from ..services.auth import AuthService
 from ..services.entity import EntityService, QueryParams
 from ..services.field import field_service
+from .auth import get_session_token
 
 router = APIRouter(prefix="/entities", tags=["Entities"])
+
+
+async def _get_optional_user(request: Request, db: AsyncSession) -> Entity | None:
+    """Get current user if authenticated, None otherwise."""
+    token = get_session_token(request)
+    if not token:
+        return None
+    auth_svc = AuthService(db)
+    return await auth_svc.get_current_user(token)
 
 
 class EntityCreate(BaseModel):
@@ -214,10 +226,14 @@ async def create_entity(
     if not ct:
         raise HTTPException(status_code=404, detail=f"Content type '{type_name}' not found")
 
+    # Get current user for audit trail
+    user = await _get_optional_user(request, db)
+    user_id = user.id if user else None
+
     service = EntityService(db)
 
     try:
-        entity = await service.create(type_name, body.data)
+        entity = await service.create(type_name, body.data, user_id=user_id)
         return service.serialize(entity)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
@@ -314,8 +330,12 @@ async def update_entity(
     if entity.type != type_name:
         raise HTTPException(status_code=404, detail="Entity not found")
 
+    # Get current user for audit trail
+    user = await _get_optional_user(request, db)
+    user_id = user.id if user else None
+
     try:
-        updated = await service.update(entity_id, body.data)
+        updated = await service.update(entity_id, body.data, user_id=user_id)
         return service.serialize(updated)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))

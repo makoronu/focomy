@@ -581,6 +581,24 @@ async def content_type_feed(
     return await _generate_rss_feed(target_ct.name, request, db)
 
 
+def _format_rfc822(iso_date: str) -> str:
+    """Convert ISO date string to RFC822 format for RSS feeds."""
+    if not iso_date:
+        return ""
+    try:
+        # Handle various ISO formats
+        dt = datetime.fromisoformat(iso_date.replace("Z", "+00:00"))
+        return dt.strftime("%a, %d %b %Y %H:%M:%S +0000")
+    except (ValueError, AttributeError):
+        return ""
+
+
+def _build_feed_url(site_url: str, path_prefix: str, slug: str) -> str:
+    """Build URL for feed items, avoiding double slashes."""
+    parts = [p for p in [site_url.rstrip("/"), path_prefix.strip("/"), slug.strip("/")] if p]
+    return "/".join(parts)
+
+
 async def _get_feed_entities(content_type: str, db: AsyncSession) -> tuple:
     """Get entities for feed generation."""
     entity_svc = EntityService(db)
@@ -610,14 +628,16 @@ async def _generate_rss_feed(
     for e in entities:
         data = entity_svc.serialize(e)
         slug = data.get("slug", "")
+        url = _build_feed_url(site_url, path_prefix, slug)
+        pub_date = _format_rfc822(data.get("created_at", ""))
         items.append(
             f"""
         <item>
             <title><![CDATA[{data.get('title', '')}]]></title>
-            <link>{site_url}/{path_prefix}/{slug}</link>
+            <link>{url}</link>
             <description><![CDATA[{data.get('excerpt', '')}]]></description>
-            <pubDate>{data.get('created_at', '')}</pubDate>
-            <guid>{site_url}/{path_prefix}/{slug}</guid>
+            <pubDate>{pub_date}</pubDate>
+            <guid>{url}</guid>
         </item>"""
         )
 
@@ -651,7 +671,7 @@ async def _generate_atom_feed(
     for e in entities:
         data = entity_svc.serialize(e)
         slug = data.get("slug", "")
-        url = f"{site_url}/{path_prefix}/{slug}"
+        url = _build_feed_url(site_url, path_prefix, slug)
         entries.append(
             f"""
     <entry>
@@ -695,10 +715,11 @@ async def _generate_json_feed(
     for e in entities:
         data = entity_svc.serialize(e)
         slug = data.get("slug", "")
+        url = _build_feed_url(site_url, path_prefix, slug)
         items.append(
             {
-                "id": f"{site_url}/{path_prefix}/{slug}",
-                "url": f"{site_url}/{path_prefix}/{slug}",
+                "id": url,
+                "url": url,
                 "title": data.get("title", ""),
                 "content_text": data.get("excerpt", ""),
                 "date_published": data.get("created_at", ""),
