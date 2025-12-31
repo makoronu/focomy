@@ -1931,6 +1931,70 @@ async def analyze_import(
 
 
 @router.post(
+    "/import/{job_id}/dry-run",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def dry_run_import(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Run a dry-run simulation of the import without making changes."""
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+        job = await import_svc.get_job(job_id)
+
+        if not job:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Run dry-run
+        result = await import_svc.dry_run(job_id)
+
+        if not result:
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content=ErrorResponse(
+                    error="Dry-run failed",
+                    code="DRY_RUN_FAILED",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        return {
+            "success": True,
+            "job_id": job_id,
+            "dry_run_result": result,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
     "/import/{job_id}/start",
     responses={
         404: {"model": ErrorResponse, "description": "Job not found"},

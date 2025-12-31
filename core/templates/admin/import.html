@@ -127,6 +127,9 @@
         <button class="btn btn-secondary btn-lg" onclick="startAnalysis()">
             Analyze
         </button>
+        <button class="btn btn-warning btn-lg" id="dryrun-btn" onclick="runDryRun()" disabled>
+            Dry Run
+        </button>
         <button class="btn btn-primary btn-lg" id="import-btn" onclick="startImport()" disabled>
             Start Import
         </button>
@@ -138,6 +141,16 @@
             <h2 class="card-title">Analysis Results</h2>
         </div>
         <div class="card-body" id="analysis-content">
+            <!-- Populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Dry-Run Results -->
+    <div class="card hidden" id="dryrun-card">
+        <div class="card-header">
+            <h2 class="card-title">Dry-Run Results</h2>
+        </div>
+        <div class="card-body" id="dryrun-content">
             <!-- Populated by JavaScript -->
         </div>
     </div>
@@ -380,6 +393,67 @@
 #connection-status.error {
     color: var(--danger);
 }
+
+.btn-warning {
+    background-color: #f59e0b;
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #d97706;
+}
+
+.dryrun-summary {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.dryrun-item {
+    background: var(--bg-secondary);
+    padding: 1rem;
+    border-radius: 8px;
+    text-align: center;
+}
+
+.dryrun-item .count {
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+
+.dryrun-item .count.new { color: var(--success); }
+.dryrun-item .count.duplicate { color: var(--warning); }
+
+.dryrun-item .label {
+    font-size: 0.875rem;
+    color: var(--muted);
+}
+
+.duplicate-list {
+    background: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-top: 1rem;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.duplicate-list h4 {
+    color: #b45309;
+    margin-bottom: 0.5rem;
+}
+
+.duplicate-list table {
+    width: 100%;
+    font-size: 0.875rem;
+}
+
+.duplicate-list th, .duplicate-list td {
+    padding: 0.25rem 0.5rem;
+    text-align: left;
+}
 </style>
 
 <script>
@@ -387,6 +461,7 @@ let currentSource = 'file';
 let selectedFile = null;
 let currentJobId = null;
 let pollInterval = null;
+let dryRunCompleted = false;
 
 function selectSource(source) {
     currentSource = source;
@@ -539,13 +614,122 @@ async function startAnalysis() {
         if (data.success) {
             currentJobId = data.job_id;
             showAnalysis(data.analysis);
-            document.getElementById('import-btn').disabled = false;
+            document.getElementById('dryrun-btn').disabled = false;
+            dryRunCompleted = false;
         } else {
             alert('Analysis failed: ' + (data.error || 'Unknown error'));
         }
     } catch (e) {
         alert('Analysis error: ' + e.message);
     }
+}
+
+async function runDryRun() {
+    if (!currentJobId) {
+        alert('Please analyze first');
+        return;
+    }
+
+    document.getElementById('dryrun-btn').disabled = true;
+    document.getElementById('dryrun-btn').textContent = 'Running...';
+
+    try {
+        const response = await fetch(`/admin/import/${currentJobId}/dry-run`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showDryRunResults(data.dry_run_result);
+            dryRunCompleted = true;
+            document.getElementById('import-btn').disabled = false;
+        } else {
+            alert('Dry-run failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Dry-run error: ' + e.message);
+    } finally {
+        document.getElementById('dryrun-btn').textContent = 'Dry Run';
+        document.getElementById('dryrun-btn').disabled = false;
+    }
+}
+
+function showDryRunResults(result) {
+    const card = document.getElementById('dryrun-card');
+    const content = document.getElementById('dryrun-content');
+
+    const summary = result.summary || {};
+
+    let html = `
+        <div class="dryrun-summary">
+            <div class="dryrun-item">
+                <div class="count new">${summary.posts?.new || 0}</div>
+                <div class="label">New Posts</div>
+            </div>
+            <div class="dryrun-item">
+                <div class="count duplicate">${summary.posts?.duplicates || 0}</div>
+                <div class="label">Duplicate Posts</div>
+            </div>
+            <div class="dryrun-item">
+                <div class="count new">${summary.pages?.new || 0}</div>
+                <div class="label">New Pages</div>
+            </div>
+            <div class="dryrun-item">
+                <div class="count duplicate">${summary.pages?.duplicates || 0}</div>
+                <div class="label">Duplicate Pages</div>
+            </div>
+            <div class="dryrun-item">
+                <div class="count new">${summary.media?.new || 0}</div>
+                <div class="label">New Media</div>
+            </div>
+            <div class="dryrun-item">
+                <div class="count duplicate">${summary.media?.duplicates || 0}</div>
+                <div class="label">Duplicate Media</div>
+            </div>
+        </div>
+    `;
+
+    if (result.duplicates && result.duplicates.length > 0) {
+        html += `
+            <div class="duplicate-list">
+                <h4>Duplicates Found (${result.duplicates.length})</h4>
+                <table>
+                    <tr><th>Type</th><th>Name</th><th>Reason</th></tr>
+                    ${result.duplicates.slice(0, 20).map(d => `
+                        <tr>
+                            <td>${d.type}</td>
+                            <td>${d.title || d.name || 'N/A'}</td>
+                            <td>${d.reason}</td>
+                        </tr>
+                    `).join('')}
+                </table>
+                ${result.duplicates.length > 20 ? `<p style="margin-top: 0.5rem;">... and ${result.duplicates.length - 20} more</p>` : ''}
+            </div>
+        `;
+    }
+
+    if (result.warnings && result.warnings.length > 0) {
+        html += `
+            <div class="warning-list">
+                <h4>Warnings</h4>
+                <ul>
+                    ${result.warnings.map(w => `<li>[${w.code}] ${w.message}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    if (!result.duplicates?.length && !result.warnings?.length) {
+        html += `<p style="color: var(--success); text-align: center; margin-top: 1rem;">
+            <strong>No issues detected. Ready to import!</strong>
+        </p>`;
+    }
+
+    content.innerHTML = html;
+    card.classList.remove('hidden');
 }
 
 function showAnalysis(analysis) {
@@ -604,7 +788,13 @@ async function startImport() {
         return;
     }
 
+    if (!dryRunCompleted) {
+        alert('Please run a dry-run first to check for potential issues');
+        return;
+    }
+
     document.getElementById('import-btn').disabled = true;
+    document.getElementById('dryrun-btn').disabled = true;
     document.getElementById('progress-card').classList.remove('hidden');
 
     try {
