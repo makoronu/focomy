@@ -235,7 +235,8 @@ class SearchService:
             """
             SELECT DISTINCT
                 e.id as entity_id,
-                e.type as entity_type
+                e.type as entity_type,
+                e.updated_at
             FROM entities e
             JOIN entity_values ev ON e.id = ev.entity_id
             WHERE e.deleted_at IS NULL
@@ -261,7 +262,7 @@ class SearchService:
 
         results = []
         for row in rows:
-            entity_id, entity_type = row
+            entity_id, entity_type, _ = row  # _ is updated_at, used only for ordering
             entity = await self.entity_svc.get(entity_id)
             if entity:
                 data = self.entity_svc.serialize(entity)
