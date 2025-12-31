@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.14] - 2025-12-31
+
+### Fixed
+- 管理画面ナビゲーションにインポートリンク追加 (#2)
+
 ## [0.1.13] - 2025-12-30
 
 ### Changed
