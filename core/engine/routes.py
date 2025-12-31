@@ -232,7 +232,7 @@ PAGE_CACHE_TTL = 300  # 5 minutes for pages
 LIST_CACHE_TTL = 60  # 1 minute for listings
 
 
-@router.get("/", response_class=HTMLResponse)
+@router.api_route("/", methods=["GET", "HEAD"], response_class=HTMLResponse)
 async def home(
     request: Request,
     db: AsyncSession = Depends(get_db),

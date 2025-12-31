@@ -154,8 +154,19 @@ def load_yaml_config(path: Path) -> dict[str, Any]:
     """Load YAML config file."""
     if not path.exists():
         return {}
-    with open(path, encoding="utf-8") as f:
-        return yaml.safe_load(f) or {}
+    try:
+        with open(path, encoding="utf-8") as f:
+            return yaml.safe_load(f) or {}
+    except yaml.YAMLError as e:
+        import sys
+        print(f"\nError: Invalid YAML in {path}", file=sys.stderr)
+        if hasattr(e, 'problem_mark'):
+            mark = e.problem_mark
+            print(f"  Line {mark.line + 1}, Column {mark.column + 1}", file=sys.stderr)
+        if hasattr(e, 'problem'):
+            print(f"  {e.problem}", file=sys.stderr)
+        print("\nPlease fix config.yaml and try again.\n", file=sys.stderr)
+        raise SystemExit(1)
 
 
 @lru_cache
