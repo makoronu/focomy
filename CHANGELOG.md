@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.16] - 2025-12-31
+
+### Fixed
+- user_authテーブルの不足カラム追加（reset_token, totp_enabled等）
+
 ## [0.1.15] - 2025-12-31
 
 ### Added
