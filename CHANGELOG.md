@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.19] - 2025-12-31
+
+### Fixed
+- import_jobsテーブルの不足カラム追加（dry_run_result, checkpoint等）
+
 ## [0.1.18] - 2025-12-31
 
 ### Fixed
