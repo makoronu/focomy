@@ -316,6 +316,8 @@ class SearchService:
             )
             return result.scalar() or 0
         except Exception:
+            # Rollback aborted transaction before fallback
+            await self.db.rollback()
             # Fallback to LIKE count
             sql = text(
                 """

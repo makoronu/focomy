@@ -90,7 +90,6 @@ def main():
     createuser_parser.add_argument(
         "--role", "-r", default="admin", choices=["admin", "editor", "author"], help="User role"
     )
-    createuser_parser.add_argument("--password", "-p", help="Password (prompted if not provided)")
 
     # import (WordPress import)
     import_parser = subparsers.add_parser("import", help="Import from WordPress")
@@ -766,14 +765,12 @@ def cmd_createuser(args):
     email = args.email
     name = args.name
     role = args.role
-    password = args.password
 
-    if not password:
-        password = getpass.getpass("Password: ")
-        password_confirm = getpass.getpass("Confirm password: ")
-        if password != password_confirm:
-            print("Error: Passwords do not match")
-            sys.exit(1)
+    password = getpass.getpass("Password: ")
+    password_confirm = getpass.getpass("Confirm password: ")
+    if password != password_confirm:
+        print("Error: Passwords do not match")
+        sys.exit(1)
 
     if len(password) < 12:
         print("Error: Password must be at least 12 characters")

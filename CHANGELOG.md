@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.21] - 2026-01-01
+
+### Fixed
+- CLI createuser: --passwordオプション削除、常にgetpassを使用 (#36)
+- RBAC: Entity.get()エラー修正（serializeを追加） (#37)
+- Search API: トランザクションabort時のrollback追加 (#35)
+
 ## [0.1.20] - 2026-01-01
 
 ### Added

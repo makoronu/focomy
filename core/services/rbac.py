@@ -188,7 +188,8 @@ class RBACService:
         if not user:
             return PermissionResult(allowed=False, reason="User not found")
 
-        role = user.get("role", Role.AUTHOR.value)
+        user_data = self.entity_svc.serialize(user)
+        role = user_data.get("role", Role.AUTHOR.value)
 
         result = self.check_permission(role, content_type, permission)
 
