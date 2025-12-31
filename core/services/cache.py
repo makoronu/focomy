@@ -10,6 +10,7 @@ Provides a unified caching interface that:
 import asyncio
 import hashlib
 import json
+import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
@@ -25,6 +26,8 @@ except ImportError:
 
 
 T = TypeVar("T")
+
+logger = logging.getLogger(__name__)
 
 
 class CacheBackend(ABC):
@@ -163,8 +166,8 @@ class RedisBackend(CacheBackend):
         try:
             serialized = json.dumps(value, default=str)
             await self._redis.setex(self._key(key), ttl, serialized)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Redis cache set failed for key {key}: {e}")
 
     async def delete(self, key: str) -> bool:
         try:
@@ -248,8 +251,8 @@ class CacheService:
                 self._backend = RedisBackend(client)
                 self._connected = True
                 return
-            except Exception:
-                pass
+            except Exception as e:
+                logger.debug(f"Redis connection failed: {e}")
 
         # Fall back to in-memory
         self._backend = InMemoryBackend()

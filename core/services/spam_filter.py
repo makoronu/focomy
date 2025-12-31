@@ -8,12 +8,15 @@ Integrates:
 """
 
 import hashlib
+import logging
 import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 import httpx
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -288,8 +291,8 @@ class SpamFilterService:
                     },
                     timeout=5.0,
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Akismet report_spam failed: {e}")
 
     async def report_ham(self, comment: CommentData) -> None:
         """Report a false positive (legitimate marked as spam) to Akismet."""
@@ -310,8 +313,8 @@ class SpamFilterService:
                     },
                     timeout=5.0,
                 )
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"Akismet report_ham failed: {e}")
 
     async def verify_key(self) -> bool:
         """Verify Akismet API key."""
