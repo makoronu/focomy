@@ -1,0 +1,57 @@
+name: comment
+label: コメント
+label_plural: コメント
+icon: comment
+admin_menu: true
+searchable: false
+
+fields:
+  - name: author_name
+    type: string
+    label: 投稿者名
+    required: true
+    max_length: 100
+
+  - name: author_email
+    type: email
+    label: メールアドレス
+    required: true
+    max_length: 255
+
+  - name: content
+    type: text
+    label: コメント内容
+    required: true
+    max_length: 2000
+
+  - name: status
+    type: select
+    label: ステータス
+    options:
+      - value: pending
+        label: 承認待ち
+      - value: approved
+        label: 承認済み
+      - value: rejected
+        label: 拒否
+      - value: spam
+        label: スパム
+    default: pending
+
+  - name: ip_address
+    type: string
+    label: IPアドレス
+    max_length: 45
+
+  - name: user_agent
+    type: string
+    label: ユーザーエージェント
+    max_length: 500
+
+relations:
+  - type: comment_post
+    label: 投稿
+    required: true
+
+  - type: comment_parent
+    label: 返信先

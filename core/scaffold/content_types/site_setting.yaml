@@ -1,0 +1,55 @@
+name: site_setting
+label: サイト設定
+label_plural: サイト設定
+icon: settings
+admin_menu: false
+searchable: false
+
+fields:
+  - name: key
+    type: string
+    label: 設定キー
+    required: true
+    unique: true
+    max_length: 100
+
+  - name: value
+    type: text
+    label: 設定値
+
+  - name: value_type
+    type: select
+    label: 値タイプ
+    options:
+      - value: string
+        label: テキスト
+      - value: number
+        label: 数値
+      - value: boolean
+        label: 真偽値
+      - value: json
+        label: JSON
+    default: string
+
+  - name: category
+    type: select
+    label: カテゴリ
+    options:
+      - value: site
+        label: サイト情報
+      - value: seo
+        label: SEO
+      - value: media
+        label: メディア
+      - value: security
+        label: セキュリティ
+      - value: theme
+        label: テーマ
+      - value: sitemap
+        label: サイトマップ
+    default: site
+
+  - name: description
+    type: text
+    label: 説明
+    max_length: 500

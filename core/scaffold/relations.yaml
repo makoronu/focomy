@@ -9,3 +9,15 @@ post_author:
   to: user
   type: many_to_one
   label: 著者
+
+comment_post:
+  from: comment
+  to: post
+  type: many_to_one
+  label: 投稿
+
+comment_parent:
+  from: comment
+  to: comment
+  type: many_to_one
+  label: 返信先
