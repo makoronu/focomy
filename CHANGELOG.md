@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.17] - 2025-12-31
+
+### Fixed
+- beautifulsoup4 (bs4) を依存関係に追加 (#4)
+
 ## [0.1.16] - 2025-12-31
 
 ### Fixed

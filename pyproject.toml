@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "focomy"
-version = "0.1.16"
+version = "0.1.17"
 description = "The Most Beautiful CMS - A metadata-driven, zero-duplicate-code content management system"
 readme = "README.md"
 license = "MIT"
@@ -60,6 +60,7 @@ dependencies = [
     "python-jose[cryptography]>=3.3.0",
     "aiohttp>=3.9.0",
     "email-validator>=2.1.0",
+    "beautifulsoup4>=4.12.0",
 ]
 
 [project.optional-dependencies]
