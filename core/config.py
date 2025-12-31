@@ -178,9 +178,17 @@ class MenusConfig(BaseModel):
     sidebar: list[MenuItemConfig] = []
 
 
+def _get_base_dir() -> Path:
+    """Get base directory - prefer cwd if config.yaml exists there."""
+    cwd = Path.cwd()
+    if (cwd / "config.yaml").exists():
+        return cwd
+    return Path(__file__).parent.parent
+
+
 class Settings(BaseSettings):
-    # Paths - core/ の親ディレクトリ（focomy/）を基準にする
-    base_dir: Path = Path(__file__).parent.parent
+    # Paths - config.yaml がある場所を基準にする
+    base_dir: Path = _get_base_dir()
     database_url: str = "postgresql+asyncpg://focomy:focomy@localhost:5432/focomy"
     debug: bool = False
 
@@ -223,8 +231,7 @@ def load_yaml_config(path: Path) -> dict[str, Any]:
 @lru_cache
 def get_settings() -> Settings:
     """Get cached settings instance."""
-    # core/ の親ディレクトリ（focomy/）を基準にする
-    base_dir = Path(__file__).parent.parent
+    base_dir = _get_base_dir()
     config_path = base_dir / "config.yaml"
 
     yaml_config = load_yaml_config(config_path)
