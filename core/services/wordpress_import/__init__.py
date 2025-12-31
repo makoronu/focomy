@@ -13,11 +13,16 @@ Complete WordPress site migration with:
 
 from .acf import ACFConverter
 from .analyzer import WordPressAnalyzer
+from .content_sanitizer import ContentSanitizer
+from .dry_run import DryRunService
 from .importer import WordPressImporter
 from .import_service import WordPressImportService
+from .link_fixer import InternalLinkFixer, URLMapBuilder
 from .media import MediaImporter
+from .preview import PreviewService
 from .redirects import RedirectGenerator
 from .rest_client import RESTClientConfig, WordPressRESTClient
+from .verification import VerificationService
 from .wxr_parser import WXRParser
 
 __all__ = [
@@ -30,4 +35,10 @@ __all__ = [
     "MediaImporter",
     "ACFConverter",
     "RedirectGenerator",
+    "ContentSanitizer",
+    "InternalLinkFixer",
+    "URLMapBuilder",
+    "DryRunService",
+    "PreviewService",
+    "VerificationService",
 ]

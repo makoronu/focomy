@@ -2,7 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## [0.1.14] - 2025-12-31
+## [0.1.15] - 2025-12-31
+
+### Added
+- WordPress Import: ドライラン機能（実インポート前のシミュレーション）
+- WordPress Import: プレビュー機能（3件試しインポート→確定/破棄）
+- WordPress Import: インポート検証機能（整合性チェック、SEO監査）
+- WordPress Import: 内部リンク自動修正（WordPress→Focomy URL変換）
+- WordPress Import: リダイレクト生成（nginx/Apache/.htaccess/JSON/YAML）
+
+### Changed
+- WordPress Import: XSSサニタイズ強化（危険タグ・属性の除去）
 
 ### Fixed
 - 管理画面ナビゲーションにインポートリンク追加 (#2)

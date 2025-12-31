@@ -16,8 +16,11 @@ from ...models import Entity, ImportJob, ImportJobPhase, ImportJobStatus
 from ..entity import EntityService
 from ..field import field_service
 from .analyzer import WordPressAnalyzer
+from .content_sanitizer import ContentSanitizer, SanitizeResult
 from .importer import ImportConfig, ImportProgress, ImportResult, WordPressImporter
+from .link_fixer import InternalLinkFixer, URLMapBuilder
 from .media import MediaImporter
+from .redirects import RedirectGenerator, RedirectReport
 from .rest_client import RESTClientConfig, WordPressRESTClient
 from .wxr_parser import WXRData, WXRParser
 
@@ -38,6 +41,7 @@ class WordPressImportService:
     def __init__(self, db: AsyncSession):
         self.db = db
         self.entity_svc = EntityService(db)
+        self.sanitizer = ContentSanitizer()
 
     async def create_job(
         self,
@@ -203,24 +207,41 @@ class WordPressImportService:
             )
             return None
 
-    async def run_import(self, job_id: str) -> ImportResult | None:
+    async def run_import(
+        self,
+        job_id: str,
+        resume: bool = False,
+    ) -> ImportResult | None:
         """
         Run full import.
 
         This is the main import method that should be called from background task.
+
+        Args:
+            job_id: The import job ID
+            resume: If True, skip already processed items (from checkpoint)
         """
         job = await self.get_job(job_id)
         if not job:
             return None
 
         try:
-            await self.update_job(
-                job_id,
-                status=ImportJobStatus.IMPORTING.value,
-                phase=ImportJobPhase.CONNECT.value,
-                started_at=datetime.utcnow(),
-                progress_message="Starting import...",
-            )
+            if resume:
+                checkpoint = await self._get_checkpoint(job_id)
+                last_phase = checkpoint.get("last_phase")
+                await self.update_job(
+                    job_id,
+                    status=ImportJobStatus.IMPORTING.value,
+                    progress_message=f"Resuming import from {last_phase or 'beginning'}...",
+                )
+            else:
+                await self.update_job(
+                    job_id,
+                    status=ImportJobStatus.IMPORTING.value,
+                    phase=ImportJobPhase.CONNECT.value,
+                    started_at=datetime.utcnow(),
+                    progress_message="Starting import...",
+                )
 
             # Get WXR data from source
             wxr_data = await self._fetch_source_data(job)
@@ -238,7 +259,7 @@ class WordPressImportService:
                 progress_total=len(wxr_data.authors),
                 progress_message="Importing authors...",
             )
-            authors_count = await self._import_authors(job_id, wxr_data)
+            authors_count = await self._import_authors(job_id, wxr_data, resume=resume)
             result.authors_imported = authors_count
 
             # Categories
@@ -249,7 +270,7 @@ class WordPressImportService:
                 progress_total=len(wxr_data.categories),
                 progress_message="Importing categories...",
             )
-            cats_count = await self._import_categories(job_id, wxr_data)
+            cats_count = await self._import_categories(job_id, wxr_data, resume=resume)
             result.categories_imported = cats_count
 
             # Tags
@@ -260,7 +281,7 @@ class WordPressImportService:
                 progress_total=len(wxr_data.tags),
                 progress_message="Importing tags...",
             )
-            tags_count = await self._import_tags(job_id, wxr_data)
+            tags_count = await self._import_tags(job_id, wxr_data, resume=resume)
             result.tags_imported = tags_count
 
             # Media
@@ -274,7 +295,7 @@ class WordPressImportService:
                     progress_total=len(media_posts),
                     progress_message="Importing media...",
                 )
-                media_count = await self._import_media(job_id, wxr_data, config)
+                media_count = await self._import_media(job_id, wxr_data, config, resume=resume)
                 result.media_imported = media_count
 
             # Posts
@@ -286,7 +307,7 @@ class WordPressImportService:
                 progress_total=len(posts),
                 progress_message="Importing posts...",
             )
-            posts_count = await self._import_posts(job_id, wxr_data, "post")
+            posts_count = await self._import_posts(job_id, wxr_data, "post", resume=resume)
             result.posts_imported = posts_count
 
             # Pages
@@ -298,7 +319,7 @@ class WordPressImportService:
                 progress_total=len(pages),
                 progress_message="Importing pages...",
             )
-            pages_count = await self._import_posts(job_id, wxr_data, "page")
+            pages_count = await self._import_posts(job_id, wxr_data, "page", resume=resume)
             result.pages_imported = pages_count
 
             # Menus
@@ -310,7 +331,7 @@ class WordPressImportService:
                     progress_total=len(wxr_data.menus),
                     progress_message="Importing menus...",
                 )
-                menus_count = await self._import_menus(job_id, wxr_data)
+                menus_count = await self._import_menus(job_id, wxr_data, resume=resume)
                 result.menus_imported = menus_count
 
             # Complete
@@ -372,14 +393,27 @@ class WordPressImportService:
 
         return None
 
-    async def _import_authors(self, job_id: str, wxr_data: WXRData) -> int:
+    async def _import_authors(
+        self,
+        job_id: str,
+        wxr_data: WXRData,
+        resume: bool = False,
+    ) -> int:
         """Import authors as users."""
         count = 0
+        skipped = 0
         for i, author in enumerate(wxr_data.authors):
             try:
+                # Skip if already processed in previous run
+                if resume and await self._is_processed(job_id, "authors", author.id):
+                    skipped += 1
+                    continue
+
                 # Check if user already exists
                 existing = await self._find_by_wp_id("user", author.id)
                 if existing:
+                    # Save checkpoint even for duplicates
+                    await self._save_checkpoint(job_id, "authors", author.id, "authors")
                     continue
 
                 # Create user entity
@@ -394,6 +428,9 @@ class WordPressImportService:
                 await self.entity_svc.create("user", user_data)
                 count += 1
 
+                # Save checkpoint after successful import
+                await self._save_checkpoint(job_id, "authors", author.id, "authors")
+
                 await self.update_job(
                     job_id,
                     progress_current=i + 1,
@@ -404,19 +441,33 @@ class WordPressImportService:
                 logger.warning(f"Failed to import author {author.login}: {e}")
 
         await self.update_job(job_id, authors_imported=count)
+        if skipped:
+            logger.info(f"Skipped {skipped} already processed authors")
         return count
 
-    async def _import_categories(self, job_id: str, wxr_data: WXRData) -> int:
+    async def _import_categories(
+        self,
+        job_id: str,
+        wxr_data: WXRData,
+        resume: bool = False,
+    ) -> int:
         """Import categories."""
         count = 0
+        skipped = 0
 
         # Sort by parent to import parents first
         categories = sorted(wxr_data.categories, key=lambda c: c.parent_id)
 
         for i, cat in enumerate(categories):
             try:
+                # Skip if already processed in previous run
+                if resume and await self._is_processed(job_id, "categories", cat.id):
+                    skipped += 1
+                    continue
+
                 existing = await self._find_by_wp_id("category", cat.id)
                 if existing:
+                    await self._save_checkpoint(job_id, "categories", cat.id, "categories")
                     continue
 
                 cat_data = {
@@ -430,6 +481,9 @@ class WordPressImportService:
                 await self.entity_svc.create("category", cat_data)
                 count += 1
 
+                # Save checkpoint after successful import
+                await self._save_checkpoint(job_id, "categories", cat.id, "categories")
+
                 await self.update_job(
                     job_id,
                     progress_current=i + 1,
@@ -440,15 +494,29 @@ class WordPressImportService:
                 logger.warning(f"Failed to import category {cat.name}: {e}")
 
         await self.update_job(job_id, categories_imported=count)
+        if skipped:
+            logger.info(f"Skipped {skipped} already processed categories")
         return count
 
-    async def _import_tags(self, job_id: str, wxr_data: WXRData) -> int:
+    async def _import_tags(
+        self,
+        job_id: str,
+        wxr_data: WXRData,
+        resume: bool = False,
+    ) -> int:
         """Import tags."""
         count = 0
+        skipped = 0
         for i, tag in enumerate(wxr_data.tags):
             try:
+                # Skip if already processed in previous run
+                if resume and await self._is_processed(job_id, "tags", tag.id):
+                    skipped += 1
+                    continue
+
                 existing = await self._find_by_wp_id("tag", tag.id)
                 if existing:
+                    await self._save_checkpoint(job_id, "tags", tag.id, "tags")
                     continue
 
                 tag_data = {
@@ -461,6 +529,9 @@ class WordPressImportService:
                 await self.entity_svc.create("tag", tag_data)
                 count += 1
 
+                # Save checkpoint after successful import
+                await self._save_checkpoint(job_id, "tags", tag.id, "tags")
+
                 await self.update_job(
                     job_id,
                     progress_current=i + 1,
@@ -471,6 +542,8 @@ class WordPressImportService:
                 logger.warning(f"Failed to import tag {tag.name}: {e}")
 
         await self.update_job(job_id, tags_imported=count)
+        if skipped:
+            logger.info(f"Skipped {skipped} already processed tags")
         return count
 
     async def _import_media(
@@ -478,6 +551,7 @@ class WordPressImportService:
         job_id: str,
         wxr_data: WXRData,
         config: dict,
+        resume: bool = False,
     ) -> int:
         """Import media files.
 
@@ -485,6 +559,7 @@ class WordPressImportService:
         If config['convert_to_webp'] is True, converts images to WebP format.
         """
         count = 0
+        skipped = 0
         media_posts = [p for p in wxr_data.posts if p.post_type == "attachment"]
 
         # Initialize MediaImporter if downloading files
@@ -508,8 +583,14 @@ class WordPressImportService:
 
         for i, media in enumerate(media_posts):
             try:
+                # Skip if already processed in previous run
+                if resume and await self._is_processed(job_id, "media", media.id):
+                    skipped += 1
+                    continue
+
                 existing = await self._find_by_wp_id("media", media.id)
                 if existing:
+                    await self._save_checkpoint(job_id, "media", media.id, "media")
                     continue
 
                 # Base media data
@@ -548,6 +629,9 @@ class WordPressImportService:
                 await self.entity_svc.create("media", media_data)
                 count += 1
 
+                # Save checkpoint after successful import
+                await self._save_checkpoint(job_id, "media", media.id, "media")
+
                 await self.update_job(
                     job_id,
                     progress_current=i + 1,
@@ -558,6 +642,8 @@ class WordPressImportService:
                 logger.warning(f"Failed to import media {media.id}: {e}")
 
         await self.update_job(job_id, media_imported=count)
+        if skipped:
+            logger.info(f"Skipped {skipped} already processed media")
         return count
 
     async def _import_posts(
@@ -565,10 +651,15 @@ class WordPressImportService:
         job_id: str,
         wxr_data: WXRData,
         post_type: str,
+        resume: bool = False,
     ) -> int:
         """Import posts or pages."""
         count = 0
+        skipped = 0
         posts = [p for p in wxr_data.posts if p.post_type == post_type]
+
+        # Checkpoint key: "posts" or "pages"
+        checkpoint_key = "posts" if post_type == "post" else "pages"
 
         # Map status
         status_map = {
@@ -582,15 +673,37 @@ class WordPressImportService:
 
         for i, post in enumerate(posts):
             try:
+                # Skip if already processed in previous run
+                if resume and await self._is_processed(job_id, checkpoint_key, post.id):
+                    skipped += 1
+                    continue
+
                 existing = await self._find_by_wp_id(post_type, post.id)
                 if existing:
+                    await self._save_checkpoint(job_id, checkpoint_key, post.id, checkpoint_key)
                     continue
+
+                # Sanitize content and excerpt
+                content_result = self.sanitizer.sanitize(post.content or "")
+                excerpt_result = self.sanitizer.sanitize(post.excerpt or "")
+
+                # Log warnings if dangerous content was found
+                if content_result.had_issues:
+                    logger.warning(
+                        f"Sanitized dangerous content in {post_type} {post.id}: "
+                        f"{len(content_result.warnings)} issues"
+                    )
+                if excerpt_result.had_issues:
+                    logger.warning(
+                        f"Sanitized dangerous content in {post_type} {post.id} excerpt: "
+                        f"{len(excerpt_result.warnings)} issues"
+                    )
 
                 post_data = {
                     "title": post.title,
                     "slug": post.slug,
-                    "content": post.content,
-                    "excerpt": post.excerpt,
+                    "content": content_result.content,
+                    "excerpt": excerpt_result.content,
                     "status": status_map.get(post.status, "draft"),
                     "wp_id": post.id,
                     "wp_author_id": post.author_id,
@@ -613,6 +726,9 @@ class WordPressImportService:
                 await self.entity_svc.create(post_type, post_data)
                 count += 1
 
+                # Save checkpoint after successful import
+                await self._save_checkpoint(job_id, checkpoint_key, post.id, checkpoint_key)
+
                 await self.update_job(
                     job_id,
                     progress_current=i + 1,
@@ -622,13 +738,26 @@ class WordPressImportService:
             except Exception as e:
                 logger.warning(f"Failed to import {post_type} {post.id}: {e}")
 
+        if skipped:
+            logger.info(f"Skipped {skipped} already processed {post_type}s")
         return count
 
-    async def _import_menus(self, job_id: str, wxr_data: WXRData) -> int:
+    async def _import_menus(
+        self,
+        job_id: str,
+        wxr_data: WXRData,
+        resume: bool = False,
+    ) -> int:
         """Import navigation menus."""
         count = 0
+        skipped = 0
         for menu_name, items in wxr_data.menus.items():
             try:
+                # Skip if already processed in previous run (use menu_name as ID)
+                if resume and await self._is_menu_processed(job_id, menu_name):
+                    skipped += 1
+                    continue
+
                 # Create menu entity
                 menu_data = {
                     "name": menu_name,
@@ -649,6 +778,9 @@ class WordPressImportService:
                 await self.entity_svc.create("menu", menu_data)
                 count += 1
 
+                # Save checkpoint after successful import
+                await self._save_menu_checkpoint(job_id, menu_name)
+
                 await self.update_job(
                     job_id,
                     progress_current=count,
@@ -659,7 +791,41 @@ class WordPressImportService:
                 logger.warning(f"Failed to import menu {menu_name}: {e}")
 
         await self.update_job(job_id, menus_imported=count)
+        if skipped:
+            logger.info(f"Skipped {skipped} already processed menus")
         return count
+
+    async def _is_menu_processed(self, job_id: str, menu_name: str) -> bool:
+        """Check if a menu was already processed (uses name instead of ID)."""
+        checkpoint = await self._get_checkpoint(job_id)
+        return menu_name in checkpoint.get("menus", [])
+
+    async def _save_menu_checkpoint(self, job_id: str, menu_name: str) -> None:
+        """Save a processed menu to checkpoint (uses name instead of ID)."""
+        job = await self.get_job(job_id)
+        if not job:
+            return
+
+        checkpoint = job.checkpoint or {
+            "authors": [],
+            "categories": [],
+            "tags": [],
+            "media": [],
+            "posts": [],
+            "pages": [],
+            "menus": [],
+            "last_phase": None,
+        }
+
+        if "menus" not in checkpoint:
+            checkpoint["menus"] = []
+
+        if menu_name not in checkpoint["menus"]:
+            checkpoint["menus"].append(menu_name)
+
+        checkpoint["last_phase"] = "menus"
+
+        await self.update_job(job_id, checkpoint=checkpoint)
 
     async def _find_by_wp_id(self, entity_type: str, wp_id: int) -> Entity | None:
         """Find entity by WordPress ID."""
@@ -676,6 +842,85 @@ class WordPressImportService:
             )
         )
         return result.scalar_one_or_none()
+
+    async def _get_checkpoint(self, job_id: str) -> dict:
+        """Get checkpoint data for a job."""
+        job = await self.get_job(job_id)
+        if not job or not job.checkpoint:
+            return {
+                "authors": [],
+                "categories": [],
+                "tags": [],
+                "media": [],
+                "posts": [],
+                "pages": [],
+                "menus": [],
+                "last_phase": None,
+            }
+        return job.checkpoint
+
+    async def _save_checkpoint(
+        self,
+        job_id: str,
+        item_type: str,
+        wp_id: int,
+        phase: str | None = None,
+    ) -> None:
+        """Save a processed item to checkpoint."""
+        job = await self.get_job(job_id)
+        if not job:
+            return
+
+        checkpoint = job.checkpoint or {
+            "authors": [],
+            "categories": [],
+            "tags": [],
+            "media": [],
+            "posts": [],
+            "pages": [],
+            "menus": [],
+            "last_phase": None,
+        }
+
+        if item_type in checkpoint and wp_id not in checkpoint[item_type]:
+            checkpoint[item_type].append(wp_id)
+
+        if phase:
+            checkpoint["last_phase"] = phase
+
+        await self.update_job(job_id, checkpoint=checkpoint)
+
+    async def _is_processed(self, job_id: str, item_type: str, wp_id: int) -> bool:
+        """Check if an item was already processed in a previous run."""
+        checkpoint = await self._get_checkpoint(job_id)
+        return wp_id in checkpoint.get(item_type, [])
+
+    async def resume_import(self, job_id: str) -> dict | None:
+        """
+        Resume a failed or cancelled import from the last checkpoint.
+
+        Returns the result of continuing the import.
+        """
+        job = await self.get_job(job_id)
+        if not job:
+            return None
+
+        if job.status not in (
+            ImportJobStatus.FAILED.value,
+            ImportJobStatus.CANCELLED.value,
+        ):
+            return {
+                "success": False,
+                "error": f"Cannot resume job with status: {job.status}",
+            }
+
+        checkpoint = await self._get_checkpoint(job_id)
+        last_phase = checkpoint.get("last_phase")
+
+        logger.info(f"Resuming import job {job_id} from phase: {last_phase}")
+
+        # Re-run the import (it will skip already processed items)
+        return await self.run_import(job_id, resume=True)
 
     async def cancel_job(self, job_id: str) -> bool:
         """Cancel an import job."""
@@ -1120,3 +1365,713 @@ class WordPressImportService:
         await self.update_job(job_id, config=config)
 
         return {"success": True, "discarded": discarded}
+
+    async def detect_diff(self, job_id: str) -> dict | None:
+        """
+        Detect differences between WordPress data and database.
+
+        Returns a summary of new/updated/unchanged/deleted items.
+        """
+        job = await self.get_job(job_id)
+        if not job:
+            return None
+
+        try:
+            await self.update_job(
+                job_id,
+                status=ImportJobStatus.ANALYZING.value,
+                phase=ImportJobPhase.ANALYZE.value,
+                progress_message="Detecting differences...",
+            )
+
+            # Get WXR data from source
+            wxr_data = await self._fetch_source_data(job)
+            if not wxr_data:
+                raise ValueError("Failed to fetch source data")
+
+            # Run diff detection
+            from .diff_detector import DiffDetector
+
+            detector = DiffDetector(self.db)
+            diff_result = await detector.detect(wxr_data)
+
+            # Store diff result in job config
+            config = job.config or {}
+            config["diff_result"] = diff_result.to_dict()
+            await self.update_job(
+                job_id,
+                status=ImportJobStatus.PENDING.value,
+                phase=ImportJobPhase.INIT.value,
+                config=config,
+                progress_message="Diff detection complete",
+            )
+
+            return {
+                "success": True,
+                **diff_result.to_dict(),
+            }
+
+        except Exception as e:
+            logger.exception(f"Diff detection failed for job {job_id}")
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
+    async def import_diff(
+        self,
+        job_id: str,
+        import_new: bool = True,
+        import_updated: bool = True,
+        delete_removed: bool = False,
+    ) -> dict | None:
+        """
+        Import only the differences (new and updated items).
+
+        Args:
+            job_id: Import job ID
+            import_new: Import new items
+            import_updated: Import updated items (will update existing)
+            delete_removed: Delete items that are no longer in WordPress
+        """
+        job = await self.get_job(job_id)
+        if not job:
+            return None
+
+        config = job.config or {}
+        diff_data = config.get("diff_result")
+
+        if not diff_data:
+            return {
+                "success": False,
+                "error": "No diff result found. Run detect_diff first.",
+            }
+
+        try:
+            await self.update_job(
+                job_id,
+                status=ImportJobStatus.IMPORTING.value,
+                phase=ImportJobPhase.POSTS.value,
+                started_at=datetime.utcnow(),
+                progress_message="Starting diff import...",
+            )
+
+            # Get WXR data again
+            wxr_data = await self._fetch_source_data(job)
+            if not wxr_data:
+                raise ValueError("Failed to fetch source data")
+
+            results = {
+                "new_imported": 0,
+                "updated": 0,
+                "deleted": 0,
+                "errors": [],
+            }
+
+            # Import new items
+            if import_new:
+                await self._import_new_from_diff(job_id, wxr_data, diff_data, results)
+
+            # Update existing items
+            if import_updated:
+                await self._update_from_diff(job_id, wxr_data, diff_data, results)
+
+            # Delete removed items
+            if delete_removed:
+                await self._delete_from_diff(job_id, diff_data, results)
+
+            await self.update_job(
+                job_id,
+                status=ImportJobStatus.COMPLETED.value,
+                phase=ImportJobPhase.COMPLETE.value,
+                completed_at=datetime.utcnow(),
+                progress_message="Diff import complete",
+            )
+
+            return {
+                "success": True,
+                **results,
+            }
+
+        except Exception as e:
+            logger.exception(f"Diff import failed for job {job_id}")
+            await self.update_job(
+                job_id,
+                status=ImportJobStatus.FAILED.value,
+                completed_at=datetime.utcnow(),
+                errors=[str(e)],
+                progress_message=f"Diff import failed: {str(e)}",
+            )
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
+    async def _import_new_from_diff(
+        self,
+        job_id: str,
+        wxr_data: WXRData,
+        diff_data: dict,
+        results: dict,
+    ) -> None:
+        """Import new items from diff."""
+        # Build lookup maps for WXR data
+        posts_map = {p.id: p for p in wxr_data.posts if p.post_type == "post"}
+        pages_map = {p.id: p for p in wxr_data.posts if p.post_type == "page"}
+        media_map = {p.id: p for p in wxr_data.posts if p.post_type == "attachment"}
+        cats_map = {c.id: c for c in wxr_data.categories}
+        tags_map = {t.id: t for t in wxr_data.tags}
+        authors_map = {a.id: a for a in wxr_data.authors}
+
+        status_map = {
+            "publish": "published",
+            "draft": "draft",
+            "pending": "pending",
+            "private": "private",
+            "future": "scheduled",
+            "trash": "archived",
+        }
+
+        # Import new posts
+        for item in diff_data.get("new", {}).get("posts", []):
+            wp_id = item["wp_id"]
+            post = posts_map.get(wp_id)
+            if post:
+                try:
+                    # Sanitize content
+                    content_result = self.sanitizer.sanitize(post.content or "")
+                    excerpt_result = self.sanitizer.sanitize(post.excerpt or "")
+                    if content_result.had_issues or excerpt_result.had_issues:
+                        logger.warning(f"Sanitized content in new post {wp_id}")
+
+                    await self.entity_svc.create("post", {
+                        "title": post.title,
+                        "slug": post.slug,
+                        "content": content_result.content,
+                        "excerpt": excerpt_result.content,
+                        "status": status_map.get(post.status, "draft"),
+                        "wp_id": post.id,
+                        "wp_modified": post.modified_at.isoformat() if post.modified_at else None,
+                    })
+                    results["new_imported"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Post {wp_id}: {e}")
+
+        # Import new pages
+        for item in diff_data.get("new", {}).get("pages", []):
+            wp_id = item["wp_id"]
+            page = pages_map.get(wp_id)
+            if page:
+                try:
+                    # Sanitize content
+                    content_result = self.sanitizer.sanitize(page.content or "")
+                    if content_result.had_issues:
+                        logger.warning(f"Sanitized content in new page {wp_id}")
+
+                    await self.entity_svc.create("page", {
+                        "title": page.title,
+                        "slug": page.slug,
+                        "content": content_result.content,
+                        "status": status_map.get(page.status, "draft"),
+                        "wp_id": page.id,
+                        "wp_modified": page.modified_at.isoformat() if page.modified_at else None,
+                    })
+                    results["new_imported"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Page {wp_id}: {e}")
+
+        # Import new categories
+        for item in diff_data.get("new", {}).get("categories", []):
+            wp_id = item["wp_id"]
+            cat = cats_map.get(wp_id)
+            if cat:
+                try:
+                    await self.entity_svc.create("category", {
+                        "name": cat.name,
+                        "slug": cat.slug,
+                        "wp_id": cat.id,
+                    })
+                    results["new_imported"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Category {wp_id}: {e}")
+
+        # Import new tags
+        for item in diff_data.get("new", {}).get("tags", []):
+            wp_id = item["wp_id"]
+            tag = tags_map.get(wp_id)
+            if tag:
+                try:
+                    await self.entity_svc.create("tag", {
+                        "name": tag.name,
+                        "slug": tag.slug,
+                        "wp_id": tag.id,
+                    })
+                    results["new_imported"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Tag {wp_id}: {e}")
+
+        await self.update_job(
+            job_id,
+            progress_message=f"Imported {results['new_imported']} new items",
+        )
+
+    async def _update_from_diff(
+        self,
+        job_id: str,
+        wxr_data: WXRData,
+        diff_data: dict,
+        results: dict,
+    ) -> None:
+        """Update existing items from diff."""
+        posts_map = {p.id: p for p in wxr_data.posts if p.post_type == "post"}
+        pages_map = {p.id: p for p in wxr_data.posts if p.post_type == "page"}
+        cats_map = {c.id: c for c in wxr_data.categories}
+        tags_map = {t.id: t for t in wxr_data.tags}
+
+        status_map = {
+            "publish": "published",
+            "draft": "draft",
+            "pending": "pending",
+            "private": "private",
+            "future": "scheduled",
+            "trash": "archived",
+        }
+
+        # Update posts
+        for item in diff_data.get("updated", {}).get("posts", []):
+            wp_id = item["wp_id"]
+            post = posts_map.get(wp_id)
+            if post:
+                try:
+                    existing = await self._find_by_wp_id("post", wp_id)
+                    if existing:
+                        # Sanitize content
+                        content_result = self.sanitizer.sanitize(post.content or "")
+                        excerpt_result = self.sanitizer.sanitize(post.excerpt or "")
+                        if content_result.had_issues or excerpt_result.had_issues:
+                            logger.warning(f"Sanitized content in updated post {wp_id}")
+
+                        await self.entity_svc.update("post", existing.id, {
+                            "title": post.title,
+                            "slug": post.slug,
+                            "content": content_result.content,
+                            "excerpt": excerpt_result.content,
+                            "status": status_map.get(post.status, "draft"),
+                            "wp_modified": post.modified_at.isoformat() if post.modified_at else None,
+                        })
+                        results["updated"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Update post {wp_id}: {e}")
+
+        # Update pages
+        for item in diff_data.get("updated", {}).get("pages", []):
+            wp_id = item["wp_id"]
+            page = pages_map.get(wp_id)
+            if page:
+                try:
+                    existing = await self._find_by_wp_id("page", wp_id)
+                    if existing:
+                        # Sanitize content
+                        content_result = self.sanitizer.sanitize(page.content or "")
+                        if content_result.had_issues:
+                            logger.warning(f"Sanitized content in updated page {wp_id}")
+
+                        await self.entity_svc.update("page", existing.id, {
+                            "title": page.title,
+                            "slug": page.slug,
+                            "content": content_result.content,
+                            "status": status_map.get(page.status, "draft"),
+                            "wp_modified": page.modified_at.isoformat() if page.modified_at else None,
+                        })
+                        results["updated"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Update page {wp_id}: {e}")
+
+        # Update categories
+        for item in diff_data.get("updated", {}).get("categories", []):
+            wp_id = item["wp_id"]
+            cat = cats_map.get(wp_id)
+            if cat:
+                try:
+                    existing = await self._find_by_wp_id("category", wp_id)
+                    if existing:
+                        await self.entity_svc.update("category", existing.id, {
+                            "name": cat.name,
+                            "slug": cat.slug,
+                        })
+                        results["updated"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Update category {wp_id}: {e}")
+
+        # Update tags
+        for item in diff_data.get("updated", {}).get("tags", []):
+            wp_id = item["wp_id"]
+            tag = tags_map.get(wp_id)
+            if tag:
+                try:
+                    existing = await self._find_by_wp_id("tag", wp_id)
+                    if existing:
+                        await self.entity_svc.update("tag", existing.id, {
+                            "name": tag.name,
+                            "slug": tag.slug,
+                        })
+                        results["updated"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Update tag {wp_id}: {e}")
+
+        await self.update_job(
+            job_id,
+            progress_message=f"Updated {results['updated']} items",
+        )
+
+    async def _delete_from_diff(
+        self,
+        job_id: str,
+        diff_data: dict,
+        results: dict,
+    ) -> None:
+        """Delete items that were removed from WordPress."""
+        entity_type_map = {
+            "posts": "post",
+            "pages": "page",
+            "media": "media",
+            "categories": "category",
+            "tags": "tag",
+            "authors": "user",
+        }
+
+        for diff_type, entity_type in entity_type_map.items():
+            for item in diff_data.get("deleted", {}).get(diff_type, []):
+                wp_id = item["wp_id"]
+                try:
+                    existing = await self._find_by_wp_id(entity_type, wp_id)
+                    if existing:
+                        await self.entity_svc.delete(entity_type, existing.id)
+                        results["deleted"] += 1
+                except Exception as e:
+                    results["errors"].append(f"Delete {diff_type} {wp_id}: {e}")
+
+        await self.update_job(
+            job_id,
+            progress_message=f"Deleted {results['deleted']} items",
+        )
+
+    async def fix_links(
+        self,
+        job_id: str,
+        source_domain: str | None = None,
+    ) -> dict:
+        """
+        Fix internal links in imported content.
+
+        Rewrites WordPress URLs to Focomy URLs in post/page content.
+
+        Args:
+            job_id: Import job ID
+            source_domain: Original WordPress domain for URL matching
+
+        Returns:
+            Dict with fix counts and details
+        """
+        await self.update_job(
+            job_id,
+            progress_message="Building URL map...",
+        )
+
+        # Build URL map
+        builder = URLMapBuilder(self.db)
+        url_map = await builder.build_map(source_domain)
+
+        if not url_map:
+            logger.info("No URL mappings found, skipping link fix")
+            return {
+                "success": True,
+                "posts_fixed": 0,
+                "pages_fixed": 0,
+                "total_links_fixed": 0,
+            }
+
+        await self.update_job(
+            job_id,
+            progress_message=f"Fixing links with {len(url_map)} URL mappings...",
+        )
+
+        # Create link fixer
+        fixer = InternalLinkFixer(url_map, source_domain)
+
+        posts_fixed = 0
+        pages_fixed = 0
+        total_links_fixed = 0
+
+        # Fix posts
+        posts_result = await self.db.execute(
+            select(Entity)
+            .join(EntityValue, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.type == "post",
+                EntityValue.field_name == "wp_id",
+                Entity.deleted_at.is_(None),
+            )
+        )
+        posts = posts_result.scalars().unique().all()
+
+        for post in posts:
+            content_result = await self.db.execute(
+                select(EntityValue).where(
+                    EntityValue.entity_id == post.id,
+                    EntityValue.field_name == "content",
+                )
+            )
+            content_ev = content_result.scalar_one_or_none()
+
+            if content_ev and content_ev.value_text:
+                fix_result = fixer.fix_content(content_ev.value_text)
+                if fix_result.had_fixes:
+                    content_ev.value_text = fix_result.content
+                    posts_fixed += 1
+                    total_links_fixed += len(fix_result.fixes)
+
+        # Fix pages
+        pages_result = await self.db.execute(
+            select(Entity)
+            .join(EntityValue, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.type == "page",
+                EntityValue.field_name == "wp_id",
+                Entity.deleted_at.is_(None),
+            )
+        )
+        pages = pages_result.scalars().unique().all()
+
+        for page in pages:
+            content_result = await self.db.execute(
+                select(EntityValue).where(
+                    EntityValue.entity_id == page.id,
+                    EntityValue.field_name == "content",
+                )
+            )
+            content_ev = content_result.scalar_one_or_none()
+
+            if content_ev and content_ev.value_text:
+                fix_result = fixer.fix_content(content_ev.value_text)
+                if fix_result.had_fixes:
+                    content_ev.value_text = fix_result.content
+                    pages_fixed += 1
+                    total_links_fixed += len(fix_result.fixes)
+
+        await self.db.commit()
+
+        logger.info(
+            f"Fixed links: {posts_fixed} posts, {pages_fixed} pages, "
+            f"{total_links_fixed} total links"
+        )
+
+        await self.update_job(
+            job_id,
+            progress_message=f"Fixed {total_links_fixed} internal links",
+        )
+
+        return {
+            "success": True,
+            "posts_fixed": posts_fixed,
+            "pages_fixed": pages_fixed,
+            "total_links_fixed": total_links_fixed,
+        }
+
+    async def generate_redirects(
+        self,
+        job_id: str,
+        source_url: str,
+        config: dict | None = None,
+    ) -> dict:
+        """
+        Generate URL redirects for imported content.
+
+        Args:
+            job_id: Import job ID
+            source_url: Original WordPress site URL
+            config: Optional configuration overrides
+
+        Returns:
+            Dict with redirect report data
+        """
+        await self.update_job(
+            job_id,
+            progress_message="Generating redirects...",
+        )
+
+        config = config or {}
+
+        # Collect data from imported entities
+        posts_data = []
+        categories_data = []
+        tags_data = []
+        authors_data = []
+
+        # Get posts
+        posts_result = await self.db.execute(
+            select(Entity)
+            .join(EntityValue, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.type == "post",
+                EntityValue.field_name == "wp_id",
+                Entity.deleted_at.is_(None),
+            )
+        )
+        posts = posts_result.scalars().unique().all()
+
+        for post in posts:
+            slug = await self._get_entity_field(post.id, "slug")
+            title = await self._get_entity_field(post.id, "title")
+            if slug:
+                posts_data.append({
+                    "old_url": f"/{slug}",
+                    "new_slug": slug,
+                    "slug": slug,
+                    "title": title or slug,
+                    "post_type": "post",
+                })
+
+        # Get pages
+        pages_result = await self.db.execute(
+            select(Entity)
+            .join(EntityValue, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.type == "page",
+                EntityValue.field_name == "wp_id",
+                Entity.deleted_at.is_(None),
+            )
+        )
+        pages = pages_result.scalars().unique().all()
+
+        for page in pages:
+            slug = await self._get_entity_field(page.id, "slug")
+            title = await self._get_entity_field(page.id, "title")
+            if slug:
+                posts_data.append({
+                    "old_url": f"/{slug}",
+                    "new_slug": slug,
+                    "slug": slug,
+                    "title": title or slug,
+                    "post_type": "page",
+                })
+
+        # Get categories
+        cats_result = await self.db.execute(
+            select(Entity)
+            .join(EntityValue, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.type == "category",
+                EntityValue.field_name == "wp_id",
+                Entity.deleted_at.is_(None),
+            )
+        )
+        categories = cats_result.scalars().unique().all()
+
+        for cat in categories:
+            slug = await self._get_entity_field(cat.id, "slug")
+            name = await self._get_entity_field(cat.id, "name")
+            if slug:
+                categories_data.append({
+                    "slug": slug,
+                    "old_slug": slug,
+                    "new_slug": slug,
+                    "name": name or slug,
+                })
+
+        # Get tags
+        tags_result = await self.db.execute(
+            select(Entity)
+            .join(EntityValue, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.type == "tag",
+                EntityValue.field_name == "wp_id",
+                Entity.deleted_at.is_(None),
+            )
+        )
+        tags = tags_result.scalars().unique().all()
+
+        for tag in tags:
+            slug = await self._get_entity_field(tag.id, "slug")
+            name = await self._get_entity_field(tag.id, "name")
+            if slug:
+                tags_data.append({
+                    "slug": slug,
+                    "old_slug": slug,
+                    "new_slug": slug,
+                    "name": name or slug,
+                })
+
+        # Get authors
+        authors_result = await self.db.execute(
+            select(Entity)
+            .join(EntityValue, Entity.id == EntityValue.entity_id)
+            .where(
+                Entity.type == "user",
+                EntityValue.field_name == "wp_id",
+                Entity.deleted_at.is_(None),
+            )
+        )
+        authors = authors_result.scalars().unique().all()
+
+        for author in authors:
+            login = await self._get_entity_field(author.id, "login")
+            display_name = await self._get_entity_field(author.id, "display_name")
+            if login:
+                authors_data.append({
+                    "login": login,
+                    "new_slug": login,
+                    "display_name": display_name or login,
+                })
+
+        # Generate redirects
+        generator = RedirectGenerator(
+            old_base_url=source_url,
+            new_base_url=config.get("new_base_url", ""),
+        )
+
+        report = generator.generate_all(
+            posts=posts_data,
+            categories=categories_data,
+            tags=tags_data,
+            authors=authors_data,
+            config=config,
+        )
+
+        logger.info(f"Generated {len(report.redirects)} redirects")
+
+        await self.update_job(
+            job_id,
+            progress_message=f"Generated {len(report.redirects)} redirects",
+        )
+
+        return {
+            "success": True,
+            "redirect_count": len(report.redirects),
+            "conflict_count": len(report.conflicts),
+            "warnings": report.warnings,
+            "redirects": [
+                {
+                    "from": r.from_path,
+                    "to": r.to_path,
+                    "status": r.status_code,
+                    "regex": r.regex,
+                    "comment": r.comment,
+                }
+                for r in report.redirects
+            ],
+            "conflicts": report.conflicts,
+        }
+
+    async def _get_entity_field(self, entity_id: str, field_name: str) -> str | None:
+        """Get a string field value from an entity."""
+        result = await self.db.execute(
+            select(EntityValue).where(
+                EntityValue.entity_id == entity_id,
+                EntityValue.field_name == field_name,
+            )
+        )
+        ev = result.scalar_one_or_none()
+        if ev:
+            return ev.value_string or ev.value_text
+        return None

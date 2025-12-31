@@ -118,6 +118,12 @@ class ImportJob(Base):
         nullable=True,
     )
 
+    # Checkpoint data for resume (stores processed IDs by type)
+    checkpoint: Mapped[dict | None] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
     # Import results
     posts_imported: Mapped[int] = mapped_column(
         Integer,
@@ -216,6 +222,7 @@ class ImportJob(Base):
             "config": self.config,
             "analysis": self.analysis,
             "dry_run_result": self.dry_run_result,
+            "checkpoint": self.checkpoint,
             "results": {
                 "posts": self.posts_imported,
                 "pages": self.pages_imported,

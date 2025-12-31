@@ -136,6 +136,9 @@
         <button class="btn btn-primary btn-lg" id="import-btn" onclick="startImport()" disabled>
             Start Import
         </button>
+        <button class="btn btn-secondary btn-lg" id="diff-btn" onclick="detectDiff()" disabled>
+            Detect Diff
+        </button>
     </div>
 
     <!-- Analysis Results -->
@@ -172,6 +175,30 @@
         </div>
     </div>
 
+    <!-- Diff Results -->
+    <div class="card hidden" id="diff-card">
+        <div class="card-header">
+            <h2 class="card-title">Diff Detection Results</h2>
+        </div>
+        <div class="card-body" id="diff-content">
+            <!-- Populated by JavaScript -->
+        </div>
+        <div class="card-footer" id="diff-actions" style="display: flex; gap: 1rem; justify-content: space-between; align-items: center; padding: 1rem; flex-wrap: wrap;">
+            <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="import-new" checked> Import New
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="import-updated" checked> Update Changed
+                </label>
+                <label style="display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" id="delete-removed"> Delete Removed
+                </label>
+            </div>
+            <button class="btn btn-primary" onclick="importDiff()">Import Changes</button>
+        </div>
+    </div>
+
     <!-- Progress -->
     <div class="card hidden" id="progress-card">
         <div class="card-header">
@@ -196,6 +223,12 @@
         </div>
         <div class="card-body" id="results-content">
             <!-- Populated by JavaScript -->
+        </div>
+        <div class="card-footer" id="results-actions" style="display: none; padding: 1rem; border-top: 1px solid var(--border);">
+            <button class="btn btn-danger" id="rollback-btn" onclick="confirmRollback()">
+                Rollback Import
+            </button>
+            <span id="rollback-info" style="margin-left: 1rem; color: var(--muted); font-size: 0.875rem;"></span>
         </div>
     </div>
 </div>
@@ -524,6 +557,7 @@ let currentJobId = null;
 let pollInterval = null;
 let dryRunCompleted = false;
 let previewCompleted = false;
+let currentPreviewId = null;
 
 function selectSource(source) {
     currentSource = source;
@@ -677,6 +711,7 @@ async function startAnalysis() {
             currentJobId = data.job_id;
             showAnalysis(data.analysis);
             document.getElementById('dryrun-btn').disabled = false;
+            document.getElementById('diff-btn').disabled = false;
             dryRunCompleted = false;
         } else {
             alert('Analysis failed: ' + (data.error || 'Unknown error'));
@@ -705,7 +740,7 @@ async function runDryRun() {
         const data = await response.json();
 
         if (data.success) {
-            showDryRunResults(data.dry_run_result);
+            showDryRunResults(data);
             dryRunCompleted = true;
             document.getElementById('preview-btn').disabled = false;
             document.getElementById('import-btn').disabled = false;
@@ -724,68 +759,83 @@ function showDryRunResults(result) {
     const card = document.getElementById('dryrun-card');
     const content = document.getElementById('dryrun-content');
 
-    const summary = result.summary || {};
+    const counts = result.counts || {};
+    const items = result.items || {};
+
+    // Count new items by type
+    const postCount = (items.posts || []).filter(i => i.status === 'new').length;
+    const pageCount = (items.pages || []).filter(i => i.status === 'new').length;
+    const mediaCount = (items.media || []).filter(i => i.status === 'new').length;
+    const catCount = (items.categories || []).filter(i => i.status === 'new').length;
+    const tagCount = (items.tags || []).filter(i => i.status === 'new').length;
 
     let html = `
         <div class="dryrun-summary">
             <div class="dryrun-item">
-                <div class="count new">${summary.posts?.new || 0}</div>
-                <div class="label">New Posts</div>
+                <div class="count new">${counts.new || 0}</div>
+                <div class="label">New Items</div>
             </div>
             <div class="dryrun-item">
-                <div class="count duplicate">${summary.posts?.duplicates || 0}</div>
-                <div class="label">Duplicate Posts</div>
+                <div class="count">${counts.update || 0}</div>
+                <div class="label">Updates</div>
             </div>
             <div class="dryrun-item">
-                <div class="count new">${summary.pages?.new || 0}</div>
-                <div class="label">New Pages</div>
+                <div class="count">${counts.skip || 0}</div>
+                <div class="label">Skip</div>
             </div>
             <div class="dryrun-item">
-                <div class="count duplicate">${summary.pages?.duplicates || 0}</div>
-                <div class="label">Duplicate Pages</div>
+                <div class="count error">${counts.error || 0}</div>
+                <div class="label">Errors</div>
             </div>
-            <div class="dryrun-item">
-                <div class="count new">${summary.media?.new || 0}</div>
-                <div class="label">New Media</div>
-            </div>
-            <div class="dryrun-item">
-                <div class="count duplicate">${summary.media?.duplicates || 0}</div>
-                <div class="label">Duplicate Media</div>
-            </div>
+        </div>
+        <div class="dryrun-details" style="margin-top: 1rem;">
+            <table style="width: 100%;">
+                <tr><th>Type</th><th>New</th><th>Skip</th><th>Error</th></tr>
+                <tr><td>Posts</td><td>${postCount}</td><td>${(items.posts || []).filter(i => i.status === 'skip').length}</td><td>${(items.posts || []).filter(i => i.status === 'error').length}</td></tr>
+                <tr><td>Pages</td><td>${pageCount}</td><td>${(items.pages || []).filter(i => i.status === 'skip').length}</td><td>${(items.pages || []).filter(i => i.status === 'error').length}</td></tr>
+                <tr><td>Media</td><td>${mediaCount}</td><td>${(items.media || []).filter(i => i.status === 'skip').length}</td><td>${(items.media || []).filter(i => i.status === 'error').length}</td></tr>
+                <tr><td>Categories</td><td>${catCount}</td><td>${(items.categories || []).filter(i => i.status === 'skip').length}</td><td>${(items.categories || []).filter(i => i.status === 'error').length}</td></tr>
+                <tr><td>Tags</td><td>${tagCount}</td><td>${(items.tags || []).filter(i => i.status === 'skip').length}</td><td>${(items.tags || []).filter(i => i.status === 'error').length}</td></tr>
+            </table>
         </div>
     `;
 
+    if (result.errors && result.errors.length > 0) {
+        html += `
+            <div class="error-list" style="margin-top: 1rem; padding: 1rem; background: #fee; border-radius: 4px;">
+                <h4 style="color: var(--error);">Errors (${result.errors.length})</h4>
+                <ul>
+                    ${result.errors.slice(0, 10).map(e => `<li>${e}</li>`).join('')}
+                </ul>
+                ${result.errors.length > 10 ? `<p>... and ${result.errors.length - 10} more</p>` : ''}
+            </div>
+        `;
+    }
+
     if (result.duplicates && result.duplicates.length > 0) {
         html += `
-            <div class="duplicate-list">
-                <h4>Duplicates Found (${result.duplicates.length})</h4>
-                <table>
-                    <tr><th>Type</th><th>Name</th><th>Reason</th></tr>
-                    ${result.duplicates.slice(0, 20).map(d => `
-                        <tr>
-                            <td>${d.type}</td>
-                            <td>${d.title || d.name || 'N/A'}</td>
-                            <td>${d.reason}</td>
-                        </tr>
-                    `).join('')}
-                </table>
-                ${result.duplicates.length > 20 ? `<p style="margin-top: 0.5rem;">... and ${result.duplicates.length - 20} more</p>` : ''}
+            <div class="duplicate-list" style="margin-top: 1rem; padding: 1rem; background: #ffd; border-radius: 4px;">
+                <h4>Duplicate Slugs (${result.duplicates.length})</h4>
+                <ul>
+                    ${result.duplicates.slice(0, 10).map(d => `<li>${d.type}: ${d.slug}</li>`).join('')}
+                </ul>
             </div>
         `;
     }
 
     if (result.warnings && result.warnings.length > 0) {
         html += `
-            <div class="warning-list">
-                <h4>Warnings</h4>
+            <div class="warning-list" style="margin-top: 1rem; padding: 1rem; background: #ffd; border-radius: 4px;">
+                <h4>Warnings (${result.warnings.length})</h4>
                 <ul>
-                    ${result.warnings.map(w => `<li>[${w.code}] ${w.message}</li>`).join('')}
+                    ${result.warnings.slice(0, 10).map(w => `<li>${w}</li>`).join('')}
                 </ul>
+                ${result.warnings.length > 10 ? `<p>... and ${result.warnings.length - 10} more</p>` : ''}
             </div>
         `;
     }
 
-    if (!result.duplicates?.length && !result.warnings?.length) {
+    if (!result.has_errors && !result.duplicates?.length) {
         html += `<p style="color: var(--success); text-align: center; margin-top: 1rem;">
             <strong>No issues detected. Ready to import!</strong>
         </p>`;
@@ -819,7 +869,8 @@ async function runPreview() {
         const data = await response.json();
 
         if (data.success) {
-            showPreviewResults(data.preview);
+            currentPreviewId = data.preview_id;
+            showPreviewResults(data);
         } else {
             alert('Preview failed: ' + (data.error || 'Unknown error'));
         }
@@ -835,27 +886,41 @@ function showPreviewResults(result) {
     const card = document.getElementById('preview-card');
     const content = document.getElementById('preview-content');
 
-    const previews = result.previews || [];
+    const items = result.items || [];
 
-    if (previews.length === 0) {
+    if (items.length === 0) {
         content.innerHTML = `<p style="color: var(--muted); text-align: center;">No items to preview (all items may already exist)</p>`;
         document.getElementById('preview-actions').style.display = 'none';
     } else {
-        let html = `<p style="margin-bottom: 1rem;">The following ${previews.length} item(s) were imported as drafts for preview:</p>`;
+        let html = `
+            <p style="margin-bottom: 1rem;">
+                Preview ID: <code>${result.preview_id}</code><br>
+                ${result.success_count} item(s) imported, ${result.error_count} error(s)
+            </p>
+        `;
 
-        for (const item of previews) {
+        if (result.errors && result.errors.length > 0) {
             html += `
-                <div class="preview-item">
-                    <h4>${item.title}</h4>
-                    <div class="meta">
-                        Slug: ${item.slug} | Original Status: ${item.original_status}
-                    </div>
-                    <div class="content-preview">
-                        ${item.content_preview ? item.content_preview.substring(0, 200) + '...' : 'No content'}
-                    </div>
+                <div style="background: #fee; padding: 0.5rem; border-radius: 4px; margin-bottom: 1rem;">
+                    <strong>Errors:</strong>
+                    <ul>${result.errors.map(e => `<li>${e}</li>`).join('')}</ul>
                 </div>
             `;
         }
+
+        html += `<table style="width: 100%;"><tr><th>Type</th><th>Title</th><th>Status</th></tr>`;
+        for (const item of items) {
+            const statusColor = item.status === 'success' ? 'var(--success)' :
+                               item.status === 'error' ? 'var(--error)' : 'var(--muted)';
+            html += `
+                <tr>
+                    <td>${item.entity_type}</td>
+                    <td>${item.title}</td>
+                    <td style="color: ${statusColor}">${item.status}</td>
+                </tr>
+            `;
+        }
+        html += `</table>`;
 
         html += `<p style="margin-top: 1rem; font-size: 0.875rem; color: var(--muted);">
             Click "Confirm & Continue" to keep these items and proceed with the full import,
@@ -871,8 +936,13 @@ function showPreviewResults(result) {
 }
 
 async function confirmPreview() {
+    if (!currentPreviewId) {
+        alert('No preview to confirm');
+        return;
+    }
+
     try {
-        const response = await fetch(`/admin/import/${currentJobId}/preview/confirm`, {
+        const response = await fetch(`/admin/import/preview/${currentPreviewId}/commit`, {
             method: 'POST',
             headers: {
                 'X-CSRF-Token': '{{ csrf_token }}'
@@ -881,8 +951,9 @@ async function confirmPreview() {
         const data = await response.json();
 
         if (data.success) {
-            alert(`${data.confirmed} preview item(s) confirmed. You can now proceed with the full import.`);
+            alert(`${data.committed_count} preview item(s) confirmed. You can now proceed with the full import.`);
             document.getElementById('preview-card').classList.add('hidden');
+            currentPreviewId = null;
         } else {
             alert('Confirm failed: ' + (data.error || 'Unknown error'));
         }
@@ -892,12 +963,17 @@ async function confirmPreview() {
 }
 
 async function discardPreview() {
+    if (!currentPreviewId) {
+        alert('No preview to discard');
+        return;
+    }
+
     if (!confirm('Are you sure you want to discard the preview items?')) {
         return;
     }
 
     try {
-        const response = await fetch(`/admin/import/${currentJobId}/preview/discard`, {
+        const response = await fetch(`/admin/import/preview/${currentPreviewId}/rollback`, {
             method: 'POST',
             headers: {
                 'X-CSRF-Token': '{{ csrf_token }}'
@@ -906,9 +982,10 @@ async function discardPreview() {
         const data = await response.json();
 
         if (data.success) {
-            alert(`${data.discarded} preview item(s) discarded.`);
+            alert(`${data.rolled_back_count} preview item(s) discarded.`);
             document.getElementById('preview-card').classList.add('hidden');
             previewCompleted = false;
+            currentPreviewId = null;
         } else {
             alert('Discard failed: ' + (data.error || 'Unknown error'));
         }
@@ -1074,6 +1151,10 @@ function showResults(data) {
                 <a href="/admin/post" class="btn btn-primary">View Posts</a>
             </p>
         `;
+
+        // Show rollback option
+        document.getElementById('results-actions').style.display = 'block';
+        document.getElementById('rollback-info').textContent = 'Rollback available for 30 days';
     } else {
         content.innerHTML = `
             <div style="text-align: center; color: var(--danger);">
@@ -1081,9 +1162,218 @@ function showResults(data) {
                 <p>${data.errors?.join('<br>') || 'Unknown error'}</p>
             </div>
         `;
+        document.getElementById('results-actions').style.display = 'none';
     }
 
     card.classList.remove('hidden');
+}
+
+async function confirmRollback() {
+    if (!currentJobId) {
+        alert('No import job to rollback');
+        return;
+    }
+
+    // Get rollback status first
+    try {
+        const statusResponse = await fetch(`/admin/import/${currentJobId}/rollback-status`);
+        const statusData = await statusResponse.json();
+
+        if (!statusData.can_rollback) {
+            alert('Cannot rollback: ' + (statusData.reason || 'Unknown reason'));
+            return;
+        }
+
+        const totalToDelete = statusData.total_to_delete || 0;
+        const preview = statusData.preview || {};
+
+        let confirmMsg = `Are you sure you want to rollback this import?\n\n`;
+        confirmMsg += `This will delete ${totalToDelete} items:\n`;
+        for (const [type, count] of Object.entries(preview)) {
+            if (count > 0) {
+                confirmMsg += `- ${type}: ${count}\n`;
+            }
+        }
+        confirmMsg += `\nThis action cannot be undone.`;
+
+        if (!confirm(confirmMsg)) {
+            return;
+        }
+
+        // Perform rollback
+        document.getElementById('rollback-btn').disabled = true;
+        document.getElementById('rollback-btn').textContent = 'Rolling back...';
+
+        const response = await fetch(`/admin/import/${currentJobId}/rollback`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`Rollback complete! Deleted ${data.total_deleted} items.`);
+            document.getElementById('results-actions').style.display = 'none';
+            document.getElementById('results-content').innerHTML = `
+                <div style="text-align: center; color: var(--warning);">
+                    <h3>Import Rolled Back</h3>
+                    <p>All imported data has been deleted.</p>
+                </div>
+            `;
+        } else {
+            alert('Rollback failed: ' + (data.error || 'Unknown error'));
+            document.getElementById('rollback-btn').disabled = false;
+            document.getElementById('rollback-btn').textContent = 'Rollback Import';
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+        document.getElementById('rollback-btn').disabled = false;
+        document.getElementById('rollback-btn').textContent = 'Rollback Import';
+    }
+}
+
+async function detectDiff() {
+    if (!currentJobId) {
+        alert('Please analyze first');
+        return;
+    }
+
+    document.getElementById('diff-btn').disabled = true;
+    document.getElementById('diff-btn').textContent = 'Detecting...';
+
+    try {
+        const response = await fetch(`/admin/import/${currentJobId}/detect-diff`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showDiffResults(data);
+        } else {
+            alert('Diff detection failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Diff detection error: ' + e.message);
+    } finally {
+        document.getElementById('diff-btn').textContent = 'Detect Diff';
+        document.getElementById('diff-btn').disabled = false;
+    }
+}
+
+function showDiffResults(result) {
+    const card = document.getElementById('diff-card');
+    const content = document.getElementById('diff-content');
+
+    const summary = result.summary || {};
+    const entityTypes = ['posts', 'pages', 'media', 'categories', 'tags', 'authors'];
+
+    let html = `
+        <table style="width: 100%; border-collapse: collapse; margin-bottom: 1rem;">
+            <thead>
+                <tr style="border-bottom: 2px solid var(--border);">
+                    <th style="text-align: left; padding: 0.5rem;">Type</th>
+                    <th style="text-align: center; padding: 0.5rem; color: var(--success);">New</th>
+                    <th style="text-align: center; padding: 0.5rem; color: var(--warning);">Updated</th>
+                    <th style="text-align: center; padding: 0.5rem; color: var(--muted);">Unchanged</th>
+                    <th style="text-align: center; padding: 0.5rem; color: var(--danger);">Deleted</th>
+                </tr>
+            </thead>
+            <tbody>
+    `;
+
+    let totalNew = 0, totalUpdated = 0, totalUnchanged = 0, totalDeleted = 0;
+
+    for (const type of entityTypes) {
+        const s = summary[type] || {};
+        totalNew += s.new || 0;
+        totalUpdated += s.updated || 0;
+        totalUnchanged += s.unchanged || 0;
+        totalDeleted += s.deleted || 0;
+
+        html += `
+            <tr style="border-bottom: 1px solid var(--border);">
+                <td style="padding: 0.5rem; text-transform: capitalize;">${type}</td>
+                <td style="text-align: center; padding: 0.5rem; color: var(--success);">${s.new || 0}</td>
+                <td style="text-align: center; padding: 0.5rem; color: var(--warning);">${s.updated || 0}</td>
+                <td style="text-align: center; padding: 0.5rem; color: var(--muted);">${s.unchanged || 0}</td>
+                <td style="text-align: center; padding: 0.5rem; color: var(--danger);">${s.deleted || 0}</td>
+            </tr>
+        `;
+    }
+
+    html += `
+            <tr style="font-weight: bold; border-top: 2px solid var(--border);">
+                <td style="padding: 0.5rem;">Total</td>
+                <td style="text-align: center; padding: 0.5rem; color: var(--success);">${totalNew}</td>
+                <td style="text-align: center; padding: 0.5rem; color: var(--warning);">${totalUpdated}</td>
+                <td style="text-align: center; padding: 0.5rem; color: var(--muted);">${totalUnchanged}</td>
+                <td style="text-align: center; padding: 0.5rem; color: var(--danger);">${totalDeleted}</td>
+            </tr>
+        </tbody>
+        </table>
+    `;
+
+    if (totalNew === 0 && totalUpdated === 0 && totalDeleted === 0) {
+        html += `<p style="color: var(--success); text-align: center;">
+            <strong>Everything is up to date! No changes to import.</strong>
+        </p>`;
+        document.getElementById('diff-actions').style.display = 'none';
+    } else {
+        document.getElementById('diff-actions').style.display = 'flex';
+    }
+
+    content.innerHTML = html;
+    card.classList.remove('hidden');
+}
+
+async function importDiff() {
+    if (!currentJobId) {
+        alert('Please analyze first');
+        return;
+    }
+
+    const importNew = document.getElementById('import-new').checked;
+    const importUpdated = document.getElementById('import-updated').checked;
+    const deleteRemoved = document.getElementById('delete-removed').checked;
+
+    if (!importNew && !importUpdated && !deleteRemoved) {
+        alert('Please select at least one option');
+        return;
+    }
+
+    if (deleteRemoved && !confirm('Warning: This will delete items that no longer exist in WordPress. Continue?')) {
+        return;
+    }
+
+    document.getElementById('progress-card').classList.remove('hidden');
+
+    try {
+        const params = new URLSearchParams({
+            import_new: importNew,
+            import_updated: importUpdated,
+            delete_removed: deleteRemoved
+        });
+
+        const response = await fetch(`/admin/import/${currentJobId}/import-diff?${params}`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            startPolling();
+        } else {
+            alert('Diff import failed to start: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Error: ' + e.message);
+    }
 }
 </script>
 {% endblock %}

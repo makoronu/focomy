@@ -2158,6 +2158,809 @@ async def discard_preview(
 
 
 @router.post(
+    "/import/{job_id}/resume",
+    responses={
+        400: {"model": ErrorResponse, "description": "Cannot resume job"},
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("3/minute")
+async def resume_import(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Resume a failed or cancelled import job from checkpoint."""
+    import asyncio
+
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+        job = await import_svc.get_job(job_id)
+
+        if not job:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Import job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Check if job can be resumed
+        from ..models import ImportJobStatus
+
+        if job.status not in (
+            ImportJobStatus.FAILED.value,
+            ImportJobStatus.CANCELLED.value,
+        ):
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error=f"Cannot resume job with status: {job.status}. Only failed or cancelled jobs can be resumed.",
+                    code="INVALID_STATUS",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Get checkpoint info
+        checkpoint = job.checkpoint or {}
+        last_phase = checkpoint.get("last_phase", "beginning")
+
+        # Start resume in background
+        asyncio.create_task(import_svc.resume_import(job_id))
+
+        return {
+            "success": True,
+            "job_id": job_id,
+            "message": f"Import resumed from phase: {last_phase}",
+            "checkpoint": {
+                "last_phase": last_phase,
+                "authors_processed": len(checkpoint.get("authors", [])),
+                "categories_processed": len(checkpoint.get("categories", [])),
+                "tags_processed": len(checkpoint.get("tags", [])),
+                "media_processed": len(checkpoint.get("media", [])),
+                "posts_processed": len(checkpoint.get("posts", [])),
+                "pages_processed": len(checkpoint.get("pages", [])),
+                "menus_processed": len(checkpoint.get("menus", [])),
+            },
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/detect-diff",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def detect_diff(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Detect differences between WordPress and database."""
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+        result = await import_svc.detect_diff(job_id)
+
+        if not result:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Import job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        if not result.get("success"):
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error=result.get("error", "Diff detection failed"),
+                    code="DIFF_FAILED",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        return {
+            **result,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/import-diff",
+    responses={
+        400: {"model": ErrorResponse, "description": "No diff result found"},
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("3/minute")
+async def import_diff(
+    request: Request,
+    job_id: str,
+    import_new: bool = True,
+    import_updated: bool = True,
+    delete_removed: bool = False,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Import only the differences (new and updated items)."""
+    import asyncio
+
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+        job = await import_svc.get_job(job_id)
+
+        if not job:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Import job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Start diff import in background
+        asyncio.create_task(
+            import_svc.import_diff(
+                job_id,
+                import_new=import_new,
+                import_updated=import_updated,
+                delete_removed=delete_removed,
+            )
+        )
+
+        return {
+            "success": True,
+            "job_id": job_id,
+            "message": "Diff import started",
+            "options": {
+                "import_new": import_new,
+                "import_updated": import_updated,
+                "delete_removed": delete_removed,
+            },
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.get(
+    "/import/{job_id}/rollback-status",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+async def get_rollback_status(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Get rollback status for an import job."""
+    from ..services.wordpress_import.rollback import RollbackService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        rollback_svc = RollbackService(db)
+        result = await rollback_svc.get_rollback_status(job_id)
+
+        if not result.get("success"):
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error=result.get("error", "Job not found"),
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        return {
+            **result,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/rollback",
+    responses={
+        400: {"model": ErrorResponse, "description": "Rollback not allowed"},
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("1/minute")
+async def rollback_import(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Rollback an import job - deletes all imported entities."""
+    from ..services.wordpress_import.rollback import RollbackService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        rollback_svc = RollbackService(db)
+
+        # Check if rollback is allowed
+        can_rollback = await rollback_svc.can_rollback(job_id)
+        if not can_rollback.get("can_rollback"):
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error=can_rollback.get("reason", "Rollback not allowed"),
+                    code="ROLLBACK_NOT_ALLOWED",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Perform rollback
+        result = await rollback_svc.rollback(job_id)
+
+        if not result.get("success"):
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error=result.get("error", "Rollback failed"),
+                    code="ROLLBACK_FAILED",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        return {
+            **result,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/fix-links",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("3/minute")
+async def fix_import_links(
+    request: Request,
+    job_id: str,
+    source_domain: str | None = None,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Fix internal links in imported content."""
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+
+        # Check job exists
+        job = await import_svc.get_job(job_id)
+        if not job:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Fix links
+        result = await import_svc.fix_links(job_id, source_domain)
+
+        return {
+            **result,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/dry-run",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def dry_run_import(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Run dry run simulation for import job."""
+    from pathlib import Path
+
+    from ..services.wordpress_import import WordPressImportService
+    from ..services.wordpress_import.dry_run import DryRunService
+    from ..services.wordpress_import.wxr_parser import WXRParser
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+
+        # Check job exists
+        job = await import_svc.get_job(job_id)
+        if not job:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Parse WXR file
+        if not job.source_file:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error="No source file found",
+                    code="NO_SOURCE_FILE",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        file_path = Path(job.source_file)
+        if not file_path.exists():
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error="Source file not found",
+                    code="FILE_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Parse and run dry run
+        parser = WXRParser()
+        wxr_data = parser.parse(str(file_path))
+
+        dry_run_svc = DryRunService(db)
+        result = await dry_run_svc.run(job_id, wxr_data)
+
+        return {
+            "success": True,
+            **result.to_dict(),
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/preview",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def preview_import(
+    request: Request,
+    job_id: str,
+    count: int = 3,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Run preview import with a few items."""
+    from pathlib import Path
+
+    from ..services.wordpress_import import WordPressImportService
+    from ..services.wordpress_import.preview import PreviewService, store_preview_entities
+    from ..services.wordpress_import.wxr_parser import WXRParser
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+
+        # Check job exists
+        job = await import_svc.get_job(job_id)
+        if not job:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Parse WXR file
+        if not job.source_file:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error="No source file found",
+                    code="NO_SOURCE_FILE",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        file_path = Path(job.source_file)
+        if not file_path.exists():
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error="Source file not found",
+                    code="FILE_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Parse and run preview
+        parser = WXRParser()
+        wxr_data = parser.parse(str(file_path))
+
+        preview_svc = PreviewService(db)
+        result = await preview_svc.run_preview(job_id, wxr_data, count)
+
+        # Store preview entities for later commit/rollback
+        entity_ids = [i.entity_id for i in result.items if i.entity_id]
+        store_preview_entities(result.preview_id, entity_ids)
+
+        return {
+            "success": True,
+            **result.to_dict(),
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/preview/{preview_id}/commit",
+    responses={
+        404: {"model": ErrorResponse, "description": "Preview not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def commit_preview(
+    request: Request,
+    preview_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Commit preview - keep imported items."""
+    from ..services.wordpress_import.preview import (
+        get_preview_entities,
+        clear_preview_entities,
+    )
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        entity_ids = get_preview_entities(preview_id)
+
+        if not entity_ids:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Preview not found or already processed",
+                    code="PREVIEW_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Remove preview flag from entities
+        for entity_id in entity_ids:
+            result = await db.execute(
+                select(EntityValue).where(
+                    EntityValue.entity_id == entity_id,
+                    EntityValue.field_name == "preview",
+                )
+            )
+            ev = result.scalar_one_or_none()
+            if ev:
+                await db.delete(ev)
+
+        await db.commit()
+        clear_preview_entities(preview_id)
+
+        return {
+            "success": True,
+            "preview_id": preview_id,
+            "committed_count": len(entity_ids),
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/preview/{preview_id}/rollback",
+    responses={
+        404: {"model": ErrorResponse, "description": "Preview not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def rollback_preview(
+    request: Request,
+    preview_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Rollback preview - delete imported items."""
+    from datetime import datetime
+
+    from ..services.wordpress_import.preview import (
+        get_preview_entities,
+        clear_preview_entities,
+    )
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        entity_ids = get_preview_entities(preview_id)
+
+        if not entity_ids:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Preview not found or already processed",
+                    code="PREVIEW_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Soft delete preview entities
+        deleted_count = 0
+        for entity_id in entity_ids:
+            result = await db.execute(
+                select(Entity).where(Entity.id == entity_id)
+            )
+            entity = result.scalar_one_or_none()
+            if entity:
+                entity.deleted_at = datetime.utcnow()
+                deleted_count += 1
+
+        await db.commit()
+        clear_preview_entities(preview_id)
+
+        return {
+            "success": True,
+            "preview_id": preview_id,
+            "rolled_back_count": deleted_count,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.get(
+    "/import/{job_id}/verify",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def verify_import(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Verify import integrity and generate report."""
+    from ..services.wordpress_import.verification import VerificationService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        service = VerificationService(db)
+        report = await service.verify(job_id)
+
+        return {
+            "success": True,
+            "job_id": report.job_id,
+            "generated_at": report.generated_at.isoformat(),
+            "counts": report.counts,
+            "summary": report.summary,
+            "issues": [
+                {
+                    "level": i.level,
+                    "category": i.category,
+                    "entity_type": i.entity_type,
+                    "entity_id": i.entity_id,
+                    "message": i.message,
+                    "details": i.details,
+                }
+                for i in report.issues
+            ],
+            "has_errors": report.has_errors,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/generate-redirects",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("3/minute")
+async def generate_import_redirects(
+    request: Request,
+    job_id: str,
+    source_url: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Generate URL redirects for imported content."""
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+
+        # Check job exists
+        job = await import_svc.get_job(job_id)
+        if not job:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        # Generate redirects
+        result = await import_svc.generate_redirects(job_id, source_url)
+
+        return {
+            **result,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
     "/import/{job_id}/start",
     responses={
         404: {"model": ErrorResponse, "description": "Job not found"},
