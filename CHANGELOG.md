@@ -6,6 +6,8 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - CLI createuser: --passwordオプション復活（指定時は使用、未指定時はgetpass） (#36)
+- Scaffold: post.yaml/page.yamlにSEOフィールド追加（seo_title, seo_description等） (#38)
+- Admin: POST削除エンドポイントでリダイレクト返却 (#39)
 
 ## [0.1.22] - 2026-01-01
 

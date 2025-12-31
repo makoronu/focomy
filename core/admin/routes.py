@@ -3587,7 +3587,41 @@ async def entity_delete_post(
     current_user: Entity = Depends(require_admin),
 ):
     """Delete entity via POST (for HTML forms)."""
-    return await entity_delete(request, type_name, entity_id, db, current_user)
+    # Perform the delete
+    entity_svc = EntityService(db)
+    entity = await entity_svc.get(entity_id)
+    if not entity or entity.type != type_name:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # RBAC permission check
+    await check_permission(db, current_user, type_name, Permission.DELETE, entity_id)
+
+    # Save entity data for audit before deletion
+    entity_data = entity_svc.serialize(entity)
+    user_data = entity_svc.serialize(current_user)
+
+    await entity_svc.delete(entity_id, user_id=user_data.get("id"))
+
+    # Log delete action
+    audit_svc = AuditService(db)
+    await audit_svc.log_delete(
+        entity_type=type_name,
+        entity_id=entity_id,
+        entity_title=entity_data.get("title") or entity_data.get("name") or entity_id,
+        data=entity_data,
+        user_id=user_data.get("id"),
+        user_email=user_data.get("email"),
+        user_name=user_data.get("name"),
+        ip_address=get_client_ip(request),
+        user_agent=request.headers.get("User-Agent"),
+        request_id=get_request_id(request),
+    )
+
+    # Redirect to list page for regular form submissions
+    return RedirectResponse(
+        url=f"/admin/{type_name}?message=Deleted+successfully",
+        status_code=303,
+    )
 
 
 # === Bulk Actions ===
