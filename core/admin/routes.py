@@ -1995,6 +1995,169 @@ async def dry_run_import(
 
 
 @router.post(
+    "/import/{job_id}/preview",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def preview_import(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Preview import by creating a small number of sample items."""
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+        job = await import_svc.get_job(job_id)
+
+        if not job:
+            return JSONResponse(
+                status_code=status.HTTP_404_NOT_FOUND,
+                content=ErrorResponse(
+                    error="Job not found",
+                    code="JOB_NOT_FOUND",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        result = await import_svc.preview_import(job_id, limit=3)
+
+        if not result or not result.get("success"):
+            return JSONResponse(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                content=ErrorResponse(
+                    error=result.get("error", "Preview failed") if result else "Preview failed",
+                    code="PREVIEW_FAILED",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        return {
+            "success": True,
+            "job_id": job_id,
+            "preview": result,
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/preview/confirm",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def confirm_preview(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Confirm preview items and finalize them."""
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+        result = await import_svc.confirm_preview(job_id)
+
+        if not result or not result.get("success"):
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error=result.get("error", "Confirm failed") if result else "Confirm failed",
+                    code="CONFIRM_FAILED",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        return {
+            "success": True,
+            "confirmed": result.get("confirmed", 0),
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
+    "/import/{job_id}/preview/discard",
+    responses={
+        404: {"model": ErrorResponse, "description": "Job not found"},
+        500: {"model": ErrorResponse, "description": "Server error"},
+    },
+)
+@limiter.limit("5/minute")
+async def discard_preview(
+    request: Request,
+    job_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Discard preview items and delete them."""
+    from ..services.wordpress_import import WordPressImportService
+
+    request_id = str(uuid.uuid4())[:8]
+
+    try:
+        import_svc = WordPressImportService(db)
+        result = await import_svc.discard_preview(job_id)
+
+        if not result or not result.get("success"):
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content=ErrorResponse(
+                    error=result.get("error", "Discard failed") if result else "Discard failed",
+                    code="DISCARD_FAILED",
+                    request_id=request_id,
+                ).model_dump(),
+            )
+
+        return {
+            "success": True,
+            "discarded": result.get("discarded", 0),
+            "request_id": request_id,
+        }
+
+    except Exception as e:
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content=ErrorResponse(
+                error=str(e),
+                code="INTERNAL_ERROR",
+                request_id=request_id,
+            ).model_dump(),
+        )
+
+
+@router.post(
     "/import/{job_id}/start",
     responses={
         404: {"model": ErrorResponse, "description": "Job not found"},

@@ -130,6 +130,9 @@
         <button class="btn btn-warning btn-lg" id="dryrun-btn" onclick="runDryRun()" disabled>
             Dry Run
         </button>
+        <button class="btn btn-secondary btn-lg" id="preview-btn" onclick="runPreview()" disabled>
+            Preview (3 items)
+        </button>
         <button class="btn btn-primary btn-lg" id="import-btn" onclick="startImport()" disabled>
             Start Import
         </button>
@@ -152,6 +155,20 @@
         </div>
         <div class="card-body" id="dryrun-content">
             <!-- Populated by JavaScript -->
+        </div>
+    </div>
+
+    <!-- Preview Results -->
+    <div class="card hidden" id="preview-card">
+        <div class="card-header">
+            <h2 class="card-title">Preview Import</h2>
+        </div>
+        <div class="card-body" id="preview-content">
+            <!-- Populated by JavaScript -->
+        </div>
+        <div class="card-footer" id="preview-actions" style="display: flex; gap: 1rem; justify-content: flex-end; padding: 1rem;">
+            <button class="btn btn-danger" onclick="discardPreview()">Discard</button>
+            <button class="btn btn-success" onclick="confirmPreview()">Confirm & Continue</button>
         </div>
     </div>
 
@@ -454,6 +471,50 @@
     padding: 0.25rem 0.5rem;
     text-align: left;
 }
+
+.preview-item {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.preview-item h4 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1rem;
+}
+
+.preview-item .meta {
+    font-size: 0.875rem;
+    color: var(--muted);
+    margin-bottom: 0.5rem;
+}
+
+.preview-item .content-preview {
+    font-size: 0.875rem;
+    color: var(--text);
+    line-height: 1.5;
+    max-height: 100px;
+    overflow: hidden;
+}
+
+.btn-success {
+    background-color: var(--success);
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #059669;
+}
+
+.btn-danger {
+    background-color: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #dc2626;
+}
 </style>
 
 <script>
@@ -462,6 +523,7 @@ let selectedFile = null;
 let currentJobId = null;
 let pollInterval = null;
 let dryRunCompleted = false;
+let previewCompleted = false;
 
 function selectSource(source) {
     currentSource = source;
@@ -645,6 +707,7 @@ async function runDryRun() {
         if (data.success) {
             showDryRunResults(data.dry_run_result);
             dryRunCompleted = true;
+            document.getElementById('preview-btn').disabled = false;
             document.getElementById('import-btn').disabled = false;
         } else {
             alert('Dry-run failed: ' + (data.error || 'Unknown error'));
@@ -730,6 +793,128 @@ function showDryRunResults(result) {
 
     content.innerHTML = html;
     card.classList.remove('hidden');
+}
+
+async function runPreview() {
+    if (!currentJobId) {
+        alert('Please analyze first');
+        return;
+    }
+
+    if (!dryRunCompleted) {
+        alert('Please run a dry-run first');
+        return;
+    }
+
+    document.getElementById('preview-btn').disabled = true;
+    document.getElementById('preview-btn').textContent = 'Previewing...';
+
+    try {
+        const response = await fetch(`/admin/import/${currentJobId}/preview`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            showPreviewResults(data.preview);
+        } else {
+            alert('Preview failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Preview error: ' + e.message);
+    } finally {
+        document.getElementById('preview-btn').textContent = 'Preview (3 items)';
+        document.getElementById('preview-btn').disabled = false;
+    }
+}
+
+function showPreviewResults(result) {
+    const card = document.getElementById('preview-card');
+    const content = document.getElementById('preview-content');
+
+    const previews = result.previews || [];
+
+    if (previews.length === 0) {
+        content.innerHTML = `<p style="color: var(--muted); text-align: center;">No items to preview (all items may already exist)</p>`;
+        document.getElementById('preview-actions').style.display = 'none';
+    } else {
+        let html = `<p style="margin-bottom: 1rem;">The following ${previews.length} item(s) were imported as drafts for preview:</p>`;
+
+        for (const item of previews) {
+            html += `
+                <div class="preview-item">
+                    <h4>${item.title}</h4>
+                    <div class="meta">
+                        Slug: ${item.slug} | Original Status: ${item.original_status}
+                    </div>
+                    <div class="content-preview">
+                        ${item.content_preview ? item.content_preview.substring(0, 200) + '...' : 'No content'}
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `<p style="margin-top: 1rem; font-size: 0.875rem; color: var(--muted);">
+            Click "Confirm & Continue" to keep these items and proceed with the full import,
+            or "Discard" to remove them and try different settings.
+        </p>`;
+
+        content.innerHTML = html;
+        document.getElementById('preview-actions').style.display = 'flex';
+    }
+
+    card.classList.remove('hidden');
+    previewCompleted = true;
+}
+
+async function confirmPreview() {
+    try {
+        const response = await fetch(`/admin/import/${currentJobId}/preview/confirm`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`${data.confirmed} preview item(s) confirmed. You can now proceed with the full import.`);
+            document.getElementById('preview-card').classList.add('hidden');
+        } else {
+            alert('Confirm failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Confirm error: ' + e.message);
+    }
+}
+
+async function discardPreview() {
+    if (!confirm('Are you sure you want to discard the preview items?')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/admin/import/${currentJobId}/preview/discard`, {
+            method: 'POST',
+            headers: {
+                'X-CSRF-Token': '{{ csrf_token }}'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            alert(`${data.discarded} preview item(s) discarded.`);
+            document.getElementById('preview-card').classList.add('hidden');
+            previewCompleted = false;
+        } else {
+            alert('Discard failed: ' + (data.error || 'Unknown error'));
+        }
+    } catch (e) {
+        alert('Discard error: ' + e.message);
+    }
 }
 
 function showAnalysis(analysis) {

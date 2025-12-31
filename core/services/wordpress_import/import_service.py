@@ -949,3 +949,174 @@ class WordPressImportService:
                     })
                 else:
                     summary["new"] += 1
+
+    async def preview_import(
+        self,
+        job_id: str,
+        limit: int = 3,
+    ) -> dict | None:
+        """
+        Import a small number of items for preview.
+
+        Imports up to `limit` posts/pages to let the user verify
+        the import works correctly before doing the full import.
+
+        Items are marked with is_preview=True for later confirmation or rollback.
+        """
+        job = await self.get_job(job_id)
+        if not job:
+            return None
+
+        try:
+            await self.update_job(
+                job_id,
+                status=ImportJobStatus.IMPORTING.value,
+                phase=ImportJobPhase.POSTS.value,
+                progress_message="Creating preview import...",
+            )
+
+            # Get WXR data from source
+            wxr_data = await self._fetch_source_data(job)
+            if not wxr_data:
+                raise ValueError("Failed to fetch source data")
+
+            # Get posts for preview (prioritize published posts)
+            all_posts = [p for p in wxr_data.posts if p.post_type == "post"]
+            published_posts = [p for p in all_posts if p.status == "publish"]
+            preview_posts = (published_posts or all_posts)[:limit]
+
+            imported = []
+            preview_ids = []
+
+            # Map status
+            status_map = {
+                "publish": "published",
+                "draft": "draft",
+                "pending": "pending",
+                "private": "private",
+                "future": "scheduled",
+                "trash": "archived",
+            }
+
+            for post in preview_posts:
+                try:
+                    existing = await self._find_by_wp_id("post", post.id)
+                    if existing:
+                        continue
+
+                    post_data = {
+                        "title": post.title,
+                        "slug": f"preview-{post.slug}",  # Prefix to avoid conflicts
+                        "content": post.content,
+                        "excerpt": post.excerpt,
+                        "status": "draft",  # Always draft for preview
+                        "wp_id": post.id,
+                        "wp_author_id": post.author_id,
+                        "is_preview": True,  # Mark as preview
+                        "created_at": post.created_at.isoformat(),
+                        "updated_at": post.modified_at.isoformat(),
+                    }
+
+                    entity = await self.entity_svc.create("post", post_data)
+                    entity_data = self.entity_svc.serialize(entity)
+                    preview_ids.append(entity_data["id"])
+                    imported.append({
+                        "id": entity_data["id"],
+                        "title": post.title,
+                        "slug": entity_data.get("slug"),
+                        "original_status": post.status,
+                        "wp_id": post.id,
+                        "content_preview": post.content[:500] if post.content else "",
+                    })
+
+                except Exception as e:
+                    logger.warning(f"Failed to preview import post {post.id}: {e}")
+
+            # Store preview IDs in job config for later confirmation/rollback
+            config = job.config or {}
+            config["preview_ids"] = preview_ids
+            await self.update_job(
+                job_id,
+                status=ImportJobStatus.PENDING.value,
+                phase=ImportJobPhase.INIT.value,
+                config=config,
+                progress_message="Preview complete",
+            )
+
+            return {
+                "success": True,
+                "preview_count": len(imported),
+                "previews": imported,
+                "preview_ids": preview_ids,
+            }
+
+        except Exception as e:
+            logger.exception(f"Preview failed for job {job_id}")
+            return {
+                "success": False,
+                "error": str(e),
+            }
+
+    async def confirm_preview(self, job_id: str) -> dict | None:
+        """Confirm preview items and update them to their original status."""
+        job = await self.get_job(job_id)
+        if not job:
+            return None
+
+        config = job.config or {}
+        preview_ids = config.get("preview_ids", [])
+
+        if not preview_ids:
+            return {"success": False, "error": "No preview items to confirm"}
+
+        confirmed = 0
+        for entity_id in preview_ids:
+            try:
+                entity = await self.entity_svc.get("post", entity_id)
+                if entity:
+                    entity_data = self.entity_svc.serialize(entity)
+                    # Remove preview prefix from slug
+                    slug = entity_data.get("slug", "")
+                    if slug.startswith("preview-"):
+                        new_slug = slug[8:]  # Remove "preview-" prefix
+                        await self.entity_svc.update("post", entity_id, {
+                            "slug": new_slug,
+                            "is_preview": False,
+                        })
+                    confirmed += 1
+            except Exception as e:
+                logger.warning(f"Failed to confirm preview {entity_id}: {e}")
+
+        # Clear preview IDs
+        config["preview_ids"] = []
+        config["preview_confirmed"] = True
+        await self.update_job(job_id, config=config)
+
+        return {"success": True, "confirmed": confirmed}
+
+    async def discard_preview(self, job_id: str) -> dict | None:
+        """Discard preview items by deleting them."""
+        job = await self.get_job(job_id)
+        if not job:
+            return None
+
+        config = job.config or {}
+        preview_ids = config.get("preview_ids", [])
+
+        if not preview_ids:
+            return {"success": False, "error": "No preview items to discard"}
+
+        discarded = 0
+        for entity_id in preview_ids:
+            try:
+                await self.entity_svc.delete("post", entity_id)
+                discarded += 1
+            except Exception as e:
+                logger.warning(f"Failed to discard preview {entity_id}: {e}")
+
+        # Clear preview IDs
+        config["preview_ids"] = []
+        config["preview_discarded"] = True
+        await self.update_job(job_id, config=config)
+
+        return {"success": True, "discarded": discarded}
