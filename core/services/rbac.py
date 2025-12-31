@@ -202,7 +202,7 @@ class RBACService:
                 return PermissionResult(allowed=False, reason="Entity not found")
 
             # Check if user owns the entity
-            created_by = entity.get("_created_by")
+            created_by = entity.created_by
             if created_by != user_id:
                 return PermissionResult(
                     allowed=False,

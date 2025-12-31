@@ -104,7 +104,9 @@ async def register(
             role=body.role,
         )
         entity_svc = EntityService(db)
-        return entity_svc.serialize(user)
+        data = entity_svc.serialize(user)
+        data.pop("password", None)  # Security: never return password hash
+        return data
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 

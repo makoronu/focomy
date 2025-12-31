@@ -664,7 +664,7 @@ async def _generate_atom_feed(
         )
 
     title = ct.label_plural if ct else "Posts"
-    updated = entities[0].updated_at.isoformat() if entities else ""
+    updated = entities[0].updated_at.isoformat() if entities else datetime.now(timezone.utc).isoformat()
 
     atom = f"""<?xml version="1.0" encoding="UTF-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">

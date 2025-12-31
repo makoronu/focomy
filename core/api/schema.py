@@ -63,6 +63,10 @@ async def get_all_schemas() -> dict[str, Any]:
 @router.get("/{type_name}")
 async def get_schema(type_name: str) -> dict[str, Any]:
     """Get a specific content type definition."""
+    # Handle /relations specially to avoid route order conflict
+    if type_name == "relations":
+        return await get_relations()
+
     ct = field_service.get_content_type(type_name)
     if not ct:
         raise HTTPException(status_code=404, detail=f"Content type '{type_name}' not found")

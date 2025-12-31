@@ -190,6 +190,8 @@ class SearchService:
             rows = result.fetchall()
         except Exception:
             # pg_trgm might not be available, fall back to LIKE
+            # Rollback aborted transaction before fallback
+            await self.db.rollback()
             return await self._fallback_search(query, types, searchable_fields, limit, offset)
 
         # Build search results
