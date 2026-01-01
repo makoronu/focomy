@@ -530,6 +530,319 @@ async def search(
     return HTMLResponse(content=html)
 
 
+# === Channel Routes ===
+
+
+@router.get("/channel/{channel_slug}", response_class=HTMLResponse)
+async def channel_list(
+    channel_slug: str,
+    request: Request,
+    page: int = 1,
+    db: AsyncSession = Depends(get_db),
+):
+    """Channel post list."""
+    entity_svc = EntityService(db)
+    from ..services.relation import RelationService
+
+    relation_svc = RelationService(db)
+
+    # Get channel by slug
+    channels = await entity_svc.find("channel", limit=1, filters={"slug": channel_slug})
+    if not channels:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel = channels[0]
+    channel_data = entity_svc.serialize(channel)
+
+    # Get all published posts and filter by channel relation
+    per_page = 10
+    offset = (page - 1) * per_page
+
+    all_posts = await entity_svc.find(
+        "post",
+        limit=1000,
+        order_by="-published_at",
+        filters={"status": "published"},
+    )
+
+    # Filter by channel relation
+    channel_posts = []
+    for post in all_posts:
+        related_channels = await relation_svc.get_related(post.id, "post_channel")
+        if any(c.id == channel.id for c in related_channels):
+            channel_posts.append(post)
+
+    total = len(channel_posts)
+    total_pages = (total + per_page - 1) // per_page if total > 0 else 1
+    paginated_posts = channel_posts[offset : offset + per_page]
+    entities = [entity_svc.serialize(p) for p in paginated_posts]
+
+    # Get SEO settings
+    site_url = str(request.base_url).rstrip("/")
+    seo_data = await get_seo_settings(db, site_url)
+
+    # Breadcrumbs
+    breadcrumb_data = generate_breadcrumbs(
+        [
+            {"name": channel_data.get("title", channel_slug), "url": f"/channel/{channel_slug}"},
+        ],
+        site_url,
+    )
+
+    context = {
+        "request": request,
+        "channel": channel_data,
+        "entities": entities,
+        "page": page,
+        "total_pages": total_pages,
+        "total": total,
+        "channel_slug": channel_slug,
+        **seo_data,
+        **breadcrumb_data,
+    }
+
+    html = await theme_service.render("channel.html", context)
+    return HTMLResponse(content=html)
+
+
+@router.get("/channel/{channel_slug}/feed.xml", response_class=Response)
+async def channel_feed(
+    channel_slug: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """RSS feed for channel."""
+    entity_svc = EntityService(db)
+    from ..services.relation import RelationService
+
+    relation_svc = RelationService(db)
+
+    # Get channel by slug
+    channels = await entity_svc.find("channel", limit=1, filters={"slug": channel_slug})
+    if not channels:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel = channels[0]
+    channel_data = entity_svc.serialize(channel)
+
+    # Get published posts for this channel
+    all_posts = await entity_svc.find(
+        "post",
+        limit=1000,
+        order_by="-published_at",
+        filters={"status": "published"},
+    )
+
+    channel_posts = []
+    for post in all_posts:
+        related_channels = await relation_svc.get_related(post.id, "post_channel")
+        if any(c.id == channel.id for c in related_channels):
+            channel_posts.append(post)
+
+    # Limit to 20 items
+    channel_posts = channel_posts[:20]
+
+    # Generate RSS
+    site_url = str(request.base_url).rstrip("/")
+    settings_svc = SettingsService(db)
+    site_settings = await settings_svc.get_by_category("site")
+    site_name = site_settings.get("name", "Focomy")
+
+    from feedgen.feed import FeedGenerator
+
+    fg = FeedGenerator()
+    fg.title(f"{channel_data.get('title', channel_slug)} - {site_name}")
+    fg.link(href=f"{site_url}/channel/{channel_slug}", rel="alternate")
+    fg.description(channel_data.get("description", ""))
+    fg.language("ja")
+
+    for post in channel_posts:
+        post_data = entity_svc.serialize(post)
+        fe = fg.add_entry()
+        fe.id(f"{site_url}/channel/{channel_slug}/{post_data.get('slug', post.id)}")
+        fe.title(post_data.get("title", "No title"))
+        fe.link(href=f"{site_url}/channel/{channel_slug}/{post_data.get('slug', post.id)}")
+        fe.description(post_data.get("excerpt", ""))
+        if post_data.get("published_at"):
+            try:
+                from datetime import datetime
+
+                pub_date = post_data["published_at"]
+                if isinstance(pub_date, str):
+                    pub_date = datetime.fromisoformat(pub_date.replace("Z", "+00:00"))
+                fe.pubDate(pub_date)
+            except Exception:
+                pass
+
+    return Response(content=fg.rss_str(pretty=True), media_type="application/rss+xml")
+
+
+@router.get("/channel/{channel_slug}/{post_slug}", response_class=HTMLResponse)
+async def channel_post_detail(
+    channel_slug: str,
+    post_slug: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Channel post detail page."""
+    entity_svc = EntityService(db)
+    from ..services.relation import RelationService
+
+    relation_svc = RelationService(db)
+
+    # Get channel by slug
+    channels = await entity_svc.find("channel", limit=1, filters={"slug": channel_slug})
+    if not channels:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel = channels[0]
+    channel_data = entity_svc.serialize(channel)
+
+    # Get post by slug
+    posts = await entity_svc.find(
+        "post",
+        limit=1,
+        filters={"slug": post_slug, "status": "published"},
+    )
+    if not posts:
+        raise HTTPException(status_code=404, detail="Post not found")
+    post = posts[0]
+
+    # Verify post belongs to this channel
+    related_channels = await relation_svc.get_related(post.id, "post_channel")
+    if not any(c.id == channel.id for c in related_channels):
+        raise HTTPException(status_code=404, detail="Post not found in this channel")
+
+    post_data = entity_svc.serialize(post)
+
+    # Get series info if any
+    series_data = None
+    series_posts = []
+    related_series = await relation_svc.get_related(post.id, "post_series")
+    if related_series:
+        series = related_series[0]
+        series_data = entity_svc.serialize(series)
+
+        # Get all posts in series
+        all_posts = await entity_svc.find(
+            "post",
+            limit=100,
+            order_by="series_order",
+            filters={"status": "published"},
+        )
+        for p in all_posts:
+            p_series = await relation_svc.get_related(p.id, "post_series")
+            if any(s.id == series.id for s in p_series):
+                series_posts.append(entity_svc.serialize(p))
+
+    # Get author
+    author_data = None
+    related_authors = await relation_svc.get_related(post.id, "post_author")
+    if related_authors:
+        author_data = entity_svc.serialize(related_authors[0])
+
+    # Get tags
+    tags = []
+    related_tags = await relation_svc.get_related(post.id, "post_tags")
+    for tag in related_tags:
+        tags.append(entity_svc.serialize(tag))
+
+    # SEO settings
+    site_url = str(request.base_url).rstrip("/")
+    seo_data = await get_seo_settings(db, site_url)
+
+    # Breadcrumbs
+    breadcrumb_data = generate_breadcrumbs(
+        [
+            {"name": channel_data.get("title", channel_slug), "url": f"/channel/{channel_slug}"},
+            {"name": post_data.get("title", "記事"), "url": f"/channel/{channel_slug}/{post_slug}"},
+        ],
+        site_url,
+    )
+
+    context = {
+        "request": request,
+        "entity": post_data,
+        "channel": channel_data,
+        "author": author_data,
+        "tags": tags,
+        "series": series_data,
+        "series_posts": series_posts,
+        "channel_slug": channel_slug,
+        **seo_data,
+        **breadcrumb_data,
+    }
+
+    html = await theme_service.render("post.html", context)
+    return HTMLResponse(content=html)
+
+
+@router.get("/series/{series_slug}", response_class=HTMLResponse)
+async def series_list(
+    series_slug: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Series post list."""
+    entity_svc = EntityService(db)
+    from ..services.relation import RelationService
+
+    relation_svc = RelationService(db)
+
+    # Get series by slug
+    series_list = await entity_svc.find("series", limit=1, filters={"slug": series_slug})
+    if not series_list:
+        raise HTTPException(status_code=404, detail="Series not found")
+    series = series_list[0]
+    series_data = entity_svc.serialize(series)
+
+    # Get all published posts in series, ordered by series_order
+    all_posts = await entity_svc.find(
+        "post",
+        limit=100,
+        order_by="series_order",
+        filters={"status": "published"},
+    )
+
+    series_posts = []
+    for post in all_posts:
+        related_series = await relation_svc.get_related(post.id, "post_series")
+        if any(s.id == series.id for s in related_series):
+            post_data = entity_svc.serialize(post)
+            # Get channel for URL
+            related_channels = await relation_svc.get_related(post.id, "post_channel")
+            if related_channels:
+                channel_data = entity_svc.serialize(related_channels[0])
+                post_data["channel_slug"] = channel_data.get("slug")
+            series_posts.append(post_data)
+
+    # Get channel info for series
+    channel_data = None
+    related_channels = await relation_svc.get_related(series.id, "series_channel")
+    if related_channels:
+        channel_data = entity_svc.serialize(related_channels[0])
+
+    # SEO settings
+    site_url = str(request.base_url).rstrip("/")
+    seo_data = await get_seo_settings(db, site_url)
+
+    # Breadcrumbs
+    breadcrumb_items = [{"name": "シリーズ", "url": "/series"}]
+    if channel_data:
+        breadcrumb_items.insert(0, {"name": channel_data.get("title"), "url": f"/channel/{channel_data.get('slug')}"})
+    breadcrumb_items.append({"name": series_data.get("title", series_slug), "url": f"/series/{series_slug}"})
+    breadcrumb_data = generate_breadcrumbs(breadcrumb_items, site_url)
+
+    context = {
+        "request": request,
+        "series": series_data,
+        "entities": series_posts,
+        "channel": channel_data,
+        **seo_data,
+        **breadcrumb_data,
+    }
+
+    html = await theme_service.render("series.html", context)
+    return HTMLResponse(content=html)
+
+
 # === RSS Feed ===
 
 

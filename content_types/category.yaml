@@ -2,7 +2,7 @@ name: category
 label: カテゴリ
 label_plural: カテゴリ一覧
 icon: folder
-admin_menu: true
+admin_menu: false  # ブログ設計変更に伴い非表示化
 hierarchical: true
 
 fields:

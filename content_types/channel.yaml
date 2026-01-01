@@ -1,0 +1,30 @@
+name: channel
+label: チャンネル
+label_plural: チャンネル一覧
+icon: folder
+admin_menu: true
+searchable: false
+
+fields:
+  - name: title
+    type: string
+    label: タイトル
+    required: true
+    indexed: true
+    max_length: 100
+
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: title
+
+  - name: description
+    type: text
+    label: 説明
+    max_length: 500
+
+  - name: sort_order
+    type: integer
+    label: 表示順
+    default: 0

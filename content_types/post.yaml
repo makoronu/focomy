@@ -2,7 +2,7 @@ name: post
 label: 投稿
 label_plural: 投稿一覧
 icon: document
-admin_menu: true
+admin_menu: false  # チャンネル別管理に変更
 searchable: true
 path_prefix: /post
 archive_enabled: true
@@ -58,6 +58,12 @@ fields:
     type: datetime
     label: 公開日時
 
+  - name: series_order
+    type: integer
+    label: シリーズ内順番
+    default: 0
+    description: シリーズ内での表示順序
+
   # SEO fields
   - name: seo_title
     type: string
@@ -111,5 +117,12 @@ relations:
     label: 著者
     required: true
 
-  - type: post_categories
-    label: カテゴリ
+  - type: post_channel
+    label: チャンネル
+    required: true
+
+  - type: post_series
+    label: シリーズ
+
+  - type: post_tags
+    label: タグ

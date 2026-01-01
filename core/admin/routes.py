@@ -122,6 +122,14 @@ async def get_context(
     comment_svc = CommentService(db)
     pending_comment_count = await comment_svc.get_pending_count()
 
+    # Get channels for sidebar
+    channels = []
+    try:
+        channels_raw = await entity_svc.find("channel", limit=50, order_by="sort_order")
+        channels = [entity_svc.serialize(c) for c in channels_raw]
+    except Exception:
+        pass  # Channel content type may not exist yet
+
     return {
         "request": request,
         "content_types": content_types,
@@ -130,6 +138,7 @@ async def get_context(
         "csrf_token": csrf_token,
         "pending_comment_count": pending_comment_count,
         "user_role": user_role,
+        "channels": channels,
     }
 
 
@@ -3176,6 +3185,398 @@ async def cancel_import(
                 request_id=request_id,
             ).model_dump(),
         )
+
+
+# === Channel Posts ===
+
+
+@router.get("/channel/{channel_slug}/posts", response_class=HTMLResponse)
+async def channel_posts(
+    request: Request,
+    channel_slug: str,
+    page: int = 1,
+    q: str = "",
+    status_filter: str = "",
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Channel post list."""
+    entity_svc = EntityService(db)
+    from ..services.relation import RelationService
+
+    relation_svc = RelationService(db)
+
+    # Get channel by slug
+    channels = await entity_svc.find("channel", limit=1, filters={"slug": channel_slug})
+    if not channels:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel = channels[0]
+    channel_data = entity_svc.serialize(channel)
+
+    # Get posts related to this channel
+    content_type = field_service.get_content_type("post")
+    if not content_type:
+        raise HTTPException(status_code=404, detail="Post content type not found")
+
+    per_page = 20
+    offset = (page - 1) * per_page
+
+    # Get all posts and filter by channel relation
+    filters = {}
+    if status_filter:
+        filters["status"] = status_filter
+
+    all_posts = await entity_svc.find(
+        "post",
+        limit=1000,
+        order_by="-created_at",
+        filters=filters,
+    )
+
+    # Filter by channel relation
+    channel_posts = []
+    for post in all_posts:
+        related_channels = await relation_svc.get_related(post.id, "post_channel")
+        if any(c.id == channel.id for c in related_channels):
+            channel_posts.append(post)
+
+    # Apply text search
+    if q:
+        q_lower = q.lower()
+        filtered = []
+        for post in channel_posts:
+            data = entity_svc.serialize(post)
+            if data.get("title") and q_lower in str(data["title"]).lower():
+                filtered.append(post)
+            elif data.get("body") and q_lower in str(data.get("body", "")).lower():
+                filtered.append(post)
+        channel_posts = filtered
+
+    # Pagination
+    total = len(channel_posts)
+    total_pages = (total + per_page - 1) // per_page
+    paginated_posts = channel_posts[offset : offset + per_page]
+
+    entities = [entity_svc.serialize(p) for p in paginated_posts]
+
+    context = await get_context(request, db, current_user, "post")
+    context.update(
+        {
+            "type_name": "post",
+            "content_type": content_type,
+            "entities": entities,
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
+            "q": q,
+            "status_filter": status_filter,
+            "channel": channel_data,
+            "channel_slug": channel_slug,
+            "is_channel_view": True,
+        }
+    )
+
+    return templates.TemplateResponse("admin/entity_list.html", context)
+
+
+@router.get("/channel/{channel_slug}/posts/new", response_class=HTMLResponse)
+async def channel_post_new(
+    request: Request,
+    channel_slug: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """New post form with channel pre-selected."""
+    entity_svc = EntityService(db)
+
+    # Get channel by slug
+    channels = await entity_svc.find("channel", limit=1, filters={"slug": channel_slug})
+    if not channels:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel = channels[0]
+    channel_data = entity_svc.serialize(channel)
+
+    content_type = field_service.get_content_type("post")
+    if not content_type:
+        raise HTTPException(status_code=404, detail="Post content type not found")
+
+    # Get relations for this content type
+    relations = await _get_relation_options("post", None, db)
+
+    # Pre-select the channel in relations
+    for rel in relations:
+        if rel["name"] == "post_channel":
+            for opt in rel["options"]:
+                opt["selected"] = opt["id"] == channel.id
+
+    context = await get_context(request, db, current_user, "post")
+    context.update(
+        {
+            "type_name": "post",
+            "content_type": content_type,
+            "entity": None,
+            "relations": relations,
+            "channel": channel_data,
+            "channel_slug": channel_slug,
+            "is_channel_view": True,
+        }
+    )
+
+    return templates.TemplateResponse("admin/entity_form.html", context)
+
+
+@router.post("/channel/{channel_slug}/posts", response_class=HTMLResponse)
+async def channel_post_create(
+    request: Request,
+    channel_slug: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Create post in channel."""
+    entity_svc = EntityService(db)
+
+    # Get channel by slug
+    channels = await entity_svc.find("channel", limit=1, filters={"slug": channel_slug})
+    if not channels:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel = channels[0]
+
+    content_type = field_service.get_content_type("post")
+    if not content_type:
+        raise HTTPException(status_code=404, detail="Post content type not found")
+
+    # RBAC permission check
+    await check_permission(db, current_user, "post", Permission.CREATE)
+
+    form_data = await request.form()
+
+    # Build entity data from form
+    import json as json_module
+
+    data = {}
+    for field in content_type.fields:
+        value = form_data.get(field.name)
+        if value is not None and value != "":
+            if field.type in ("number", "integer"):
+                data[field.name] = int(value)
+            elif field.type == "float":
+                data[field.name] = float(value)
+            elif field.type == "boolean":
+                data[field.name] = value == "true"
+            elif field.type in ("blocks", "json", "multiselect"):
+                try:
+                    data[field.name] = json_module.loads(value)
+                except (json_module.JSONDecodeError, TypeError):
+                    data[field.name] = value
+            else:
+                data[field.name] = value
+
+    try:
+        entity = await entity_svc.create("post", data, created_by=current_user.id)
+
+        # Save relations - ensure channel is linked
+        from ..services.relation import RelationService
+
+        relation_svc = RelationService(db)
+
+        for rel in content_type.relations:
+            if rel.type == "post_channel":
+                # Always link to channel
+                await relation_svc.sync(entity.id, rel.type, [channel.id])
+            else:
+                rel_ids = form_data.getlist(rel.type)
+                if rel_ids:
+                    await relation_svc.sync(entity.id, rel.type, rel_ids)
+
+        # Audit log
+        if hasattr(request.app.state, "settings") and request.app.state.settings.audit_enabled:
+            audit_svc = AuditService(db)
+            await audit_svc.log(
+                action="create",
+                entity_type="post",
+                entity_id=entity.id,
+                user_id=current_user.id,
+                after_data=data,
+                ip_address=get_client_ip(request),
+                request_id=get_request_id(request),
+            )
+
+        return RedirectResponse(
+            url=f"/admin/channel/{channel_slug}/posts?message=Created+successfully",
+            status_code=303,
+        )
+
+    except ValueError as e:
+        channel_data = entity_svc.serialize(channel)
+        relations = await _get_relation_options("post", None, db)
+        context = await get_context(request, db, current_user, "post")
+        context.update(
+            {
+                "type_name": "post",
+                "content_type": content_type,
+                "entity": data,
+                "relations": relations,
+                "error": str(e),
+                "channel": channel_data,
+                "channel_slug": channel_slug,
+                "is_channel_view": True,
+            }
+        )
+        return templates.TemplateResponse("admin/entity_form.html", context)
+
+
+@router.get("/channel/{channel_slug}/posts/{entity_id}/edit", response_class=HTMLResponse)
+async def channel_post_edit(
+    request: Request,
+    channel_slug: str,
+    entity_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Edit post in channel."""
+    entity_svc = EntityService(db)
+
+    # Get channel by slug
+    channels = await entity_svc.find("channel", limit=1, filters={"slug": channel_slug})
+    if not channels:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel = channels[0]
+    channel_data = entity_svc.serialize(channel)
+
+    # Get entity
+    entity = await entity_svc.get(entity_id)
+    if not entity or entity.type != "post":
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    content_type = field_service.get_content_type("post")
+    if not content_type:
+        raise HTTPException(status_code=404, detail="Post content type not found")
+
+    entity_data = entity_svc.serialize(entity)
+    relations = await _get_relation_options("post", entity_id, db)
+
+    context = await get_context(request, db, current_user, "post")
+    context.update(
+        {
+            "type_name": "post",
+            "content_type": content_type,
+            "entity": entity_data,
+            "relations": relations,
+            "channel": channel_data,
+            "channel_slug": channel_slug,
+            "is_channel_view": True,
+        }
+    )
+
+    return templates.TemplateResponse("admin/entity_form.html", context)
+
+
+@router.post("/channel/{channel_slug}/posts/{entity_id}", response_class=HTMLResponse)
+async def channel_post_update(
+    request: Request,
+    channel_slug: str,
+    entity_id: str,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Update post in channel."""
+    entity_svc = EntityService(db)
+
+    # Get channel by slug
+    channels = await entity_svc.find("channel", limit=1, filters={"slug": channel_slug})
+    if not channels:
+        raise HTTPException(status_code=404, detail="Channel not found")
+    channel = channels[0]
+
+    # Get entity
+    entity = await entity_svc.get(entity_id)
+    if not entity or entity.type != "post":
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    content_type = field_service.get_content_type("post")
+    if not content_type:
+        raise HTTPException(status_code=404, detail="Post content type not found")
+
+    # RBAC permission check
+    await check_permission(db, current_user, "post", Permission.UPDATE, entity_id)
+
+    form_data = await request.form()
+    before_data = entity_svc.serialize(entity)
+
+    # Build entity data from form
+    import json as json_module
+
+    data = {}
+    for field in content_type.fields:
+        value = form_data.get(field.name)
+        if value is not None and value != "":
+            if field.type in ("number", "integer"):
+                data[field.name] = int(value)
+            elif field.type == "float":
+                data[field.name] = float(value)
+            elif field.type == "boolean":
+                data[field.name] = value == "true"
+            elif field.type in ("blocks", "json", "multiselect"):
+                try:
+                    data[field.name] = json_module.loads(value)
+                except (json_module.JSONDecodeError, TypeError):
+                    data[field.name] = value
+            else:
+                data[field.name] = value
+        elif field.type == "boolean":
+            data[field.name] = False
+
+    try:
+        await entity_svc.update(entity_id, data, updated_by=current_user.id)
+
+        # Save relations - ensure channel is linked
+        from ..services.relation import RelationService
+
+        relation_svc = RelationService(db)
+
+        for rel in content_type.relations:
+            if rel.type == "post_channel":
+                await relation_svc.sync(entity_id, rel.type, [channel.id])
+            else:
+                rel_ids = form_data.getlist(rel.type)
+                await relation_svc.sync(entity_id, rel.type, rel_ids if rel_ids else [])
+
+        # Audit log
+        if hasattr(request.app.state, "settings") and request.app.state.settings.audit_enabled:
+            audit_svc = AuditService(db)
+            await audit_svc.log(
+                action="update",
+                entity_type="post",
+                entity_id=entity_id,
+                user_id=current_user.id,
+                before_data=before_data,
+                after_data=data,
+                ip_address=get_client_ip(request),
+                request_id=get_request_id(request),
+            )
+
+        return RedirectResponse(
+            url=f"/admin/channel/{channel_slug}/posts?message=Updated+successfully",
+            status_code=303,
+        )
+
+    except ValueError as e:
+        channel_data = entity_svc.serialize(channel)
+        relations = await _get_relation_options("post", entity_id, db)
+        context = await get_context(request, db, current_user, "post")
+        context.update(
+            {
+                "type_name": "post",
+                "content_type": content_type,
+                "entity": data,
+                "relations": relations,
+                "error": str(e),
+                "channel": channel_data,
+                "channel_slug": channel_slug,
+                "is_channel_view": True,
+            }
+        )
+        return templates.TemplateResponse("admin/entity_form.html", context)
 
 
 # === Entity List ===

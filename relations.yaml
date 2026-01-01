@@ -8,11 +8,25 @@ post_author:
   required: true
   label: 著者
 
-post_categories:
+post_channel:
   from: post
-  to: category
+  to: channel
+  type: many_to_one
+  required: true
+  label: チャンネル
+
+post_series:
+  from: post
+  to: series
+  type: many_to_one
+  required: false
+  label: シリーズ
+
+post_tags:
+  from: post
+  to: tag
   type: many_to_many
-  label: カテゴリ
+  label: タグ
 
 post_related:
   from: post
@@ -93,3 +107,11 @@ plugin_developer_user:
   type: many_to_one
   required: true
   label: ユーザーアカウント
+
+# Channel/Series relations
+series_channel:
+  from: series
+  to: channel
+  type: many_to_one
+  required: true
+  label: 所属チャンネル

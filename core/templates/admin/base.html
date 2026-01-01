@@ -508,18 +508,32 @@
                 </a>
 
                 <div class="nav-section">コンテンツ</div>
-                <a href="/admin/post" class="nav-item {% if current_page == 'post' %}active{% endif %}">
-                    投稿
-                </a>
                 <a href="/admin/page" class="nav-item {% if current_page == 'page' %}active{% endif %}">
                     固定ページ
-                </a>
-                <a href="/admin/category" class="nav-item {% if current_page == 'category' %}active{% endif %}">
-                    カテゴリ
                 </a>
                 <a href="/admin/tag" class="nav-item {% if current_page == 'tag' %}active{% endif %}">
                     タグ
                 </a>
+                <a href="/admin/series" class="nav-item {% if current_page == 'series' %}active{% endif %}">
+                    シリーズ
+                </a>
+
+                {% if channels %}
+                <div class="nav-section">チャンネル</div>
+                <a href="/admin/channel" class="nav-item {% if current_page == 'channel' %}active{% endif %}">
+                    チャンネル管理
+                </a>
+                {% for ch in channels %}
+                <a href="/admin/channel/{{ ch.slug }}/posts" class="nav-item nav-item-sub {% if channel_slug == ch.slug %}active{% endif %}">
+                    {{ ch.title }}
+                </a>
+                {% endfor %}
+                {% else %}
+                <div class="nav-section">チャンネル</div>
+                <a href="/admin/channel" class="nav-item {% if current_page == 'channel' %}active{% endif %}">
+                    チャンネル管理
+                </a>
+                {% endif %}
                 <a href="/admin/media" class="nav-item {% if current_page == 'media' %}active{% endif %}">
                     メディア
                 </a>
