@@ -26,6 +26,5 @@ fields:
         label: 投稿者
     default: author
   - name: password
-    type: string
-    label: パスワード（ハッシュ）
-    admin_hidden: true
+    type: password
+    label: パスワード

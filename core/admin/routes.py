@@ -3788,6 +3788,11 @@ async def entity_create(
                     data[field.name] = json_module.loads(value)
                 except (json_module.JSONDecodeError, TypeError):
                     data[field.name] = value
+            elif field.type == "password":
+                # Hash password before saving
+                import bcrypt
+                salt = bcrypt.gensalt()
+                data[field.name] = bcrypt.hashpw(value.encode(), salt).decode()
             elif field.type in ("media", "image"):
                 # Handle file upload for media/image type
                 if hasattr(value, 'file'):
@@ -3935,6 +3940,11 @@ async def entity_update(
                     data[field.name] = json_module.loads(value)
                 except (json_module.JSONDecodeError, TypeError):
                     data[field.name] = value
+            elif field.type == "password":
+                # Hash password before saving
+                import bcrypt
+                salt = bcrypt.gensalt()
+                data[field.name] = bcrypt.hashpw(value.encode(), salt).decode()
             elif field.type in ("media", "image"):
                 # Handle file upload for media/image type
                 if hasattr(value, 'file'):

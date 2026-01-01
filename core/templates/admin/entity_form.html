@@ -16,6 +16,7 @@
     <form method="POST" action="/admin/{{ type_name }}{% if entity %}/{{ entity.id }}{% endif %}" enctype="multipart/form-data">
         <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         {% for field in content_type.fields %}
+        {% if not field.admin_hidden %}
         <div class="form-group">
             <label class="form-label" for="{{ field.name }}">
                 {{ field.label or field.name }}
@@ -192,6 +193,7 @@
             <p class="form-hint">{{ field.hint }}</p>
             {% endif %}
         </div>
+        {% endif %}
         {% endfor %}
 
         {% if relations %}
