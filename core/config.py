@@ -129,7 +129,7 @@ class FeaturesConfig(BaseModel):
     # Phase 4: Auxiliary features
     menu: bool = False
     widget: bool = False
-    revision: bool = False
+    revision: bool = True
     preview: bool = False
     workflow: bool = False
     edit_lock: bool = False
