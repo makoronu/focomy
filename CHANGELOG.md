@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.45] - 2026-01-02
+
+### Changed
+- 編集画面フィールド整理 (#092)
+  - OGフィールド削除（og_title, og_description, og_image）
+  - 抜粋フィールド非表示化（admin_hidden: true）
+
 ## [0.1.44] - 2026-01-01
 
 ### Added

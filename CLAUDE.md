@@ -106,6 +106,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.19 | 2025-12-31 | [PyPI](https://pypi.org/project/focomy/0.1.19/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
 | v0.1.20 | 2026-01-01 | [PyPI](https://pypi.org/project/focomy/0.1.20/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
 | v0.1.36 | 2026-01-01 | [PyPI](https://pypi.org/project/focomy/0.1.36/) / [GitHub](https://github.com/makoronu/focomy) - **チャンネル/シリーズ/タグ アーキテクチャ** |
+| v0.1.45 | 2026-01-02 | [PyPI](https://pypi.org/project/focomy/0.1.45/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **編集画面フィールド整理** |
 
 ---
 
