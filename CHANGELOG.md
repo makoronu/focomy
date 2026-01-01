@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.26] - 2026-01-01
+
+### Changed
+- Feature Flags: media機能をデフォルト有効化（Phase 2開始）
+
 ## [0.1.25] - 2026-01-01
 
 ### Fixed

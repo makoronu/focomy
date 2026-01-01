@@ -121,7 +121,7 @@ class FeaturesConfig(BaseModel):
     core: bool = True
 
     # Phase 2: Media
-    media: bool = False
+    media: bool = True
 
     # Phase 3: ACF Alternative
     acf_alternative: bool = False
