@@ -31,6 +31,7 @@ fields:
     label: 抜粋
     max_length: 200
     auto_generate: body
+    admin_hidden: true
 
   - name: featured_image
     type: media
@@ -86,24 +87,6 @@ fields:
     type: url
     label: canonical URL
     description: 正規URLを上書き
-
-  - name: og_title
-    type: string
-    label: OGタイトル
-    description: SNSシェア時のタイトル（空の場合はSEOタイトル）
-    max_length: 60
-
-  - name: og_description
-    type: text
-    label: OG説明文
-    description: SNSシェア時の説明文（空の場合はSEO説明文）
-    max_length: 160
-
-  - name: og_image
-    type: media
-    label: OG画像
-    description: SNSシェア時の画像（空の場合はアイキャッチ）
-    accept: image/*
 
 relations:
   - type: post_author
