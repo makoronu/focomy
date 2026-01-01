@@ -1,6 +1,8 @@
 name: tag
-label: Tag
+label: タグ
+label_plural: タグ一覧
 icon: tag
+admin_menu: true
 list_display:
   - name
   - slug

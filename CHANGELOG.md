@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.34] - 2026-01-01
+
+### Fixed
+- scaffold: tag.yamlにadmin_menu: true追加（サイドバー表示修正）
+
 ## [0.1.33] - 2026-01-01
 
 ### Added
