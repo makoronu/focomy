@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.47] - 2026-01-02
+
+### Fixed
+- パスワード更新が機能しない問題修正
+  - user_authテーブルへの直接更新に変更
+  - ユーザー作成時のUserAuthレコード作成対応
+
 ## [0.1.46] - 2026-01-02
 
 ### Fixed

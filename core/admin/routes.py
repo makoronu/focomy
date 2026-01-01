@@ -3789,10 +3789,8 @@ async def entity_create(
                 except (json_module.JSONDecodeError, TypeError):
                     data[field.name] = value
             elif field.type == "password":
-                # Hash password before saving
-                import bcrypt
-                salt = bcrypt.gensalt()
-                data[field.name] = bcrypt.hashpw(value.encode(), salt).decode()
+                # Password is handled separately for user_auth table
+                data["_password_plain"] = value
             elif field.type in ("media", "image"):
                 # Handle file upload for media/image type
                 if hasattr(value, 'file'):
@@ -3807,10 +3805,26 @@ async def entity_create(
             else:
                 data[field.name] = value
 
+    # Handle password for user type
+    password_plain = data.pop("_password_plain", None)
+
     try:
         user_data = entity_svc.serialize(current_user)
         entity = await entity_svc.create(type_name, data, user_id=user_data.get("id"))
         entity_data = entity_svc.serialize(entity)
+
+        # Create UserAuth record for new user
+        if type_name == "user" and password_plain:
+            from ..models.auth import UserAuth
+            import bcrypt
+            salt = bcrypt.gensalt()
+            user_auth = UserAuth(
+                entity_id=entity.id,
+                email=data.get("email", ""),
+                password_hash=bcrypt.hashpw(password_plain.encode(), salt).decode(),
+            )
+            db.add(user_auth)
+            await db.commit()
 
         # Handle relations
         from ..services.relation import RelationService
@@ -3941,10 +3955,8 @@ async def entity_update(
                 except (json_module.JSONDecodeError, TypeError):
                     data[field.name] = value
             elif field.type == "password":
-                # Hash password before saving
-                import bcrypt
-                salt = bcrypt.gensalt()
-                data[field.name] = bcrypt.hashpw(value.encode(), salt).decode()
+                # Password is handled separately for user_auth table
+                data["_password_plain"] = value
             elif field.type in ("media", "image"):
                 # Handle file upload for media/image type
                 if hasattr(value, 'file'):
@@ -3961,6 +3973,19 @@ async def entity_update(
         elif field.type == "boolean":
             # Unchecked checkbox
             data[field.name] = False
+
+    # Handle password update for user type
+    password_plain = data.pop("_password_plain", None)
+    if type_name == "user" and password_plain:
+        from ..models.auth import UserAuth
+        from sqlalchemy import select
+        import bcrypt
+        query = select(UserAuth).where(UserAuth.user_id == entity_id)
+        result = await db.execute(query)
+        user_auth = result.scalar_one_or_none()
+        if user_auth:
+            salt = bcrypt.gensalt()
+            user_auth.password_hash = bcrypt.hashpw(password_plain.encode(), salt).decode()
 
     # Save before state for audit
     before_data = entity_svc.serialize(entity_raw)
