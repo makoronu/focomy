@@ -11,18 +11,19 @@ import signal
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import datetime, timezone
-from enum import Enum
 from pathlib import Path
 
 
-class DeploymentState(Enum):
-    """Deployment states."""
+class DeploymentState:
+    """Deployment states (string constants)."""
 
     RUNNING = "running"
     DEPLOYING = "deploying"
     DRAINING = "draining"
     STOPPED = "stopped"
     FAILED = "failed"
+
+    ALL = [RUNNING, DEPLOYING, DRAINING, STOPPED, FAILED]
 
 
 @dataclass
@@ -41,7 +42,7 @@ class DeploymentInfo:
 
     version: str
     deployed_at: datetime
-    state: DeploymentState
+    state: str  # Use DeploymentState constants
     previous_version: str | None
 
 

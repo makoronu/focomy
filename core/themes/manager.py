@@ -6,7 +6,6 @@ import shutil
 import zipfile
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from enum import Enum
 from pathlib import Path
 
 import yaml
@@ -16,14 +15,16 @@ from ..utils import utcnow
 logger = logging.getLogger(__name__)
 
 
-class ThemeState(Enum):
-    """Theme lifecycle states."""
+class ThemeState:
+    """Theme lifecycle states (string constants)."""
 
     AVAILABLE = "available"
     ACTIVE = "active"
     INACTIVE = "inactive"
     UPDATING = "updating"
     ERROR = "error"
+
+    ALL = [AVAILABLE, ACTIVE, INACTIVE, UPDATING, ERROR]
 
 
 @dataclass

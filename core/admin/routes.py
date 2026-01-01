@@ -25,10 +25,42 @@ from ..schemas.import_schema import (
 )
 from ..utils import require_feature
 
+import json as json_module
+from typing import Any
+
 router = APIRouter(prefix="/admin", tags=["admin"])
 
 # Templates - パッケージ内の絶対パスを使用（PyPIパッケージ対応）
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
+
+
+def parse_form_fields(fields: list, form_data: dict) -> dict[str, Any]:
+    """Parse form data based on field definitions.
+
+    Converts form values to appropriate Python types based on field.type.
+    Handles: number, integer, float, boolean, blocks, json, multiselect.
+    """
+    data = {}
+    for field in fields:
+        value = form_data.get(field.name)
+        if value is not None and value != "":
+            if field.type in ("number", "integer"):
+                data[field.name] = int(value)
+            elif field.type == "float":
+                data[field.name] = float(value)
+            elif field.type == "boolean":
+                data[field.name] = value == "true"
+            elif field.type in ("blocks", "json", "multiselect"):
+                try:
+                    data[field.name] = json_module.loads(value)
+                except (json_module.JSONDecodeError, TypeError):
+                    data[field.name] = value
+            else:
+                data[field.name] = value
+        elif field.type == "boolean":
+            # Unchecked checkbox
+            data[field.name] = False
+    return data
 
 
 async def get_current_admin(
@@ -2307,8 +2339,8 @@ async def resume_import(
         from ..models import ImportJobStatus
 
         if job.status not in (
-            ImportJobStatus.FAILED.value,
-            ImportJobStatus.CANCELLED.value,
+            ImportJobStatus.FAILED,
+            ImportJobStatus.CANCELLED,
         ):
             return JSONResponse(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -3392,25 +3424,7 @@ async def channel_post_create(
     form_data = await request.form()
 
     # Build entity data from form
-    import json as json_module
-
-    data = {}
-    for field in content_type.fields:
-        value = form_data.get(field.name)
-        if value is not None and value != "":
-            if field.type in ("number", "integer"):
-                data[field.name] = int(value)
-            elif field.type == "float":
-                data[field.name] = float(value)
-            elif field.type == "boolean":
-                data[field.name] = value == "true"
-            elif field.type in ("blocks", "json", "multiselect"):
-                try:
-                    data[field.name] = json_module.loads(value)
-                except (json_module.JSONDecodeError, TypeError):
-                    data[field.name] = value
-            else:
-                data[field.name] = value
+    data = parse_form_fields(content_type.fields, form_data)
 
     try:
         entity = await entity_svc.create("post", data, created_by=current_user.id)
@@ -3545,27 +3559,7 @@ async def channel_post_update(
     before_data = entity_svc.serialize(entity)
 
     # Build entity data from form
-    import json as json_module
-
-    data = {}
-    for field in content_type.fields:
-        value = form_data.get(field.name)
-        if value is not None and value != "":
-            if field.type in ("number", "integer"):
-                data[field.name] = int(value)
-            elif field.type == "float":
-                data[field.name] = float(value)
-            elif field.type == "boolean":
-                data[field.name] = value == "true"
-            elif field.type in ("blocks", "json", "multiselect"):
-                try:
-                    data[field.name] = json_module.loads(value)
-                except (json_module.JSONDecodeError, TypeError):
-                    data[field.name] = value
-            else:
-                data[field.name] = value
-        elif field.type == "boolean":
-            data[field.name] = False
+    data = parse_form_fields(content_type.fields, form_data)
 
     try:
         await entity_svc.update(entity_id, data, updated_by=current_user.id)

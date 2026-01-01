@@ -4,7 +4,6 @@ import json
 import logging
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
-from enum import Enum
 from pathlib import Path
 from typing import Any
 
@@ -13,8 +12,8 @@ from ..utils import utcnow
 logger = logging.getLogger(__name__)
 
 
-class SettingType(Enum):
-    """Types of customizer settings."""
+class SettingType:
+    """Types of customizer settings (string constants)."""
 
     TEXT = "text"
     TEXTAREA = "textarea"
@@ -30,6 +29,8 @@ class SettingType(Enum):
     SPACING = "spacing"
     TYPOGRAPHY = "typography"
 
+    ALL = [TEXT, TEXTAREA, NUMBER, COLOR, IMAGE, FONT, SELECT, CHECKBOX, RADIO, RANGE, CODE, SPACING, TYPOGRAPHY]
+
 
 @dataclass
 class CustomizerSetting:
@@ -37,7 +38,7 @@ class CustomizerSetting:
 
     id: str
     label: str
-    type: SettingType
+    type: str
     default: Any = None
     description: str = ""
     section: str = ""

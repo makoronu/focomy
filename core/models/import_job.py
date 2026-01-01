@@ -2,7 +2,6 @@
 
 import uuid
 from datetime import datetime
-from enum import Enum
 
 from sqlalchemy import DateTime, Integer, String, Text, JSON
 from sqlalchemy.orm import Mapped, mapped_column
@@ -15,8 +14,8 @@ def generate_uuid() -> str:
     return str(uuid.uuid4())
 
 
-class ImportJobStatus(str, Enum):
-    """Import job status."""
+class ImportJobStatus:
+    """Import job status (string constants)."""
 
     PENDING = "pending"
     ANALYZING = "analyzing"
@@ -25,9 +24,11 @@ class ImportJobStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
 
+    ALL = [PENDING, ANALYZING, IMPORTING, COMPLETED, FAILED, CANCELLED]
 
-class ImportJobPhase(str, Enum):
-    """Import job phase."""
+
+class ImportJobPhase:
+    """Import job phase (string constants)."""
 
     INIT = "init"
     CONNECT = "connect"
@@ -41,6 +42,8 @@ class ImportJobPhase(str, Enum):
     MENUS = "menus"
     REDIRECTS = "redirects"
     COMPLETE = "complete"
+
+    ALL = [INIT, CONNECT, ANALYZE, AUTHORS, CATEGORIES, TAGS, MEDIA, POSTS, PAGES, MENUS, REDIRECTS, COMPLETE]
 
 
 class ImportJob(Base):
@@ -77,13 +80,13 @@ class ImportJob(Base):
     status: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        default=ImportJobStatus.PENDING.value,
+        default=ImportJobStatus.PENDING,
         index=True,
     )
     phase: Mapped[str] = mapped_column(
         String(20),
         nullable=False,
-        default=ImportJobPhase.INIT.value,
+        default=ImportJobPhase.INIT,
     )
     progress_current: Mapped[int] = mapped_column(
         Integer,

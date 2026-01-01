@@ -4,13 +4,12 @@ from abc import ABC, abstractmethod
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
 from pathlib import Path
 from typing import Any
 
 
-class PluginState(Enum):
-    """Plugin lifecycle states."""
+class PluginState:
+    """Plugin lifecycle states (string constants)."""
 
     UNKNOWN = "unknown"
     DISCOVERED = "discovered"
@@ -19,6 +18,8 @@ class PluginState(Enum):
     DEACTIVATED = "deactivated"
     ERROR = "error"
     INCOMPATIBLE = "incompatible"
+
+    ALL = [UNKNOWN, DISCOVERED, LOADED, ACTIVATED, DEACTIVATED, ERROR, INCOMPATIBLE]
 
 
 @dataclass

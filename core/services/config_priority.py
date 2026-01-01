@@ -9,20 +9,21 @@ Defines clear priority order:
 
 import os
 from dataclasses import dataclass
-from enum import IntEnum
 from pathlib import Path
 from typing import Any
 
 import yaml
 
 
-class ConfigSource(IntEnum):
-    """Configuration sources by priority (higher = more important)."""
+class ConfigSource:
+    """Configuration sources by priority (higher = more important) - integer constants."""
 
     DEFAULT = 0
     YAML = 10
     DATABASE = 20
     ENVIRONMENT = 30
+
+    ALL = [DEFAULT, YAML, DATABASE, ENVIRONMENT]
 
 
 @dataclass
@@ -31,7 +32,7 @@ class ConfigValue:
 
     key: str
     value: Any
-    source: ConfigSource
+    source: int  # Use ConfigSource constants
     source_detail: str  # e.g., "ENV:DATABASE_URL" or "config.yaml"
 
 
@@ -42,7 +43,7 @@ class ConfigConflict:
     key: str
     values: list[ConfigValue]
     resolved_value: Any
-    resolved_source: ConfigSource
+    resolved_source: int  # Use ConfigSource constants
 
 
 class ConfigPriorityService:

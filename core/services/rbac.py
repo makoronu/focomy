@@ -4,15 +4,14 @@ Provides permission checking based on user roles and content types.
 """
 
 from dataclasses import dataclass
-from enum import Enum
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from .entity import EntityService
 
 
-class Permission(str, Enum):
-    """Available permissions."""
+class Permission:
+    """Available permissions (string constants)."""
 
     CREATE = "create"
     READ = "read"
@@ -24,18 +23,22 @@ class Permission(str, Enum):
     MANAGE_MEDIA = "manage_media"
     VIEW_AUDIT = "view_audit"
 
+    ALL = [CREATE, READ, UPDATE, DELETE, PUBLISH, MANAGE_USERS, MANAGE_SETTINGS, MANAGE_MEDIA, VIEW_AUDIT]
 
-class Role(str, Enum):
-    """User roles with increasing privileges."""
+
+class Role:
+    """User roles with increasing privileges (string constants)."""
 
     AUTHOR = "author"
     EDITOR = "editor"
     ADMIN = "admin"
 
+    ALL = [AUTHOR, EDITOR, ADMIN]
+
 
 # Permission matrix: role -> content_type -> permissions
 # "*" means all content types
-PERMISSION_MATRIX: dict[str, dict[str, set[Permission]]] = {
+PERMISSION_MATRIX: dict[str, dict[str, set[str]]] = {
     Role.AUTHOR: {
         # Authors can create/edit their own content
         "*": {Permission.CREATE, Permission.READ},
@@ -101,7 +104,7 @@ PERMISSION_MATRIX: dict[str, dict[str, set[Permission]]] = {
 }
 
 # Owner-only permissions: actions that require ownership
-OWNER_ONLY_ACTIONS: dict[str, set[Permission]] = {
+OWNER_ONLY_ACTIONS: dict[str, set[str]] = {
     Role.AUTHOR: {Permission.UPDATE, Permission.DELETE},
 }
 
@@ -126,13 +129,12 @@ class RBACService:
         self,
         role: str,
         content_type: str,
-    ) -> set[Permission]:
+    ) -> set[str]:
         """Get all permissions for a role on a content type."""
-        role_enum = Role(role) if role in [r.value for r in Role] else None
-        if not role_enum:
+        if role not in Role.ALL:
             return set()
 
-        role_matrix = PERMISSION_MATRIX.get(role_enum, {})
+        role_matrix = PERMISSION_MATRIX.get(role, {})
 
         # Check specific content type first
         if content_type in role_matrix:
@@ -145,7 +147,7 @@ class RBACService:
         self,
         role: str,
         content_type: str,
-        permission: Permission,
+        permission: str,
     ) -> bool:
         """Check if role has permission for content type."""
         permissions = self.get_role_permissions(role, content_type)
@@ -155,19 +157,18 @@ class RBACService:
         self,
         role: str,
         content_type: str,
-        permission: Permission,
+        permission: str,
     ) -> PermissionResult:
         """Check permission and return detailed result."""
         if not self.has_permission(role, content_type, permission):
             return PermissionResult(
                 allowed=False,
-                reason=f"Role '{role}' does not have '{permission.value}' permission for '{content_type}'",
+                reason=f"Role '{role}' does not have '{permission}' permission for '{content_type}'",
             )
 
         # Check if this requires ownership
-        role_enum = Role(role) if role in [r.value for r in Role] else None
         requires_ownership = (
-            role_enum in OWNER_ONLY_ACTIONS and permission in OWNER_ONLY_ACTIONS[role_enum]
+            role in OWNER_ONLY_ACTIONS and permission in OWNER_ONLY_ACTIONS[role]
         )
 
         return PermissionResult(
@@ -179,7 +180,7 @@ class RBACService:
         self,
         user_id: str,
         content_type: str,
-        permission: Permission,
+        permission: str,
         entity_id: str | None = None,
     ) -> PermissionResult:
         """Check if user can perform action, considering ownership."""
@@ -189,7 +190,7 @@ class RBACService:
             return PermissionResult(allowed=False, reason="User not found")
 
         user_data = self.entity_svc.serialize(user)
-        role = user_data.get("role", Role.AUTHOR.value)
+        role = user_data.get("role", Role.AUTHOR)
 
         result = self.check_permission(role, content_type, permission)
 
@@ -214,14 +215,13 @@ class RBACService:
 
     def get_allowed_types(self, role: str) -> list[str]:
         """Get list of content types the role can access."""
-        role_enum = Role(role) if role in [r.value for r in Role] else None
-        if not role_enum:
+        if role not in Role.ALL:
             return []
 
-        role_matrix = PERMISSION_MATRIX.get(role_enum, {})
+        role_matrix = PERMISSION_MATRIX.get(role, {})
 
         # If admin, return all (indicated by only having "*")
-        if role_enum == Role.ADMIN:
+        if role == Role.ADMIN:
             return ["*"]
 
         # Return types that have any permissions
@@ -234,7 +234,7 @@ class RBACService:
 
     def get_menu_items(self, role: str, all_types: list[str]) -> list[str]:
         """Get content types that should appear in admin menu for role."""
-        if role == Role.ADMIN.value:
+        if role == Role.ADMIN:
             return all_types
 
         visible = []

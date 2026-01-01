@@ -43,7 +43,7 @@ class RollbackService:
         if not job:
             return {"can_rollback": False, "reason": "Job not found"}
 
-        if job.status != ImportJobStatus.COMPLETED.value:
+        if job.status != ImportJobStatus.COMPLETED:
             return {
                 "can_rollback": False,
                 "reason": f"Job status is {job.status}, not completed",

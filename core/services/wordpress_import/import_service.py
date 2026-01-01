@@ -61,8 +61,8 @@ class WordPressImportService:
             source_file=source_file,
             config=config or {},
             created_by=user_id,
-            status=ImportJobStatus.PENDING.value,
-            phase=ImportJobPhase.INIT.value,
+            status=ImportJobStatus.PENDING,
+            phase=ImportJobPhase.INIT,
         )
         self.db.add(job)
         await self.db.commit()
@@ -79,9 +79,9 @@ class WordPressImportService:
         result = await self.db.execute(
             select(ImportJob).where(
                 ImportJob.status.in_([
-                    ImportJobStatus.PENDING.value,
-                    ImportJobStatus.ANALYZING.value,
-                    ImportJobStatus.IMPORTING.value,
+                    ImportJobStatus.PENDING,
+                    ImportJobStatus.ANALYZING,
+                    ImportJobStatus.IMPORTING,
                 ])
             )
         )
@@ -134,8 +134,8 @@ class WordPressImportService:
         try:
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.ANALYZING.value,
-                phase=ImportJobPhase.ANALYZE.value,
+                status=ImportJobStatus.ANALYZING,
+                phase=ImportJobPhase.ANALYZE,
                 progress_message="Analyzing WordPress data...",
             )
 
@@ -192,8 +192,8 @@ class WordPressImportService:
 
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.PENDING.value,
-                phase=ImportJobPhase.INIT.value,
+                status=ImportJobStatus.PENDING,
+                phase=ImportJobPhase.INIT,
                 analysis=analysis_dict,
                 progress_message="Analysis complete",
             )
@@ -204,7 +204,7 @@ class WordPressImportService:
             logger.exception(f"Analysis failed for job {job_id}")
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.FAILED.value,
+                status=ImportJobStatus.FAILED,
                 errors=[str(e)],
                 progress_message=f"Analysis failed: {str(e)}",
             )
@@ -234,14 +234,14 @@ class WordPressImportService:
                 last_phase = checkpoint.get("last_phase")
                 await self.update_job(
                     job_id,
-                    status=ImportJobStatus.IMPORTING.value,
+                    status=ImportJobStatus.IMPORTING,
                     progress_message=f"Resuming import from {last_phase or 'beginning'}...",
                 )
             else:
                 await self.update_job(
                     job_id,
-                    status=ImportJobStatus.IMPORTING.value,
-                    phase=ImportJobPhase.CONNECT.value,
+                    status=ImportJobStatus.IMPORTING,
+                    phase=ImportJobPhase.CONNECT,
                     started_at=utcnow(),
                     progress_message="Starting import...",
                 )
@@ -257,7 +257,7 @@ class WordPressImportService:
             # Authors
             await self.update_job(
                 job_id,
-                phase=ImportJobPhase.AUTHORS.value,
+                phase=ImportJobPhase.AUTHORS,
                 progress_current=0,
                 progress_total=len(wxr_data.authors),
                 progress_message="Importing authors...",
@@ -268,7 +268,7 @@ class WordPressImportService:
             # Categories
             await self.update_job(
                 job_id,
-                phase=ImportJobPhase.CATEGORIES.value,
+                phase=ImportJobPhase.CATEGORIES,
                 progress_current=0,
                 progress_total=len(wxr_data.categories),
                 progress_message="Importing categories...",
@@ -279,7 +279,7 @@ class WordPressImportService:
             # Tags
             await self.update_job(
                 job_id,
-                phase=ImportJobPhase.TAGS.value,
+                phase=ImportJobPhase.TAGS,
                 progress_current=0,
                 progress_total=len(wxr_data.tags),
                 progress_message="Importing tags...",
@@ -293,7 +293,7 @@ class WordPressImportService:
                 media_posts = [p for p in wxr_data.posts if p.post_type == "attachment"]
                 await self.update_job(
                     job_id,
-                    phase=ImportJobPhase.MEDIA.value,
+                    phase=ImportJobPhase.MEDIA,
                     progress_current=0,
                     progress_total=len(media_posts),
                     progress_message="Importing media...",
@@ -305,7 +305,7 @@ class WordPressImportService:
             posts = [p for p in wxr_data.posts if p.post_type == "post"]
             await self.update_job(
                 job_id,
-                phase=ImportJobPhase.POSTS.value,
+                phase=ImportJobPhase.POSTS,
                 progress_current=0,
                 progress_total=len(posts),
                 progress_message="Importing posts...",
@@ -317,7 +317,7 @@ class WordPressImportService:
             pages = [p for p in wxr_data.posts if p.post_type == "page"]
             await self.update_job(
                 job_id,
-                phase=ImportJobPhase.PAGES.value,
+                phase=ImportJobPhase.PAGES,
                 progress_current=0,
                 progress_total=len(pages),
                 progress_message="Importing pages...",
@@ -329,7 +329,7 @@ class WordPressImportService:
             if config.get("import_menus", True) and wxr_data.menus:
                 await self.update_job(
                     job_id,
-                    phase=ImportJobPhase.MENUS.value,
+                    phase=ImportJobPhase.MENUS,
                     progress_current=0,
                     progress_total=len(wxr_data.menus),
                     progress_message="Importing menus...",
@@ -341,8 +341,8 @@ class WordPressImportService:
             result.success = True
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.COMPLETED.value,
-                phase=ImportJobPhase.COMPLETE.value,
+                status=ImportJobStatus.COMPLETED,
+                phase=ImportJobPhase.COMPLETE,
                 completed_at=utcnow(),
                 posts_imported=result.posts_imported,
                 pages_imported=result.pages_imported,
@@ -360,7 +360,7 @@ class WordPressImportService:
             logger.exception(f"Import failed for job {job_id}")
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.FAILED.value,
+                status=ImportJobStatus.FAILED,
                 completed_at=utcnow(),
                 errors=[str(e)],
                 progress_message=f"Import failed: {str(e)}",
@@ -899,8 +899,8 @@ class WordPressImportService:
             return None
 
         if job.status not in (
-            ImportJobStatus.FAILED.value,
-            ImportJobStatus.CANCELLED.value,
+            ImportJobStatus.FAILED,
+            ImportJobStatus.CANCELLED,
         ):
             return {
                 "success": False,
@@ -921,12 +921,12 @@ class WordPressImportService:
         if not job:
             return False
 
-        if job.status in (ImportJobStatus.COMPLETED.value, ImportJobStatus.FAILED.value):
+        if job.status in (ImportJobStatus.COMPLETED, ImportJobStatus.FAILED):
             return False
 
         await self.update_job(
             job_id,
-            status=ImportJobStatus.CANCELLED.value,
+            status=ImportJobStatus.CANCELLED,
             completed_at=utcnow(),
             progress_message="Import cancelled by user",
         )
@@ -950,8 +950,8 @@ class WordPressImportService:
         try:
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.ANALYZING.value,
-                phase=ImportJobPhase.ANALYZE.value,
+                status=ImportJobStatus.ANALYZING,
+                phase=ImportJobPhase.ANALYZE,
                 progress_message="Running dry-run simulation...",
             )
 
@@ -999,8 +999,8 @@ class WordPressImportService:
             # Store dry-run result in job
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.PENDING.value,
-                phase=ImportJobPhase.INIT.value,
+                status=ImportJobStatus.PENDING,
+                phase=ImportJobPhase.INIT,
                 dry_run_result=dry_run_result,
                 progress_message="Dry-run complete",
             )
@@ -1208,8 +1208,8 @@ class WordPressImportService:
         try:
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.IMPORTING.value,
-                phase=ImportJobPhase.POSTS.value,
+                status=ImportJobStatus.IMPORTING,
+                phase=ImportJobPhase.POSTS,
                 progress_message="Creating preview import...",
             )
 
@@ -1265,8 +1265,8 @@ class WordPressImportService:
             config["preview_ids"] = preview_ids
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.PENDING.value,
-                phase=ImportJobPhase.INIT.value,
+                status=ImportJobStatus.PENDING,
+                phase=ImportJobPhase.INIT,
                 config=config,
                 progress_message="Preview complete",
             )
@@ -1362,8 +1362,8 @@ class WordPressImportService:
         try:
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.ANALYZING.value,
-                phase=ImportJobPhase.ANALYZE.value,
+                status=ImportJobStatus.ANALYZING,
+                phase=ImportJobPhase.ANALYZE,
                 progress_message="Detecting differences...",
             )
 
@@ -1383,8 +1383,8 @@ class WordPressImportService:
             config["diff_result"] = diff_result.to_dict()
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.PENDING.value,
-                phase=ImportJobPhase.INIT.value,
+                status=ImportJobStatus.PENDING,
+                phase=ImportJobPhase.INIT,
                 config=config,
                 progress_message="Diff detection complete",
             )
@@ -1433,8 +1433,8 @@ class WordPressImportService:
         try:
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.IMPORTING.value,
-                phase=ImportJobPhase.POSTS.value,
+                status=ImportJobStatus.IMPORTING,
+                phase=ImportJobPhase.POSTS,
                 started_at=utcnow(),
                 progress_message="Starting diff import...",
             )
@@ -1465,8 +1465,8 @@ class WordPressImportService:
 
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.COMPLETED.value,
-                phase=ImportJobPhase.COMPLETE.value,
+                status=ImportJobStatus.COMPLETED,
+                phase=ImportJobPhase.COMPLETE,
                 completed_at=utcnow(),
                 progress_message="Diff import complete",
             )
@@ -1480,7 +1480,7 @@ class WordPressImportService:
             logger.exception(f"Diff import failed for job {job_id}")
             await self.update_job(
                 job_id,
-                status=ImportJobStatus.FAILED.value,
+                status=ImportJobStatus.FAILED,
                 completed_at=utcnow(),
                 errors=[str(e)],
                 progress_message=f"Diff import failed: {str(e)}",
