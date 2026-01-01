@@ -153,7 +153,7 @@
                     {% if field.required %}required{% endif %}
                 >
 
-            {% elif field.type == 'image' or field.type == 'file' %}
+            {% elif field.type == 'image' or field.type == 'file' or field.type == 'media' %}
                 {% if entity and entity.get(field.name) %}
                 <div class="mb-2">
                     <img src="{{ entity.get(field.name) }}" alt="" style="max-width: 200px; max-height: 150px;">
