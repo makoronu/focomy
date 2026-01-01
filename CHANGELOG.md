@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.39] - 2026-01-01
+
+### Changed
+- Protocol: ENUM削除（10クラス）→ 文字列定数クラスに変換
+  - Permission, Role, ImportJobStatus, ImportJobPhase, PluginState
+  - ThemeState, SettingType, ConfigSource, DeploymentState
+- Protocol: 重複コード共通化（parse_form_fields関数追加）
+
 ## [0.1.38] - 2026-01-01
 
 ### Added
