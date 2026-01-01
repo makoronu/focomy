@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..config import get_settings
 from ..database import get_db
 from ..models import Entity
 from ..rate_limit import limiter
@@ -132,8 +133,10 @@ async def get_context(
     try:
         channels_raw = await entity_svc.find("channel", limit=50, order_by="sort_order")
         channels = [entity_svc.serialize(c) for c in channels_raw]
-    except Exception:
-        pass  # Channel content type may not exist yet
+    except Exception as e:
+        # Channel content type may not exist yet - log but continue
+        import logging
+        logging.debug(f"Channel content type not available: {e}")
 
     return {
         "request": request,
@@ -554,7 +557,7 @@ async def media_list(
 
     media_svc = MediaService(db)
 
-    per_page = 20
+    per_page = get_settings().admin.per_page
     offset = (page - 1) * per_page
 
     # Prepare filters
@@ -1578,7 +1581,7 @@ async def comments_list(
 
     comment_svc = CommentService(db)
 
-    per_page = 20
+    per_page = get_settings().admin.per_page
 
     # Get comments with status filter
     comments = await comment_svc.get_recent_comments(
@@ -1832,6 +1835,7 @@ async def import_page(
     current_user: Entity = Depends(require_admin),
 ):
     """WordPress import page."""
+    require_feature("wordpress_import")
     context = await get_context(request, db, current_user, "import")
     return templates.TemplateResponse("admin/import.html", context)
 
@@ -1851,6 +1855,7 @@ async def test_wp_connection(
     current_user: Entity = Depends(require_admin),
 ):
     """Test WordPress REST API connection."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import import RESTClientConfig, WordPressRESTClient
 
     request_id = str(uuid.uuid4())[:8]
@@ -1898,6 +1903,7 @@ async def analyze_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Analyze WordPress data for import."""
+    require_feature("wordpress_import")
     import tempfile
     from pathlib import Path
 
@@ -2046,6 +2052,7 @@ async def dry_run_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Run a dry-run simulation of the import without making changes."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import import WordPressImportService
 
     request_id = str(uuid.uuid4())[:8]
@@ -2110,6 +2117,7 @@ async def preview_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Preview import by creating a small number of sample items."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import import WordPressImportService
 
     request_id = str(uuid.uuid4())[:8]
@@ -2274,6 +2282,7 @@ async def resume_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Resume a failed or cancelled import job from checkpoint."""
+    require_feature("wordpress_import")
     import asyncio
 
     from ..services.wordpress_import import WordPressImportService
@@ -2423,6 +2432,7 @@ async def import_diff(
     current_user: Entity = Depends(require_admin),
 ):
     """Import only the differences (new and updated items)."""
+    require_feature("wordpress_import")
     import asyncio
 
     from ..services.wordpress_import import WordPressImportService
@@ -2540,6 +2550,7 @@ async def rollback_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Rollback an import job - deletes all imported entities."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import.rollback import RollbackService
 
     request_id = str(uuid.uuid4())[:8]
@@ -2604,6 +2615,7 @@ async def fix_import_links(
     current_user: Entity = Depends(require_admin),
 ):
     """Fix internal links in imported content."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import import WordPressImportService
 
     request_id = str(uuid.uuid4())[:8]
@@ -2657,6 +2669,7 @@ async def dry_run_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Run dry run simulation for import job."""
+    require_feature("wordpress_import")
     from pathlib import Path
 
     from ..services.wordpress_import import WordPressImportService
@@ -2742,6 +2755,7 @@ async def preview_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Run preview import with a few items."""
+    require_feature("wordpress_import")
     from pathlib import Path
 
     from ..services.wordpress_import import WordPressImportService
@@ -2966,6 +2980,7 @@ async def verify_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Verify import integrity and generate report."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import.verification import VerificationService
 
     request_id = str(uuid.uuid4())[:8]
@@ -3022,6 +3037,7 @@ async def generate_import_redirects(
     current_user: Entity = Depends(require_admin),
 ):
     """Generate URL redirects for imported content."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import import WordPressImportService
 
     request_id = str(uuid.uuid4())[:8]
@@ -3075,6 +3091,7 @@ async def start_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Start WordPress import job."""
+    require_feature("wordpress_import")
     import asyncio
 
     from ..services.wordpress_import import WordPressImportService
@@ -3135,6 +3152,7 @@ async def get_import_status(
     current_user: Entity = Depends(require_admin),
 ):
     """Get import job status for polling."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import import WordPressImportService
 
     request_id = str(uuid.uuid4())[:8]
@@ -3180,6 +3198,7 @@ async def cancel_import(
     current_user: Entity = Depends(require_admin),
 ):
     """Cancel import job."""
+    require_feature("wordpress_import")
     from ..services.wordpress_import import WordPressImportService
 
     request_id = str(uuid.uuid4())[:8]
@@ -3232,7 +3251,7 @@ async def channel_posts(
     if not content_type:
         raise HTTPException(status_code=404, detail="Post content type not found")
 
-    per_page = 20
+    per_page = get_settings().admin.per_page
     offset = (page - 1) * per_page
 
     # Get all posts and filter by channel relation
@@ -3283,9 +3302,9 @@ async def channel_posts(
     context.update(
         {
             "type_name": "post",
-            "content_type": content_type,
+            "content_type": content_type.model_dump(),
             "entities": entities,
-            "list_fields": list_fields,
+            "list_fields": [f.model_dump() for f in list_fields],
             "page": page,
             "total_pages": total_pages,
             "total": total,
@@ -3335,7 +3354,7 @@ async def channel_post_new(
     context.update(
         {
             "type_name": "post",
-            "content_type": content_type,
+            "content_type": content_type.model_dump(),
             "entity": None,
             "relations": relations,
             "channel": channel_data,
@@ -3435,7 +3454,7 @@ async def channel_post_create(
         context.update(
             {
                 "type_name": "post",
-                "content_type": content_type,
+                "content_type": content_type.model_dump(),
                 "entity": data,
                 "relations": relations,
                 "error": str(e),
@@ -3481,7 +3500,7 @@ async def channel_post_edit(
     context.update(
         {
             "type_name": "post",
-            "content_type": content_type,
+            "content_type": content_type.model_dump(),
             "entity": entity_data,
             "relations": relations,
             "channel": channel_data,
@@ -3589,7 +3608,7 @@ async def channel_post_update(
         context.update(
             {
                 "type_name": "post",
-                "content_type": content_type,
+                "content_type": content_type.model_dump(),
                 "entity": data,
                 "relations": relations,
                 "error": str(e),
@@ -3620,7 +3639,7 @@ async def entity_list(
         raise HTTPException(status_code=404, detail="Content type not found")
 
     entity_svc = EntityService(db)
-    per_page = 20
+    per_page = get_settings().admin.per_page
     offset = (page - 1) * per_page
 
     # Build filters
@@ -3671,9 +3690,9 @@ async def entity_list(
     context.update(
         {
             "type_name": type_name,
-            "content_type": content_type,
+            "content_type": content_type.model_dump(),
             "entities": entities,
-            "list_fields": list_fields,
+            "list_fields": [f.model_dump() for f in list_fields],
             "page": page,
             "total_pages": total_pages,
             "message": request.query_params.get("message"),
@@ -3707,7 +3726,7 @@ async def entity_new(
     context.update(
         {
             "type_name": type_name,
-            "content_type": content_type,
+            "content_type": content_type.model_dump(),
             "entity": None,
             "relations": relations,
         }
@@ -3811,7 +3830,7 @@ async def entity_create(
         context.update(
             {
                 "type_name": type_name,
-                "content_type": content_type,
+                "content_type": content_type.model_dump(),
                 "entity": data,
                 "relations": relations,
                 "error": str(e),
@@ -3848,7 +3867,7 @@ async def entity_edit(
     context.update(
         {
             "type_name": type_name,
-            "content_type": content_type,
+            "content_type": content_type.model_dump(),
             "entity": entity,
             "relations": relations,
             "message": request.query_params.get("message"),
@@ -3969,7 +3988,7 @@ async def entity_update(
         context.update(
             {
                 "type_name": type_name,
-                "content_type": content_type,
+                "content_type": content_type.model_dump(),
                 "entity": entity,
                 "relations": relations,
                 "error": str(e),

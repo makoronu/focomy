@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.38] - 2026-01-01
+
+### Added
+- WordPress Import: 全ルートにrequire_feature("wordpress_import")追加
+
+### Changed
+- Feature Flags: wordpress_import機能をデフォルト有効化
+
+### Fixed
+- Admin: 全エンティティページでcontent_type/list_fieldsをmodel_dump()変換（Jinja2互換性修正）
+- Protocol: 例外握りつぶし修正（channel取得時のログ出力追加）
+- Protocol: per_pageハードコード修正（config.yamlから取得）
+
 ## [0.1.37] - 2026-01-01
 
 ### Changed

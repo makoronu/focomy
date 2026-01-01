@@ -85,4 +85,4 @@ features:
   deployment: false
 
   # Phase 7: WordPress Import
-  wordpress_import: false
+  wordpress_import: true
