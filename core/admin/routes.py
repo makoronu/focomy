@@ -103,15 +103,20 @@ async def get_context(
         user_data = entity_svc.serialize(current_user)
         user_role = user_data.get("role", "author")
 
-    # Filter content types based on role
+    # Filter content types based on role and convert to dict for template
     rbac_svc = RBACService(db)
     if user_role == "admin":
-        content_types = all_content_types
+        # Convert Pydantic models to dicts for Jinja2 compatibility
+        content_types = {name: ct.model_dump() for name, ct in all_content_types.items()}
     else:
         visible_type_names = rbac_svc.get_menu_items(
-            user_role, [ct.name for ct in all_content_types]
+            user_role, [ct.name for ct in all_content_types.values()]
         )
-        content_types = [ct for ct in all_content_types if ct.name in visible_type_names]
+        content_types = {
+            name: ct.model_dump()
+            for name, ct in all_content_types.items()
+            if ct.name in visible_type_names
+        }
 
     # Get CSRF token from request state (set by middleware)
     csrf_token = getattr(request.state, "csrf_token", "")
