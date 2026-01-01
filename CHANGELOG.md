@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.46] - 2026-01-02
+
+### Fixed
+- ユーザー管理UI修正
+  - admin_hiddenフィールドが編集画面に表示される問題修正
+  - パスワードフィールドがハッシュ表示される問題修正
+  - パスワード保存時の自動ハッシュ化対応
+
 ## [0.1.45] - 2026-01-02
 
 ### Changed
