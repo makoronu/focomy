@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.29] - 2026-01-01
+
+### Changed
+- Feature Flags: search機能をデフォルト有効化（Phase 4開始）
+
 ## [0.1.28] - 2026-01-01
 
 ### Fixed

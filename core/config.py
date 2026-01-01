@@ -134,7 +134,7 @@ class FeaturesConfig(BaseModel):
     workflow: bool = False
     edit_lock: bool = False
     bulk: bool = False
-    search: bool = False
+    search: bool = True
     redirect: bool = False
     routing: bool = False
     audit: bool = False
