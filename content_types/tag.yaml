@@ -1,9 +1,8 @@
-name: category
-label: カテゴリ
-label_plural: カテゴリ一覧
-icon: folder
+name: tag
+label: タグ
+label_plural: タグ一覧
+icon: tag
 admin_menu: true
-hierarchical: true
 
 fields:
   - name: name
@@ -24,22 +23,7 @@ fields:
     label: 説明
     max_length: 500
 
-  - name: sort_order
-    type: integer
-    label: 表示順
-    default: 0
-
   - name: wp_id
     type: integer
     label: WordPress ID
     indexed: true
-
-  - name: wp_parent_id
-    type: integer
-    label: WordPress Parent ID
-
-relations:
-  - type: category_parent
-    label: 親カテゴリ
-    target: category
-    self_referential: true

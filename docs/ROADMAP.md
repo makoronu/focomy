@@ -22,6 +22,36 @@
 
 ## 詳細
 
+### 091 機能安定化（Phase 1-7）→ WordPress Import準備
+
+#### 概要
+WordPress Importを安全に有効化するための段階的機能有効化計画
+
+#### 発見した問題（2026-01-01）
+| 問題 | 現状 | 必要 |
+|------|------|------|
+| tag.yaml | content_typesに**存在しない** | scaffold版をコピー（wp_id付き） |
+| category.yaml | wp_id, wp_parent_id**なし** | WordPress ID追跡用フィールド追加 |
+| bulk routes.py | require_feature()チェック**なし** | フラグチェック追加必要 |
+| wordpress_import routes.py | require_feature()チェック**なし** | フラグチェック追加必要 |
+
+#### ステップ（順次実行）
+
+| Step | Version | 機能 | 作業内容 |
+|------|---------|------|----------|
+| 0 | v0.1.33 | content_types修正 | tag.yaml追加、category.yamlにwp_id/wp_parent_id追加 |
+| 1 | v0.1.34 | menu | フラグ有効化 + 動作確認 |
+| 2 | v0.1.35 | bulk | routes.pyにrequire_feature追加 + フラグ有効化 + 動作確認 |
+| 3 | v0.1.36 | link_validator | フラグ有効化 + 動作確認 |
+| 4 | v0.1.37 | wordpress_import | routes.pyにrequire_feature追加 + フラグ有効化 + 動作確認 |
+
+#### 完了条件
+- [ ] 全ステップのローカルテスト完了
+- [ ] 各バージョンで本番デプロイ + 動作確認
+- [ ] WordPress Importで記事・カテゴリ・タグが正しくインポートされる
+
+---
+
 ### 089 pip installable 対応
 
 #### 概要

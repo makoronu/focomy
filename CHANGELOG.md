@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.33] - 2026-01-01
+
+### Added
+- content_types: tag.yaml追加（WordPress Import用wp_id付き）
+- content_types: category.yamlにwp_id, wp_parent_idフィールド追加
+
 ## [0.1.32] - 2026-01-01
 
 ### Fixed
