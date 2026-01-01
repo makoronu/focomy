@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.31] - 2026-01-01
+
+### Changed
+- Feature Flags: audit機能をデフォルト有効化（Phase 4完了）
+
 ## [0.1.30] - 2026-01-01
 
 ### Changed

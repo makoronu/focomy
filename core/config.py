@@ -137,7 +137,7 @@ class FeaturesConfig(BaseModel):
     search: bool = True
     redirect: bool = False
     routing: bool = False
-    audit: bool = False
+    audit: bool = True
     sentry: bool = False
     link_validator: bool = False
 
