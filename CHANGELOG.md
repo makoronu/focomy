@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.37] - 2026-01-01
+
+### Changed
+- Feature Flags: link_validator機能をデフォルト有効化
+
+## [0.1.36] - 2026-01-01
+
+### Added
+- ブログチャンネル・シリーズアーキテクチャ
+- content_types: blog.yaml（チャンネル管理）
+- content_types: series.yaml（シリーズ管理）
+- チャンネル別投稿管理（/admin/channel/{slug}/posts）
+- チャンネル別RSSフィード（/blog/{channel}/feed.xml）
+
+### Fixed
+- Dashboard: admin_menuフィルター適用、ContentType→dict変換 (#44)
+- Series: チャンネル選択UIのリレーション設定 (#45)
+- RSS: feedgenからraw XML生成に変更 (#46)
+- Channel Posts: list_fields/search_query追加 (#47)
+
+### Changed
+- post.yaml: admin_menu: false（チャンネル別管理に移行）
+
 ## [0.1.35] - 2026-01-01
 
 ### Fixed

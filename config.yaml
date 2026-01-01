@@ -63,7 +63,7 @@ features:
   routing: false
   audit: false
   sentry: false
-  link_validator: false
+  link_validator: true
 
   # Phase 5: Extended features
   comment: false
