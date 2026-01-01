@@ -467,10 +467,14 @@ body {
     margin-bottom: var(--space-md);
 }
 
+.post-content h1 { font-size: 2.25rem; margin-top: var(--space-2xl); margin-bottom: var(--space-lg); }
 .post-content h2, .post-content h3 {
     margin-top: var(--space-xl);
     margin-bottom: var(--space-md);
 }
+.post-content h4 { font-size: 1.25rem; }
+.post-content h5 { font-size: 1.125rem; color: var(--color-text-muted); }
+.post-content h6 { font-size: 1rem; color: var(--color-text-muted); }
 
 .post-content img {
     max-width: 100%;
@@ -587,6 +591,29 @@ body {
 .video--youtube iframe, .video--vimeo iframe { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border-radius: 0.5rem; }
 .video--native video { width: 100%; border-radius: 0.5rem; }
 .video__caption { text-align: center; font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.5rem; }
+
+/* Spacer */
+.spacer { display: block; }
+
+/* Group */
+.group { border-radius: 0.5rem; margin: 1.5rem 0; }
+
+/* Cover */
+.cover { position: relative; display: flex; align-items: center; justify-content: center; background-size: cover; background-position: center; border-radius: 0.5rem; margin: 1.5rem 0; overflow: hidden; }
+.cover__overlay { position: absolute; inset: 0; }
+.cover__content { position: relative; z-index: 1; text-align: center; padding: 2rem; max-width: 80%; }
+.cover__title { font-size: 2rem; font-weight: 700; color: white; margin: 0; }
+.cover__subtitle { font-size: 1.25rem; color: rgba(255,255,255,0.9); margin-top: 0.5rem; }
+
+/* Gallery */
+.gallery { margin: 1.5rem 0; }
+.gallery__grid { display: grid; gap: 0.5rem; }
+.gallery--2 .gallery__grid { grid-template-columns: repeat(2, 1fr); }
+.gallery--3 .gallery__grid { grid-template-columns: repeat(3, 1fr); }
+.gallery--4 .gallery__grid { grid-template-columns: repeat(4, 1fr); }
+.gallery__item { aspect-ratio: 1; overflow: hidden; border-radius: 0.5rem; }
+.gallery__item img { width: 100%; height: 100%; object-fit: cover; }
+.gallery__caption { text-align: center; font-size: 0.875rem; color: var(--color-text-muted); margin-top: 0.5rem; }
 """
         )
 
@@ -925,6 +952,73 @@ body {
                         <iframe src="{safe_url}" width="100%" height="400" frameborder="0" allowfullscreen></iframe>
                         {caption_html}
                     </figure>"""
+                    )
+
+            elif block_type == "spacer":
+                height = int(block_data.get("height", 50))
+                height = max(10, min(500, height))
+                html_parts.append(
+                    f'<div class="spacer" style="height: {height}px;" aria-hidden="true"></div>'
+                )
+
+            elif block_type == "group":
+                content = self._sanitize_html(block_data.get("content", ""))
+                bg_color = escape(block_data.get("backgroundColor", "#f8fafc"))
+                padding = int(block_data.get("padding", 16))
+                padding = max(0, min(100, padding))
+                # Validate hex color
+                import re
+                if not re.match(r'^#[0-9a-fA-F]{6}$', bg_color):
+                    bg_color = "#f8fafc"
+                html_parts.append(
+                    f'<div class="group" style="background: {bg_color}; padding: {padding}px;">{content}</div>'
+                )
+
+            elif block_type == "cover":
+                image_url = self._sanitize_url(block_data.get("imageUrl", ""))
+                title = self._sanitize_html(block_data.get("title", ""))
+                subtitle = self._sanitize_html(block_data.get("subtitle", ""))
+                overlay_color = escape(block_data.get("overlayColor", "#000000"))
+                overlay_opacity = float(block_data.get("overlayOpacity", 0.5))
+                height = int(block_data.get("height", 400))
+                height = max(100, min(1000, height))
+                overlay_opacity = max(0, min(1, overlay_opacity))
+                # Validate hex color
+                import re
+                if not re.match(r'^#[0-9a-fA-F]{6}$', overlay_color):
+                    overlay_color = "#000000"
+                r = int(overlay_color[1:3], 16)
+                g = int(overlay_color[3:5], 16)
+                b = int(overlay_color[5:7], 16)
+                overlay_rgba = f"rgba({r}, {g}, {b}, {overlay_opacity})"
+                bg_style = f'background-image: url({image_url});' if image_url else 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);'
+                subtitle_html = f'<p class="cover__subtitle">{subtitle}</p>' if subtitle else ""
+                html_parts.append(
+                    f'<section class="cover" style="min-height: {height}px; {bg_style}">'
+                    f'<div class="cover__overlay" style="background: {overlay_rgba};"></div>'
+                    f'<div class="cover__content">'
+                    f'<h2 class="cover__title">{title}</h2>'
+                    f'{subtitle_html}'
+                    f'</div>'
+                    f'</section>'
+                )
+
+            elif block_type == "gallery":
+                images = block_data.get("images", [])
+                columns = int(block_data.get("columns", 3))
+                columns = max(2, min(4, columns))
+                caption = escape(block_data.get("caption", ""))
+                caption_html = f'<figcaption class="gallery__caption">{caption}</figcaption>' if caption else ""
+                images_html = []
+                for img in images:
+                    url = self._sanitize_url(img.get("url", ""))
+                    if url:
+                        images_html.append(f'<div class="gallery__item"><img src="{url}" alt="" loading="lazy"></div>')
+                if images_html:
+                    html_parts.append(
+                        f'<figure class="gallery gallery--{columns}">'
+                        f'<div class="gallery__grid">{"".join(images_html)}</div>'
+                        f'{caption_html}</figure>'
                     )
 
         return "\n".join(html_parts)
