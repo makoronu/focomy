@@ -170,13 +170,24 @@ class FieldService:
         if self._loaded:
             return
 
-        # Load content types
+        # Scaffold directory (fallback for pip installed packages)
+        scaffold_dir = Path(__file__).parent.parent / "scaffold"
+
+        # Load content types from user's directory first
         content_types_dir = settings.base_dir / "content_types"
         if content_types_dir.exists():
             for path in content_types_dir.glob("*.yaml"):
                 ct = self._load_content_type(path)
                 if ct:
                     self._content_types[ct.name] = ct
+        else:
+            # Fallback to scaffold content types (pip install without focomy init)
+            scaffold_ct_dir = scaffold_dir / "content_types"
+            if scaffold_ct_dir.exists():
+                for path in scaffold_ct_dir.glob("*.yaml"):
+                    ct = self._load_content_type(path)
+                    if ct:
+                        self._content_types[ct.name] = ct
 
         # Load plugin content types
         plugins_dir = settings.base_dir / "plugins"
@@ -190,10 +201,14 @@ class FieldService:
                             if ct:
                                 self._content_types[ct.name] = ct
 
-        # Load relations
+        # Load relations from user's directory first, fallback to scaffold
         relations_path = settings.base_dir / "relations.yaml"
         if relations_path.exists():
             self._load_relations(relations_path)
+        else:
+            scaffold_relations = scaffold_dir / "relations.yaml"
+            if scaffold_relations.exists():
+                self._load_relations(scaffold_relations)
 
         # Load plugin relations
         if plugins_dir.exists():

@@ -10,7 +10,7 @@ from importlib import resources
 from pathlib import Path
 
 # Version
-__version__ = "0.1.23"
+__version__ = "0.1.24"
 
 GITHUB_REPO = "focomy/focomy"
 PYPI_PACKAGE = "focomy"

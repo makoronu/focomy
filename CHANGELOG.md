@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.24] - 2026-01-01
+
+### Fixed
+- FieldService: scaffoldへのフォールバック追加（pip install時にcontent_typesが見つからない問題） (#38)
+
 ## [0.1.23] - 2026-01-01
 
 ### Fixed
