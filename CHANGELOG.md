@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.44] - 2026-01-01
+
+### Added
+- WordPress Import: Analyzeボタンにローディングスピナー追加 (#52)
+
 ## [0.1.43] - 2026-01-01
 
 ### Fixed

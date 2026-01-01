@@ -124,7 +124,7 @@
 
     <!-- Action Buttons -->
     <div class="action-buttons">
-        <button class="btn btn-secondary btn-lg" onclick="startAnalysis()">
+        <button class="btn btn-secondary btn-lg" id="analyze-btn" onclick="startAnalysis()">
             Analyze
         </button>
         <button class="btn btn-warning btn-lg" id="dryrun-btn" onclick="runDryRun()" disabled>
@@ -548,6 +548,22 @@
 .btn-danger:hover {
     background-color: #dc2626;
 }
+
+.spinner {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.8s linear infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
 </style>
 
 <script>
@@ -668,6 +684,7 @@ async function testConnection() {
 
 async function startAnalysis() {
     const formData = new FormData();
+    const analyzeBtn = document.getElementById('analyze-btn');
 
     if (currentSource === 'file') {
         if (!selectedFile) {
@@ -697,6 +714,10 @@ async function startAnalysis() {
     formData.append('import_comments', document.getElementById('opt-comments').checked);
     formData.append('import_menus', document.getElementById('opt-menus').checked);
 
+    // Show loading state
+    analyzeBtn.disabled = true;
+    analyzeBtn.innerHTML = '<span class="spinner"></span> Analyzing...';
+
     try {
         const response = await fetch('/admin/import/analyze', {
             method: 'POST',
@@ -718,6 +739,9 @@ async function startAnalysis() {
         }
     } catch (e) {
         alert('Analysis error: ' + e.message);
+    } finally {
+        analyzeBtn.disabled = false;
+        analyzeBtn.innerHTML = 'Analyze';
     }
 }
 
