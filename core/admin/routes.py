@@ -2116,10 +2116,32 @@ async def dry_run_import(
                 ).model_dump(),
             )
 
+        # Convert to JS-expected format
+        summary = result.get("summary", {})
+        counts = {
+            "new": sum(s.get("new", 0) for s in summary.values()),
+            "skip": sum(s.get("duplicates", 0) for s in summary.values()),
+            "error": len(result.get("errors", [])),
+            "update": 0,
+        }
+        # Build items with status for each type
+        items = {}
+        for entity_type, stats in summary.items():
+            items[entity_type] = [
+                {"status": "new"} for _ in range(stats.get("new", 0))
+            ] + [
+                {"status": "skip"} for _ in range(stats.get("duplicates", 0))
+            ]
+
         return {
             "success": True,
             "job_id": job_id,
-            "dry_run_result": result,
+            "counts": counts,
+            "items": items,
+            "warnings": result.get("warnings", []),
+            "errors": result.get("errors", []),
+            "duplicates": result.get("duplicates", []),
+            "has_errors": len(result.get("errors", [])) > 0,
             "request_id": request_id,
         }
 

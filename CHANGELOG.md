@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.41] - 2026-01-01
+
+### Fixed
+- WordPress Import: Dry-Run結果が全件0になる問題修正 (#51)
+  - APIレスポンス構造をJavaScriptの期待する形式に変換
+
 ## [0.1.40] - 2026-01-01
 
 ### Fixed
