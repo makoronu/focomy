@@ -3330,8 +3330,8 @@ async def entity_create(
                     data[field.name] = json_module.loads(value)
                 except (json_module.JSONDecodeError, TypeError):
                     data[field.name] = value
-            elif field.type == "media":
-                # Handle file upload for media type
+            elif field.type in ("media", "image"):
+                # Handle file upload for media/image type
                 if hasattr(value, 'file'):
                     from ..services.media import MediaService
                     media_svc = MediaService(db)
@@ -3477,8 +3477,8 @@ async def entity_update(
                     data[field.name] = json_module.loads(value)
                 except (json_module.JSONDecodeError, TypeError):
                     data[field.name] = value
-            elif field.type == "media":
-                # Handle file upload for media type
+            elif field.type in ("media", "image"):
+                # Handle file upload for media/image type
                 if hasattr(value, 'file'):
                     from ..services.media import MediaService
                     media_svc = MediaService(db)

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.28] - 2026-01-01
+
+### Fixed
+- Admin: imageタイプフィールドもファイルアップロード処理対象に追加 (#40)
+
 ## [0.1.27] - 2026-01-01
 
 ### Fixed
