@@ -10,6 +10,23 @@
 
 | ID | タスク | 開始日 |
 |----|--------|--------|
+| 092 | UI/UXシンプル化 | 2026-01-02 |
+
+---
+
+## 予定
+
+| ID | タスク |
+|----|--------|
+| 093 | WordPress HTML→ブロック変換器 |
+| 094 | WordPressテーマCSS抽出・適用 |
+
+---
+
+## 完了（直近）
+
+| ID | タスク | 完了日 |
+|----|--------|--------|
 | 091 | 機能安定化（Phase 1-7） | 2026-01-01 |
 
 ---
@@ -21,6 +38,89 @@
 ---
 
 ## 詳細
+
+### 092 UI/UXシンプル化
+
+#### 概要
+不要機能を削除し、必要最小限で最大の価値を実現。SEO的にも問題なし。
+
+#### 設計方針
+- OGタグ = SEO設定から自動生成（統一がベストプラクティス）
+- 抜粋 = 本文先頭から自動生成（WordPressデフォルトと同じ）
+- 不要機能は削除（ウィジェット、コメント等）
+
+#### Phase 1: 編集画面スリム化（30分）
+
+| 作業 | ファイル | 詳細 |
+|------|----------|------|
+| OG系フィールド削除 | `content_types/post.yaml` | og_title, og_description, og_image 削除 |
+| OG系フィールド削除 | `content_types/page.yaml` | 同上 |
+| 抜粋フィールド削除 | `content_types/post.yaml` | excerpt 削除（自動生成に変更） |
+
+#### Phase 2: OG自動フォールバック実装（20分）
+
+| 作業 | ファイル | 詳細 |
+|------|----------|------|
+| OGタグ生成修正 | `core/engine/routes.py` | og:title → seo_title or title |
+| | | og:description → seo_description or content[:160] |
+| | | og:image → featured_image |
+
+#### Phase 3: サイドバー整理（20分）
+
+| 削除対象 | 詳細 |
+|----------|------|
+| ウィジェット | content_types削除、ルート削除、サイドバーリンク削除 |
+| コメント | 同上 |
+| サイトマップUI | リンク削除（自動生成は維持） |
+| リンク検証 | リンク削除 |
+
+#### Phase 4: 機能フラグ整理（10分）
+
+widget, comment, link_validator をfalse固定または削除
+
+#### 完了条件
+- [ ] 編集画面: タイトル/スラッグ/本文/アイキャッチ/ステータス/公開日時/SEO/Relations のみ
+- [ ] サイドバー: 不要リンク非表示
+- [ ] OGタグ: SEO/アイキャッチから自動生成
+- [ ] 抜粋: 本文から自動生成
+- [ ] 72テストパス
+
+#### 所要時間
+約1時間20分
+
+---
+
+### 093 WordPress HTML→ブロック変換器
+
+#### 概要
+WordPressのHTMLコンテンツをFocomyのEditor.jsブロック形式に変換
+
+#### 対応タグ
+```
+<p>        → {"type":"paragraph","data":{"text":"..."}}
+<h1>-<h6>  → {"type":"header","data":{"text":"...","level":N}}
+<img>      → {"type":"image","data":{"url":"..."}}
+<ul>/<ol>  → {"type":"list","data":{"items":[...]}}
+<blockquote> → {"type":"quote","data":{"text":"..."}}
+<pre>      → {"type":"code","data":{"code":"..."}}
+```
+
+#### 所要時間
+約1時間
+
+---
+
+### 094 WordPressテーマCSS抽出・適用
+
+#### 概要
+WordPressテーマのCSS/スタイルを抽出してFocomyに適用。「移行しても見た目変わらない」を実現。
+
+#### 作業内容
+- style.cssの抽出
+- 画像パスの変換
+- Focomyテーマへの統合
+
+---
 
 ### 091 機能安定化（Phase 1-7）→ WordPress Import準備
 
