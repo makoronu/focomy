@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.35] - 2026-01-01
+
+### Fixed
+- Admin: サイドバーにタグリンク追加 (#43)
+
 ## [0.1.34] - 2026-01-01
 
 ### Fixed
