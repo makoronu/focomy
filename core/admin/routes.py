@@ -3980,7 +3980,7 @@ async def entity_update(
         from ..models.auth import UserAuth
         from sqlalchemy import select
         import bcrypt
-        query = select(UserAuth).where(UserAuth.user_id == entity_id)
+        query = select(UserAuth).where(UserAuth.entity_id == entity_id)
         result = await db.execute(query)
         user_auth = result.scalar_one_or_none()
         if user_auth:

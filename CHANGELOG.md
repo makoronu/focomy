@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.48] - 2026-01-02
+
+### Fixed
+- パスワード更新クエリのカラム名修正
+  - UserAuth.user_id → UserAuth.entity_id
+
 ## [0.1.47] - 2026-01-02
 
 ### Fixed
