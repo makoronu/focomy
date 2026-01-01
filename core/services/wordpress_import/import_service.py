@@ -836,6 +836,22 @@ class WordPressImportService:
         )
         return result.scalar_one_or_none()
 
+    async def _find_by_slug(self, entity_type: str, slug: str) -> Entity | None:
+        """Find entity by slug."""
+        from ...models import EntityValue
+
+        result = await self.db.execute(
+            select(Entity)
+            .join(EntityValue)
+            .where(
+                Entity.type == entity_type,
+                EntityValue.field_name == "slug",
+                EntityValue.value_string == slug,
+                Entity.deleted_at.is_(None),
+            )
+        )
+        return result.scalar_one_or_none()
+
     async def _get_checkpoint(self, job_id: str) -> dict:
         """Get checkpoint data for a job."""
         job = await self.get_job(job_id)
@@ -1080,7 +1096,7 @@ class WordPressImportService:
                 })
             else:
                 # Check by slug
-                existing_slug = await self.entity_svc.find_by_slug("category", cat.slug)
+                existing_slug = await self._find_by_slug("category", cat.slug)
                 if existing_slug:
                     summary["duplicates"] += 1
                     result["duplicates"].append({
@@ -1113,7 +1129,7 @@ class WordPressImportService:
                 })
             else:
                 # Check by slug
-                existing_slug = await self.entity_svc.find_by_slug("tag", tag.slug)
+                existing_slug = await self._find_by_slug("tag", tag.slug)
                 if existing_slug:
                     summary["duplicates"] += 1
                     result["duplicates"].append({
@@ -1171,7 +1187,7 @@ class WordPressImportService:
                 })
             else:
                 # Check by slug
-                existing_slug = await self.entity_svc.find_by_slug(post_type, post.slug)
+                existing_slug = await self._find_by_slug(post_type, post.slug)
                 if existing_slug:
                     summary["duplicates"] += 1
                     result["duplicates"].append({

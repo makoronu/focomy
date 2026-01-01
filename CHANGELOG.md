@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.42] - 2026-01-01
+
+### Fixed
+- WordPress Import: Dry-RunでAttributeError修正 (#51)
+  - `_find_by_slug`メソッドを追加（存在しない`entity_svc.find_by_slug`を置換）
+
 ## [0.1.41] - 2026-01-01
 
 ### Fixed
