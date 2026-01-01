@@ -10,7 +10,7 @@ from importlib import resources
 from pathlib import Path
 
 # Version
-__version__ = "0.1.24"
+__version__ = "0.1.25"
 
 GITHUB_REPO = "focomy/focomy"
 PYPI_PACKAGE = "focomy"
@@ -534,6 +534,52 @@ def cmd_update(args):
         sys.exit(1)
 
 
+def _merge_content_type_fields(scaffold_file: Path, local_file: Path) -> bool:
+    """Merge new fields from scaffold content_type into local file.
+
+    Returns True if any fields were added.
+    """
+    try:
+        with open(scaffold_file, encoding="utf-8") as f:
+            scaffold_data = yaml.safe_load(f)
+        with open(local_file, encoding="utf-8") as f:
+            local_data = yaml.safe_load(f)
+
+        if not scaffold_data or not local_data:
+            return False
+
+        scaffold_fields = scaffold_data.get("fields", [])
+        local_fields = local_data.get("fields", [])
+
+        # Get existing field names
+        local_field_names = {f.get("name") for f in local_fields if f.get("name")}
+
+        # Find new fields in scaffold
+        new_fields = [
+            f for f in scaffold_fields
+            if f.get("name") and f.get("name") not in local_field_names
+        ]
+
+        if not new_fields:
+            return False
+
+        # Add new fields to local
+        local_data["fields"].extend(new_fields)
+
+        # Write back
+        with open(local_file, "w", encoding="utf-8") as f:
+            yaml.dump(local_data, f, allow_unicode=True, default_flow_style=False, sort_keys=False)
+
+        print(f"  Added {len(new_fields)} new fields to {local_file.name}:")
+        for field in new_fields:
+            print(f"    + {field.get('name')}")
+
+        return True
+    except Exception as e:
+        print(f"  Warning: Could not merge {local_file.name}: {e}")
+        return False
+
+
 def _sync_scaffold_files():
     """Sync missing files from scaffold to current site."""
     scaffold_path = _get_scaffold_path()
@@ -541,7 +587,7 @@ def _sync_scaffold_files():
 
     print("Syncing missing files from scaffold...")
 
-    # Sync content_types
+    # Sync content_types (merge new fields into existing files)
     ct_scaffold = scaffold_path / "content_types"
     ct_local = Path("content_types")
     if ct_scaffold.exists() and ct_local.exists():
@@ -550,6 +596,11 @@ def _sync_scaffold_files():
             if not local_file.exists():
                 shutil.copy(yaml_file, local_file)
                 synced.append(f"content_types/{yaml_file.name}")
+            else:
+                # Merge new fields from scaffold into existing local file
+                merged = _merge_content_type_fields(yaml_file, local_file)
+                if merged:
+                    synced.append(f"content_types/{yaml_file.name} (fields merged)")
 
     # Sync themes (only missing files, don't overwrite)
     themes_scaffold = scaffold_path / "themes"

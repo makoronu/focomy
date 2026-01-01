@@ -76,12 +76,12 @@ class EntityService:
                         await self._set_value(entity.id, field_def.name, value, field_def.type)
 
             await self.db.commit()
-            await self.db.refresh(entity)
 
             # Invalidate cache for this content type
             await self._invalidate_cache(type_name)
 
-            return entity
+            # Re-fetch to ensure values relationship is loaded
+            return await self.get(entity.id)
 
         except Exception:
             await self.db.rollback()
@@ -159,12 +159,12 @@ class EntityService:
                         )
 
             await self.db.commit()
-            await self.db.refresh(entity)
 
             # Invalidate cache for this content type
             await self._invalidate_cache(entity.type)
 
-            return entity
+            # Re-fetch to ensure values relationship is loaded
+            return await self.get(entity_id)
 
         except Exception:
             await self.db.rollback()

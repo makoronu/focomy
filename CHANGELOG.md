@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.25] - 2026-01-01
+
+### Fixed
+- EntityService: create()/update()後のvalues relationshipロード問題修正 (#38)
+- CLI: `focomy update --sync` で既存content_typesに新フィールドをマージ (#38)
+
 ## [0.1.24] - 2026-01-01
 
 ### Fixed
