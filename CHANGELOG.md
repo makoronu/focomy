@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.43] - 2026-01-01
+
+### Fixed
+- WordPress Import: Dry-Runで`value_string`属性エラー修正 (#51)
+  - `EntityValue.value_string` → `EntityValue.value_text`
+
 ## [0.1.42] - 2026-01-01
 
 ### Fixed

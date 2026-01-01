@@ -846,7 +846,7 @@ class WordPressImportService:
             .where(
                 Entity.type == entity_type,
                 EntityValue.field_name == "slug",
-                EntityValue.value_string == slug,
+                EntityValue.value_text == slug,
                 Entity.deleted_at.is_(None),
             )
         )
