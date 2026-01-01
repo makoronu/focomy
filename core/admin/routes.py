@@ -504,11 +504,20 @@ async def dashboard(
     for ct_name in content_types.keys():
         stats[ct_name] = await entity_svc.count(ct_name)
 
-    # Get recent posts
+    # Get recent posts with channel info
+    from ..services.relation import RelationService
+
+    relation_svc = RelationService(db)
     recent_posts = []
     posts = await entity_svc.find("post", limit=5, order_by="-created_at")
     for post in posts:
         data = entity_svc.serialize(post)
+        # Get channel for this post
+        related_channels = await relation_svc.get_related(post.id, "post_channel")
+        if related_channels:
+            channel_data = entity_svc.serialize(related_channels[0])
+            data["channel_slug"] = channel_data.get("slug")
+            data["channel_title"] = channel_data.get("title")
         recent_posts.append(data)
 
     context = await get_context(request, db, current_user, "dashboard")
@@ -3259,16 +3268,24 @@ async def channel_posts(
 
     entities = [entity_svc.serialize(p) for p in paginated_posts]
 
+    # Get list fields (first 3-4 important fields)
+    list_fields = []
+    for field in content_type.fields[:4]:
+        if field.name not in ("password", "body", "blocks"):
+            list_fields.append(field)
+
     context = await get_context(request, db, current_user, "post")
     context.update(
         {
             "type_name": "post",
             "content_type": content_type,
             "entities": entities,
+            "list_fields": list_fields,
             "page": page,
             "total_pages": total_pages,
             "total": total,
-            "q": q,
+            "message": request.query_params.get("message"),
+            "search_query": q,
             "status_filter": status_filter,
             "channel": channel_data,
             "channel_slug": channel_slug,

@@ -640,39 +640,43 @@ async def channel_feed(
     # Limit to 20 items
     channel_posts = channel_posts[:20]
 
-    # Generate RSS
+    # Generate RSS using raw XML (same as _generate_rss_feed)
     site_url = str(request.base_url).rstrip("/")
-    settings_svc = SettingsService(db)
-    site_settings = await settings_svc.get_by_category("site")
-    site_name = site_settings.get("name", "Focomy")
 
-    from feedgen.feed import FeedGenerator
-
-    fg = FeedGenerator()
-    fg.title(f"{channel_data.get('title', channel_slug)} - {site_name}")
-    fg.link(href=f"{site_url}/channel/{channel_slug}", rel="alternate")
-    fg.description(channel_data.get("description", ""))
-    fg.language("ja")
-
+    items = []
     for post in channel_posts:
         post_data = entity_svc.serialize(post)
-        fe = fg.add_entry()
-        fe.id(f"{site_url}/channel/{channel_slug}/{post_data.get('slug', post.id)}")
-        fe.title(post_data.get("title", "No title"))
-        fe.link(href=f"{site_url}/channel/{channel_slug}/{post_data.get('slug', post.id)}")
-        fe.description(post_data.get("excerpt", ""))
-        if post_data.get("published_at"):
-            try:
-                from datetime import datetime
+        slug = post_data.get("slug", "")
+        url = f"{site_url}/channel/{channel_slug}/{slug}"
+        pub_date = _format_rfc822(post_data.get("published_at", ""))
+        items.append(
+            f"""
+        <item>
+            <title><![CDATA[{post_data.get('title', '')}]]></title>
+            <link>{url}</link>
+            <description><![CDATA[{post_data.get('excerpt', '')}]]></description>
+            <pubDate>{pub_date}</pubDate>
+            <guid>{url}</guid>
+        </item>"""
+        )
 
-                pub_date = post_data["published_at"]
-                if isinstance(pub_date, str):
-                    pub_date = datetime.fromisoformat(pub_date.replace("Z", "+00:00"))
-                fe.pubDate(pub_date)
-            except Exception:
-                pass
+    channel_title = channel_data.get("title", channel_slug)
+    channel_desc = channel_data.get("description", f"Latest posts from {channel_title}")
+    feed_url = f"{site_url}/channel/{channel_slug}/feed.xml"
 
-    return Response(content=fg.rss_str(pretty=True), media_type="application/rss+xml")
+    rss = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+    <channel>
+        <title>{channel_title}</title>
+        <link>{site_url}/channel/{channel_slug}</link>
+        <description>{channel_desc}</description>
+        <language>ja</language>
+        <atom:link href="{feed_url}" rel="self" type="application/rss+xml"/>
+        {''.join(items)}
+    </channel>
+</rss>"""
+
+    return Response(content=rss, media_type="application/rss+xml")
 
 
 @router.get("/channel/{channel_slug}/{post_slug}", response_class=HTMLResponse)

@@ -6,10 +6,12 @@
 {% block content %}
 <div class="grid grid-4 mb-2">
     {% for ct_name, ct in content_types.items() %}
+    {% if ct.admin_menu %}
     <div class="stat-card">
         <div class="stat-label">{{ ct.label }}</div>
         <div class="stat-value">{{ stats.get(ct_name, 0) }}</div>
     </div>
+    {% endif %}
     {% endfor %}
 </div>
 
@@ -17,13 +19,13 @@
     <div class="card">
         <div class="card-header">
             <h3 class="card-title">Recent Posts</h3>
-            <a href="/admin/post" class="btn btn-secondary">View All</a>
         </div>
         <div class="table-container">
             <table>
                 <thead>
                     <tr>
                         <th>Title</th>
+                        <th>Channel</th>
                         <th>Status</th>
                         <th>Created</th>
                     </tr>
@@ -32,8 +34,13 @@
                     {% for post in recent_posts %}
                     <tr>
                         <td>
+                            {% if post.channel_slug %}
+                            <a href="/admin/channel/{{ post.channel_slug }}/posts/{{ post.id }}/edit">{{ post.title or 'Untitled' }}</a>
+                            {% else %}
                             <a href="/admin/post/{{ post.id }}/edit">{{ post.title or 'Untitled' }}</a>
+                            {% endif %}
                         </td>
+                        <td class="text-muted">{{ post.channel_title or '-' }}</td>
                         <td>
                             <span class="badge {% if post.status == 'published' %}badge-success{% else %}badge-warning{% endif %}">
                                 {{ post.status or 'draft' }}
@@ -43,7 +50,7 @@
                     </tr>
                     {% else %}
                     <tr>
-                        <td colspan="3" class="text-muted text-center">No posts yet</td>
+                        <td colspan="4" class="text-muted text-center">No posts yet</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -57,9 +64,11 @@
         </div>
         <div class="flex gap-2" style="flex-wrap: wrap;">
             {% for ct_name, ct in content_types.items() %}
+            {% if ct.admin_menu %}
             <a href="/admin/{{ ct_name }}/new" class="btn btn-secondary">
                 New {{ ct.label }}
             </a>
+            {% endif %}
             {% endfor %}
         </div>
     </div>

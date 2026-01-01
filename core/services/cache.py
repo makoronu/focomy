@@ -14,6 +14,11 @@ import logging
 from abc import ABC, abstractmethod
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+
+
+def utcnow() -> datetime:
+    """Return current UTC time as timezone-aware datetime."""
+    return datetime.now(timezone.utc)
 from functools import wraps
 from typing import Any, Optional, TypeVar
 
