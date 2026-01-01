@@ -87,7 +87,7 @@
                                 {{ entity.get(field.name, '-') }}
                             </span>
                         {% else %}
-                            {{ entity.get(field.name, '-') | truncate(50) }}
+                            {{ entity.get(field.name, '-') | string | truncate(50) }}
                         {% endif %}
                     </td>
                     {% endfor %}

@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.40] - 2026-01-01
+
+### Fixed
+- Admin: entity_list.htmlでinteger型フィールドにtruncateフィルタ適用時のエラー修正 (#50)
+
 ## [0.1.39] - 2026-01-01
 
 ### Changed
