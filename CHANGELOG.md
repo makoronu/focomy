@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.32] - 2026-01-01
+
+### Fixed
+- Audit: Entity CRUD操作の監査ログ記録問題修正 (#41)
+- Phase 4完了: search/revision/audit全機能正常動作確認
+
 ## [0.1.31] - 2026-01-01
 
 ### Changed
