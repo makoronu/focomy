@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.49] - 2026-01-02
+
+### Added
+- Editor.jsブロック追加（095-099）
+  - 見出しh1-h6対応（levels拡張）
+  - ギャラリーブロック（複数画像グリッド）
+  - カバーブロック（背景画像+オーバーレイテキスト）
+  - グループブロック（背景色+パディング）
+  - スペーサーブロック（可変高さ余白）
+
 ## [0.1.48] - 2026-01-02
 
 ### Fixed
