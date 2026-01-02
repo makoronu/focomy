@@ -679,6 +679,12 @@ class WordPressImportService:
 
                 existing = await self._find_by_wp_id(post_type, post.id)
                 if existing:
+                    self.error_collector.add_skip(
+                        phase=checkpoint_key,
+                        item_id=post.id,
+                        item_title=post.title,
+                        reason="already_exists",
+                    )
                     await self._save_checkpoint(job_id, checkpoint_key, post.id, checkpoint_key)
                     continue
 
@@ -688,26 +694,32 @@ class WordPressImportService:
 
                 # Log warnings if dangerous content was found
                 if content_result.had_issues:
-                    logger.warning(
-                        f"Sanitized dangerous content in {post_type} {post.id}: "
-                        f"{len(content_result.warnings)} issues"
+                    self.error_collector.add_warning(
+                        phase=checkpoint_key,
+                        item_id=post.id,
+                        item_title=post.title,
+                        warning_type="sanitized_content",
+                        message=f"Sanitized {len(content_result.warnings)} dangerous elements",
                     )
                 if excerpt_result.had_issues:
-                    logger.warning(
-                        f"Sanitized dangerous content in {post_type} {post.id} excerpt: "
-                        f"{len(excerpt_result.warnings)} issues"
+                    self.error_collector.add_warning(
+                        phase=checkpoint_key,
+                        item_id=post.id,
+                        item_title=post.title,
+                        warning_type="sanitized_excerpt",
+                        message=f"Sanitized {len(excerpt_result.warnings)} dangerous elements in excerpt",
                     )
+
+                # Convert HTML to Editor.js blocks
+                body_blocks = self.block_converter.convert(content_result.content)
 
                 post_data = {
                     "title": post.title,
                     "slug": post.slug,
-                    "content": content_result.content,
+                    "body": body_blocks,
                     "excerpt": excerpt_result.content,
                     "status": WP_STATUS_MAP.get(post.status, "draft"),
                     "wp_id": post.id,
-                    "wp_author_id": post.author_id,
-                    "created_at": post.created_at.isoformat(),
-                    "updated_at": post.modified_at.isoformat(),
                 }
 
                 # SEO data from Yoast
@@ -716,11 +728,51 @@ class WordPressImportService:
                 if "_yoast_wpseo_metadesc" in post.postmeta:
                     post_data["seo_description"] = post.postmeta["_yoast_wpseo_metadesc"]
 
-                # Categories and tags as comma-separated slugs
-                if post.categories:
-                    post_data["category_slugs"] = ",".join(c["slug"] for c in post.categories)
-                if post.tags:
-                    post_data["tag_slugs"] = ",".join(t["slug"] for t in post.tags)
+                # Featured image
+                thumbnail_id = post.postmeta.get("_thumbnail_id")
+                if thumbnail_id:
+                    try:
+                        thumbnail_id_int = int(thumbnail_id)
+                        featured_url = self.id_resolver.resolve_media(thumbnail_id_int)
+                        if featured_url:
+                            post_data["featured_image"] = featured_url
+                    except (ValueError, TypeError):
+                        pass
+
+                # Resolve author (required for post)
+                author_id = await self.id_resolver.resolve_user(post.author_id)
+                if not author_id:
+                    self.error_collector.add_skip(
+                        phase=checkpoint_key,
+                        item_id=post.id,
+                        item_title=post.title,
+                        reason="no_author",
+                        context={"wp_author_id": post.author_id},
+                    )
+                    await self._save_checkpoint(job_id, checkpoint_key, post.id, checkpoint_key)
+                    continue
+
+                post_data["post_author"] = author_id
+
+                # post-specific relations
+                if post_type == "post":
+                    # channel (required)
+                    channel_id = await self.id_resolver.get_default_channel()
+                    post_data["post_channel"] = channel_id
+
+                    # categories (optional)
+                    if post.categories:
+                        cat_slugs = [c["slug"] for c in post.categories]
+                        category_ids = await self.id_resolver.resolve_categories(cat_slugs)
+                        if category_ids:
+                            post_data["post_categories"] = category_ids
+
+                    # tags (optional)
+                    if post.tags:
+                        tag_slugs = [t["slug"] for t in post.tags]
+                        tag_ids = await self.id_resolver.resolve_tags(tag_slugs)
+                        if tag_ids:
+                            post_data["post_tags"] = tag_ids
 
                 await self.entity_svc.create(post_type, post_data)
                 count += 1
@@ -735,7 +787,15 @@ class WordPressImportService:
                 )
 
             except Exception as e:
-                logger.warning(f"Failed to import {post_type} {post.id}: {e}")
+                self.error_collector.add_error(
+                    phase=checkpoint_key,
+                    item_id=post.id,
+                    item_title=post.title,
+                    error_type="import_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"slug": post.slug, "status": post.status},
+                )
 
         if skipped:
             logger.info(f"Skipped {skipped} already processed {post_type}s")
