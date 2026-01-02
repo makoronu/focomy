@@ -112,6 +112,11 @@ fields:
     description: SNSシェア時の画像（空の場合はアイキャッチ）
     accept: image/*
 
+  - name: wp_id
+    type: integer
+    label: WordPress ID
+    indexed: true
+
 relations:
   - type: post_author
     label: 著者
@@ -126,3 +131,6 @@ relations:
 
   - type: post_tags
     label: タグ
+
+  - type: post_categories
+    label: カテゴリ

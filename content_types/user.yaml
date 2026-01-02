@@ -56,3 +56,8 @@ fields:
     type: string
     label: OAuth ID
     admin_hidden: true
+
+  - name: wp_id
+    type: integer
+    label: WordPress ID
+    indexed: true

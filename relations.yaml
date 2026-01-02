@@ -28,6 +28,12 @@ post_tags:
   type: many_to_many
   label: タグ
 
+post_categories:
+  from: post
+  to: category
+  type: many_to_many
+  label: カテゴリ
+
 post_related:
   from: post
   to: post

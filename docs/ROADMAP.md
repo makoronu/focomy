@@ -8,7 +8,9 @@
 
 ## 進行中
 
-なし
+| ID | タスク | 開始日 | 状態 |
+|----|--------|--------|------|
+| 108 | 投稿本文インポート修正 | 2026-01-02 | S1準備中 |
 
 ---
 
@@ -90,6 +92,132 @@ WordPress HTML/Gutenberg → Editor.jsブロック形式への変換
 | ネスト深すぎ | 深さ制限（max 10） |
 | 巨大HTML | サイズ制限（5MB） |
 | 未知ブロック | rawブロックで保持 |
+
+---
+
+## 108: 投稿本文インポート修正 詳細
+
+### 概要
+
+WordPress投稿をFocomyにインポートする際のデータ変換・リレーション設定を修正
+
+### 発見した問題
+
+| # | 問題 | 深刻度 |
+|---|------|--------|
+| 1 | post_categories リレーション未定義 | 致命的 |
+| 2 | post.yaml に wp_id なし | 高 |
+| 3 | page.yaml に wp_id なし | 高 |
+| 4 | user.yaml に wp_id なし | 高 |
+| 5 | SEOネストオブジェクト未対応 | 中 |
+| 6 | チャンネル割り当てロジックなし | 中 |
+| 7 | featured_image ID解決なし | 中 |
+
+### セグメント構成
+
+```
+[S1: Content Types + Relations修正]
+    ↓ マイグレーション実行で確認
+[S2: ID解決ユーティリティ]
+    ↓ 単体テストで確認
+[S3: _transform_post修正]
+    ↓ モックデータで確認
+[S4: リレーション設定]
+    ↓ E2Eテストで確認
+```
+
+### S1: Content Types + Relations修正 - 完了
+
+| # | タスク | ファイル | 状態 |
+|---|--------|----------|------|
+| 1 | post.yaml に wp_id 追加 | `content_types/post.yaml` | 完了 |
+| 2 | page.yaml に wp_id 追加 | `content_types/page.yaml` | 完了 |
+| 3 | user.yaml に wp_id 追加 | `content_types/user.yaml` | 完了 |
+| 4 | post_categories リレーション追加 | `relations.yaml` | 完了 |
+| 5 | post.yaml に post_categories 追加 | `content_types/post.yaml` | 完了 |
+
+**テスト結果**: YAML構文チェック OK
+
+### S2: ID解決ユーティリティ
+
+| # | タスク | ファイル | 状態 |
+|---|--------|----------|------|
+| 1 | WpIdResolver クラス作成 | `services/wordpress_import/id_resolver.py` | 未着手 |
+| 2 | wp_id → entity_id 変換 | 同上 | 未着手 |
+| 3 | slug → entity_id 変換 | 同上 | 未着手 |
+| 4 | メディアURL解決 | 同上 | 未着手 |
+
+**インターフェース**:
+```python
+class WpIdResolver:
+    async def resolve_user(self, wp_id: int) -> str | None
+    async def resolve_category(self, slug: str) -> str | None
+    async def resolve_tag(self, slug: str) -> str | None
+    async def resolve_media(self, wp_id: int) -> str | None
+    async def get_default_channel(self) -> str
+```
+
+**確認方法**: print文で解決結果確認
+
+### S3: _transform_post修正
+
+| # | タスク | 状態 |
+|---|--------|------|
+| 1 | SEOネスト→フラット変換 | 未着手 |
+| 2 | 不要フィールド除去（meta等） | 未着手 |
+| 3 | wp_id フィールド追加 | 未着手 |
+| 4 | featured_image URL解決 | 未着手 |
+
+**変換前**:
+```python
+{
+    "wp_id": 123,
+    "seo": {"title": "...", "description": "..."},
+    "author_wp_id": 1,
+    "categories": ["slug1", "slug2"],
+    "tags": ["tag1"],
+    "featured_image": 456,  # WP media ID
+    "meta": {...},
+}
+```
+
+**変換後**:
+```python
+{
+    "wp_id": 123,
+    "seo_title": "...",
+    "seo_description": "...",
+    # author_wp_id, categories, tags, meta 削除
+    # featured_image → URL or Focomy media ID
+}
+```
+
+**確認方法**: サンプルデータで変換結果確認
+
+### S4: リレーション設定
+
+| # | タスク | 状態 |
+|---|--------|------|
+| 1 | post_author 設定 | 未着手 |
+| 2 | post_channel 設定 | 未着手 |
+| 3 | post_categories 設定 | 未着手 |
+| 4 | post_tags 設定 | 未着手 |
+| 5 | page_author 設定 | 未着手 |
+| 6 | page_parent 設定 | 未着手 |
+
+**確認方法**: 実インポート → 管理画面で確認
+
+### 依存関係
+
+```
+S1 (YAML修正)
+ ↓
+S2 (ID解決) ← S1完了必須
+ ↓
+S3 (データ変換) ← S2完了必須
+ ↓
+S4 (リレーション) ← S2, S3完了必須
+```
 
 ---
 
