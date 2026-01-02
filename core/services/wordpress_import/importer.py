@@ -525,12 +525,52 @@ class WordPressImporter:
                     acf_groups,
                 )
 
-            # TODO S4: Set relations using relations_data
-            # - Resolve author_wp_id to user entity ID
-            # - Resolve category_slugs to category entity IDs
-            # - Resolve tag_slugs to tag entity IDs
-            # - Set default channel
-            _ = relations_data  # Placeholder for S4
+            # S4: Set relations
+            if self._id_resolver:
+                try:
+                    # author解決（post/page共通、relation名は異なる）
+                    author_relation = f"{post_type}_author"
+                    author_id = None
+                    if relations_data.get("author_wp_id"):
+                        author_id = await self._id_resolver.resolve_user(
+                            relations_data["author_wp_id"]
+                        )
+
+                    if author_id:
+                        post_data[author_relation] = author_id
+                    elif self.config.default_author_id:
+                        post_data[author_relation] = self.config.default_author_id
+                    else:
+                        logger.warning(
+                            f"No author for {post_type} '{post.title}', skipping"
+                        )
+                        continue
+
+                    # post専用のリレーション
+                    if post_type == "post":
+                        # channel（required）
+                        channel_id = await self._id_resolver.get_default_channel()
+                        post_data["post_channel"] = channel_id
+
+                        # categories（optional）
+                        category_ids = await self._id_resolver.resolve_categories(
+                            relations_data["category_slugs"]
+                        )
+                        if category_ids:
+                            post_data["post_categories"] = category_ids
+
+                        # tags（optional）
+                        tag_ids = await self._id_resolver.resolve_tags(
+                            relations_data["tag_slugs"]
+                        )
+                        if tag_ids:
+                            post_data["post_tags"] = tag_ids
+
+                except Exception as e:
+                    logger.error(
+                        f"Failed to set relations for {post_type} '{post.title}': {e}"
+                    )
+                    continue
 
             if self.content_service:
                 await self.content_service.create(post_type, post_data)
