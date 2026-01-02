@@ -344,6 +344,15 @@ class WordPressImportService:
                 menus_count = await self._import_menus(job_id, wxr_data, resume=resume)
                 result.menus_imported = menus_count
 
+            # Output error log
+            error_summary = self.error_collector.summary()
+            output_dir = Path(config.get("output_dir", "."))
+            output_dir.mkdir(parents=True, exist_ok=True)
+            timestamp = utcnow().strftime("%Y%m%d_%H%M%S")
+            log_path = output_dir / f"import_errors_{job_id}_{timestamp}.log"
+            self.error_collector.to_log_file(log_path)
+            logger.info(f"Error log written to: {log_path}")
+
             # Complete
             result.success = True
             await self.update_job(
@@ -358,13 +367,31 @@ class WordPressImportService:
                 tags_imported=result.tags_imported,
                 authors_imported=result.authors_imported,
                 menus_imported=result.menus_imported,
-                progress_message="Import completed successfully!",
+                progress_message=f"Import completed! Errors: {error_summary['total_errors']}, Skipped: {error_summary['total_skipped']}",
+                errors=[str(error_summary['total_errors'])] if error_summary['total_errors'] > 0 else None,
             )
+
+            # Clear error collector for next import
+            self.error_collector.clear()
 
             return result
 
         except Exception as e:
             logger.exception(f"Import failed for job {job_id}")
+
+            # Output error log even on failure
+            try:
+                error_summary = self.error_collector.summary()
+                config = job.config or {} if job else {}
+                output_dir = Path(config.get("output_dir", "."))
+                output_dir.mkdir(parents=True, exist_ok=True)
+                timestamp = utcnow().strftime("%Y%m%d_%H%M%S")
+                log_path = output_dir / f"import_errors_{job_id}_{timestamp}.log"
+                self.error_collector.to_log_file(log_path)
+                logger.info(f"Error log written to: {log_path}")
+            except Exception as log_error:
+                logger.warning(f"Failed to write error log: {log_error}")
+
             await self.update_job(
                 job_id,
                 status=ImportJobStatus.FAILED,
@@ -372,6 +399,10 @@ class WordPressImportService:
                 errors=[str(e)],
                 progress_message=f"Import failed: {str(e)}",
             )
+
+            # Clear error collector for next import
+            self.error_collector.clear()
+
             return None
 
     async def _fetch_source_data(self, job: ImportJob) -> WXRData | None:
