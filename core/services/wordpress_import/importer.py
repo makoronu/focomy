@@ -12,6 +12,7 @@ from typing import Any
 from .acf import ACFConverter
 from .constants import WP_STATUS_MAP
 from .analyzer import AnalysisReport, WordPressAnalyzer
+from .id_resolver import WpIdResolver
 from .media import MediaImporter, MediaImportResult, MediaItem
 from .redirects import RedirectGenerator, RedirectReport
 from .wxr_parser import WXRData, WXRParser, WXRPost
@@ -143,11 +144,13 @@ class WordPressImporter:
         self._media_importer: MediaImporter | None = None
         self._acf_converter = ACFConverter()
         self._redirect_generator: RedirectGenerator | None = None
+        self._id_resolver: WpIdResolver | None = None
 
         self._wxr_data: WXRData | None = None
         self._analysis: AnalysisReport | None = None
         self._checkpoint: dict = {}
         self._progress_callback: callable | None = None
+        self._media_items: list[MediaItem] = []
 
         # Setup output directory
         self.config.output_dir.mkdir(parents=True, exist_ok=True)
@@ -239,6 +242,10 @@ class WordPressImporter:
                 result.media_result = media_result
                 result.media_imported = len(media_result.imported)
 
+                # Build media ID mapping for featured image resolution
+                if self._id_resolver and self._media_items:
+                    self._id_resolver.set_media_mapping(self._media_items, media_result)
+
             # Phase 7: Import posts
             if self.config.import_posts:
                 result.posts_imported = await self._import_posts("post")
@@ -292,6 +299,10 @@ class WordPressImporter:
                 old_base_url=self.config.old_base_url or self._wxr_data.site.base_blog_url,
                 new_base_url=self.config.new_base_url,
             )
+
+        # ID resolver for WP -> Focomy ID mapping
+        if self.content_service:
+            self._id_resolver = WpIdResolver(self.content_service)
 
         # Load ACF field groups if provided
         if self.config.convert_acf and self.config.acf_export_file:
@@ -415,10 +426,10 @@ class WordPressImporter:
             return MediaImportResult()
 
         # Collect media items from attachments
-        media_items = []
+        self._media_items = []
         for post in self._wxr_data.posts:
             if post.post_type == "attachment":
-                media_items.append(
+                self._media_items.append(
                     MediaItem(
                         original_url=post.guid or post.link,
                         filename=post.slug or f"media_{post.id}",
@@ -433,7 +444,7 @@ class WordPressImporter:
         self._report_progress(
             ImportProgress(
                 phase="media",
-                total=len(media_items),
+                total=len(self._media_items),
                 message="Downloading media files...",
             )
         )
@@ -449,7 +460,7 @@ class WordPressImporter:
             )
 
         result = await self._media_importer.import_media(
-            media_items,
+            self._media_items,
             progress_callback=progress_callback,
         )
 
@@ -486,23 +497,40 @@ class WordPressImporter:
 
             # Rewrite media URLs in raw HTML first
             content = post.content
-            if self._media_importer and hasattr(self, "_media_result"):
-                content = self._media_importer.rewrite_content_urls(
-                    content,
-                    self._media_result.url_mapping,
-                    self.config.old_base_url,
-                )
+            if self._media_importer and self._media_items:
+                # Get url_mapping from id_resolver if available
+                url_mapping = {}
+                if self._id_resolver:
+                    url_mapping = {
+                        item.original_url: self._id_resolver.resolve_media(item.post_id)
+                        for item in self._media_items
+                        if self._id_resolver.resolve_media(item.post_id)
+                    }
+                if url_mapping:
+                    content = self._media_importer.rewrite_content_urls(
+                        content,
+                        url_mapping,
+                        self.config.old_base_url,
+                    )
 
             # Transform post data (converts content to Editor.js blocks)
-            post_data = self._transform_post_with_content(post, content)
+            # Returns (fields_dict, relations_dict)
+            post_data, relations_data = self._transform_post_with_content(post, content)
 
             # Convert ACF fields
             if self.config.convert_acf:
                 acf_groups = self._acf_converter._field_groups
-                post_data["fields"] = self._acf_converter.convert_post_meta(
+                post_data["acf_fields"] = self._acf_converter.convert_post_meta(
                     post.postmeta,
                     acf_groups,
                 )
+
+            # TODO S4: Set relations using relations_data
+            # - Resolve author_wp_id to user entity ID
+            # - Resolve category_slugs to category entity IDs
+            # - Resolve tag_slugs to tag entity IDs
+            # - Set default channel
+            _ = relations_data  # Placeholder for S4
 
             if self.content_service:
                 await self.content_service.create(post_type, post_data)
@@ -512,7 +540,9 @@ class WordPressImporter:
 
         return count
 
-    def _transform_post_with_content(self, post: WXRPost, content: str) -> dict:
+    def _transform_post_with_content(
+        self, post: WXRPost, content: str
+    ) -> tuple[dict, dict]:
         """Transform WXR post to Focomy format.
 
         Args:
@@ -520,31 +550,49 @@ class WordPressImporter:
             content: HTML content (may have rewritten URLs)
 
         Returns:
-            Focomy post data with Editor.js blocks
+            Tuple of (fields_dict, relations_dict)
+            - fields_dict: Fields for EntityService.create()
+            - relations_dict: Data for relation resolution in S4
         """
         # Convert HTML content to Editor.js blocks
         body_blocks = block_converter.convert(content)
 
-        return {
+        # Resolve featured image WP attachment ID to URL
+        featured_image_url = None
+        thumbnail_id = post.postmeta.get("_thumbnail_id")
+        if thumbnail_id and self._id_resolver:
+            try:
+                wp_id = int(thumbnail_id)
+                featured_image_url = self._id_resolver.resolve_media(wp_id)
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid thumbnail_id: {thumbnail_id}")
+
+        # Flatten SEO from Yoast meta
+        seo_title = post.postmeta.get("_yoast_wpseo_title", "")
+        seo_description = post.postmeta.get("_yoast_wpseo_metadesc", "")
+
+        # Fields dict (only fields in post.yaml)
+        fields = {
             "wp_id": post.id,
             "title": post.title,
             "slug": post.slug,
-            "body": body_blocks,  # Editor.js blocks format
+            "body": body_blocks,
             "excerpt": post.excerpt,
             "status": WP_STATUS_MAP.get(post.status, "draft"),
-            "author_wp_id": post.author_id,
-            "created_at": post.created_at.isoformat(),
-            "updated_at": post.modified_at.isoformat(),
-            "categories": [c["slug"] for c in post.categories],
-            "tags": [t["slug"] for t in post.tags],
-            "featured_image": post.postmeta.get("_thumbnail_id"),
-            "seo": {
-                "title": post.postmeta.get("_yoast_wpseo_title", ""),
-                "description": post.postmeta.get("_yoast_wpseo_metadesc", ""),
-                "focus_keyword": post.postmeta.get("_yoast_wpseo_focuskw", ""),
-            },
-            "meta": {k: v for k, v in post.postmeta.items() if not k.startswith("_")},
+            "published_at": post.created_at.isoformat() if post.created_at else None,
+            "featured_image": featured_image_url,
+            "seo_title": seo_title,
+            "seo_description": seo_description,
         }
+
+        # Relations dict (for S4 to resolve)
+        relations = {
+            "author_wp_id": post.author_id,
+            "category_slugs": [c["slug"] for c in post.categories],
+            "tag_slugs": [t["slug"] for t in post.tags],
+        }
+
+        return fields, relations
 
     async def _import_menus(self) -> int:
         """Import WordPress navigation menus."""
