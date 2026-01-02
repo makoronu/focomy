@@ -6,6 +6,8 @@ import uuid
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, HTTPException, Request
+
+from . import __version__
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -303,7 +305,7 @@ async def lifespan(app: FastAPI):
     # Configure structured logging first
     configure_logging()
     logger = get_logger("focomy")
-    logger.info("Starting Focomy CMS", version="0.1.0", debug=settings.debug)
+    logger.info("Starting Focomy CMS", version=__version__, debug=settings.debug)
 
     # Startup
     await init_db()
@@ -337,7 +339,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="Focomy",
     description="The Most Beautiful CMS",
-    version="0.1.0",
+    version=__version__,
     lifespan=lifespan,
 )
 

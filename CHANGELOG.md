@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.55] - 2026-01-02
+
+### Fixed
+- バージョン表示がハードコードされている問題修正（#100）
+  - importlib.metadataから動的にバージョン取得
+  - core/__init__.py, cli.py, main.py, login.html統一
+
 ## [0.1.54] - 2026-01-02
 
 ### Added

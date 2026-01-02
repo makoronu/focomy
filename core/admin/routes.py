@@ -33,6 +33,10 @@ router = APIRouter(prefix="/admin", tags=["admin"])
 # Templates - パッケージ内の絶対パスを使用（PyPIパッケージ対応）
 templates = Jinja2Templates(directory=str(Path(__file__).parent.parent / "templates"))
 
+# Add version to template globals
+from .. import __version__
+templates.env.globals["version"] = __version__
+
 
 def parse_form_fields(fields: list, form_data: dict) -> dict[str, Any]:
     """Parse form data based on field definitions.
