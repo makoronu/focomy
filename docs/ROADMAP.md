@@ -10,7 +10,117 @@
 
 | ID | タスク | 開始日 | 状態 |
 |----|--------|--------|------|
-| - | なし | - | - |
+| 126 | インポート機能統合 | 2026-01-02 | S1準備中 |
+
+---
+
+## 126: インポート機能統合 詳細
+
+### 概要
+
+`WordPressImportService` に既存機能（block_converter, WpIdResolver, ErrorCollector）を統合し、WXR/REST両対応の完全なインポートを実現
+
+### 背景
+
+- `importer.py` と `import_service.py` が別々に存在（設計違反）
+- `import_service.py` が実際に使われている（管理画面/REST API）
+- 既に作成した機能が未接続
+
+### セグメント構成
+
+```
+[S1: 依存追加・初期化]
+    ↓
+[S2: _import_posts 修正]
+    ↓
+[S3: _import_authors 修正]
+    ↓
+[S4: _import_categories/tags/media/menus 修正]
+    ↓
+[S5: エラーログ出力]
+    ↓
+[S6: 構文チェック・テスト]
+```
+
+### S1: 依存追加・初期化
+
+| # | タスク | 詳細 | 状態 |
+|---|--------|------|------|
+| 1 | import追加 | `block_converter`, `WpIdResolver`, `ErrorCollector` | 未着手 |
+| 2 | `__init__` 修正 | `id_resolver`, `error_collector` インスタンス作成 | 未着手 |
+| 3 | media mapping | `_import_media` 後に `id_resolver.set_media_mapping()` | 未着手 |
+
+### S2: _import_posts 修正
+
+| # | タスク | 現状 | 修正後 | 状態 |
+|---|--------|------|--------|------|
+| 1 | 本文変換 | `content` そのまま | `block_converter.convert()` → `body` | 未着手 |
+| 2 | フィールド名 | `content` | `body` (post.yaml準拠) | 未着手 |
+| 3 | author | `wp_author_id` 保存 | `post_author` リレーション設定 | 未着手 |
+| 4 | channel | なし | `post_channel` = `get_default_channel()` | 未着手 |
+| 5 | categories | `category_slugs` カンマ区切り | `post_categories` = ID配列 | 未着手 |
+| 6 | tags | `tag_slugs` カンマ区切り | `post_tags` = ID配列 | 未着手 |
+| 7 | featured_image | なし | `id_resolver.resolve_media()` でURL取得 | 未着手 |
+| 8 | エラー | `logger.warning` | `error_collector.add_error()` | 未着手 |
+| 9 | スキップ | なし | `error_collector.add_skip()` | 未着手 |
+
+### S3: _import_authors 修正
+
+| # | タスク | 現状 | 修正後 | 状態 |
+|---|--------|------|--------|------|
+| 1 | フィールド確認 | `wp_login` など | `wp_id` 確認（user.yaml準拠） | 未着手 |
+| 2 | パスワード | なし | ランダム生成（required対応） | 未着手 |
+| 3 | エラー | `logger.warning` | `error_collector.add_error()` | 未着手 |
+
+### S4: _import_categories/tags/media/menus 修正
+
+| # | タスク | 状態 |
+|---|--------|------|
+| 1 | _import_categories: `error_collector.add_error()` | 未着手 |
+| 2 | _import_tags: `error_collector.add_error()` | 未着手 |
+| 3 | _import_media: `error_collector.add_error()` | 未着手 |
+| 4 | _import_media: `id_resolver.set_media_mapping()` | 未着手 |
+| 5 | _import_menus: `error_collector.add_error()` | 未着手 |
+
+### S5: エラーログ出力
+
+| # | タスク | 詳細 | 状態 |
+|---|--------|------|------|
+| 1 | `run_import` 終了時 | `error_collector.to_log_file()` 呼び出し | 未着手 |
+| 2 | ログパス | `output_dir/import_errors_{timestamp}.log` | 未着手 |
+| 3 | job更新 | エラー件数を `job.errors` に保存 | 未着手 |
+
+### S6: 構文チェック・テスト
+
+| # | タスク | 状態 |
+|---|--------|------|
+| 1 | `python3 -m py_compile` | 未着手 |
+| 2 | import確認 | 未着手 |
+| 3 | 管理画面から実インポートテスト | 未着手 |
+
+### エラー捕捉一覧
+
+| フェーズ | 捕捉内容 |
+|----------|----------|
+| authors | 作成失敗、email重複 |
+| categories | 作成失敗、slug重複 |
+| tags | 作成失敗、slug重複 |
+| media | ダウンロード失敗、保存失敗 |
+| posts | 変換失敗、author未解決、channel取得失敗、作成失敗 |
+| pages | 同上（authorのみ） |
+| menus | 作成失敗 |
+
+### 依存関係
+
+```
+S1 → S2 → S3 → S4 → S5 → S6
+```
+
+### 削除予定
+
+| ファイル | 対応 |
+|----------|------|
+| `importer.py` | 126完了後に削除検討 |
 
 ---
 
