@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.50] - 2026-01-02
+
+### Added
+- BlockTune: 配置機能追加（100）
+  - AlignmentBlockTune（左揃え・中央揃え・右揃え）
+  - paragraph/headerブロックに適用
+- BlockTune: テキスト色・背景色追加（101）
+  - ColorBlockTune（文字色・背景色のカラーピッカー）
+  - paragraph/headerブロックに適用
+
 ## [0.1.49] - 2026-01-02
 
 ### Added

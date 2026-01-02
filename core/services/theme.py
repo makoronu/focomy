@@ -728,6 +728,13 @@ body {
 
         return re.sub(r"<(/?\w+[^>]*)>", replace_tag, html)
 
+    def _validate_color(self, color: str) -> str:
+        """Validate hex color, return empty string if invalid."""
+        import re
+        if color and re.match(r"^#[0-9a-fA-F]{6}$", color):
+            return color
+        return ""
+
     def _render_blocks(self, content: Any) -> str:
         """Render Editor.js blocks to HTML."""
         if not content:
@@ -754,12 +761,54 @@ body {
             block_data = block.get("data", {})
 
             if block_type == "paragraph":
-                html_parts.append(f'<p>{block_data.get("text", "")}</p>')
+                text = self._sanitize_html(block_data.get("text", ""))
+                tunes = block.get("tunes", {})
+                alignment = tunes.get("alignmentTune", {}).get("alignment", "left")
+                text_color = self._validate_color(
+                    tunes.get("colorTune", {}).get("textColor", "")
+                )
+                bg_color = self._validate_color(
+                    tunes.get("colorTune", {}).get("backgroundColor", "")
+                )
+
+                styles = []
+                if alignment in ("center", "right"):
+                    styles.append(f"text-align: {alignment}")
+                if text_color:
+                    styles.append(f"color: {text_color}")
+                if bg_color:
+                    styles.append(f"background: {bg_color}")
+                    styles.append("padding: 1rem")
+                    styles.append("border-radius: 0.5rem")
+
+                style_attr = f' style="{"; ".join(styles)}"' if styles else ""
+                html_parts.append(f"<p{style_attr}>{text}</p>")
 
             elif block_type == "header":
-                level = block_data.get("level", 2)
-                text = block_data.get("text", "")
-                html_parts.append(f"<h{level}>{text}</h{level}>")
+                level = int(block_data.get("level", 2))
+                level = max(1, min(6, level))
+                text = escape(block_data.get("text", ""))
+                tunes = block.get("tunes", {})
+                alignment = tunes.get("alignmentTune", {}).get("alignment", "left")
+                text_color = self._validate_color(
+                    tunes.get("colorTune", {}).get("textColor", "")
+                )
+                bg_color = self._validate_color(
+                    tunes.get("colorTune", {}).get("backgroundColor", "")
+                )
+
+                styles = []
+                if alignment in ("center", "right"):
+                    styles.append(f"text-align: {alignment}")
+                if text_color:
+                    styles.append(f"color: {text_color}")
+                if bg_color:
+                    styles.append(f"background: {bg_color}")
+                    styles.append("padding: 1rem")
+                    styles.append("border-radius: 0.5rem")
+
+                style_attr = f' style="{"; ".join(styles)}"' if styles else ""
+                html_parts.append(f"<h{level}{style_attr}>{text}</h{level}>")
 
             elif block_type == "list":
                 style = block_data.get("style", "unordered")

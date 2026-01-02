@@ -347,6 +347,80 @@
     font-size: 0.875rem;
 }
 
+/* === Alignment Tune === */
+.cdx-alignment-tune {
+    display: flex;
+    gap: 4px;
+    padding: 6px;
+}
+.cdx-alignment-tune__button {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cdx-alignment-tune__button:hover {
+    background: #f3f4f6;
+}
+.cdx-alignment-tune__button--active {
+    background: #3b82f6;
+    color: white;
+    border-color: #3b82f6;
+}
+[data-alignment="left"] .ce-block__content { text-align: left; }
+[data-alignment="center"] .ce-block__content { text-align: center; }
+[data-alignment="right"] .ce-block__content { text-align: right; }
+
+/* === Color Tune === */
+.cdx-color-tune {
+    padding: 8px;
+}
+.cdx-color-tune__row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+.cdx-color-tune__row:last-child {
+    margin-bottom: 0;
+}
+.cdx-color-tune__label {
+    font-size: 12px;
+    color: #6b7280;
+    width: 48px;
+}
+.cdx-color-tune__input {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    cursor: pointer;
+}
+.cdx-color-tune__reset {
+    width: 24px;
+    height: 24px;
+    border: 1px solid #e5e7eb;
+    border-radius: 4px;
+    background: white;
+    cursor: pointer;
+    font-size: 14px;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.cdx-color-tune__reset:hover {
+    background: #fee2e2;
+    color: #ef4444;
+}
+
 /* === Spacerブロック === */
 .cdx-spacer {
     margin: 0.5rem 0;
@@ -1026,6 +1100,177 @@ class ColumnsBlock {
     }
 }
 
+/* === BlockTune: Alignment === */
+class AlignmentBlockTune {
+    static get isTune() { return true; }
+
+    constructor({api, data, config, block}) {
+        this.api = api;
+        this.block = block;
+        this.data = data || { alignment: 'left' };
+        this.wrapper = null;
+    }
+
+    render() {
+        this.wrapper = document.createElement('div');
+        this.wrapper.classList.add('cdx-alignment-tune');
+
+        const alignments = [
+            { value: 'left', icon: '◀', label: '左揃え' },
+            { value: 'center', icon: '■', label: '中央揃え' },
+            { value: 'right', icon: '▶', label: '右揃え' }
+        ];
+
+        alignments.forEach(align => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.classList.add('cdx-alignment-tune__button');
+            if (this.data.alignment === align.value) {
+                btn.classList.add('cdx-alignment-tune__button--active');
+            }
+            btn.textContent = align.icon;
+            btn.title = align.label;
+            btn.addEventListener('click', () => {
+                this.data.alignment = align.value;
+                this._updateButtons();
+                this._applyAlignment();
+            });
+            this.wrapper.appendChild(btn);
+        });
+
+        // Apply initial alignment
+        setTimeout(() => this._applyAlignment(), 0);
+
+        return this.wrapper;
+    }
+
+    _updateButtons() {
+        const alignments = ['left', 'center', 'right'];
+        this.wrapper.querySelectorAll('.cdx-alignment-tune__button').forEach((btn, i) => {
+            btn.classList.toggle('cdx-alignment-tune__button--active',
+                this.data.alignment === alignments[i]);
+        });
+    }
+
+    _applyAlignment() {
+        if (this.block && this.block.holder) {
+            this.block.holder.dataset.alignment = this.data.alignment;
+        }
+    }
+
+    save() {
+        return this.data;
+    }
+}
+
+/* === BlockTune: Color === */
+class ColorBlockTune {
+    static get isTune() { return true; }
+
+    constructor({api, data, config, block}) {
+        this.api = api;
+        this.block = block;
+        this.data = data || { textColor: '', backgroundColor: '' };
+        this.wrapper = null;
+    }
+
+    render() {
+        this.wrapper = document.createElement('div');
+        this.wrapper.classList.add('cdx-color-tune');
+
+        // Text color row
+        const textRow = document.createElement('div');
+        textRow.classList.add('cdx-color-tune__row');
+
+        const textLabel = document.createElement('label');
+        textLabel.classList.add('cdx-color-tune__label');
+        textLabel.textContent = '文字色';
+
+        const textInput = document.createElement('input');
+        textInput.type = 'color';
+        textInput.value = this.data.textColor || '#000000';
+        textInput.classList.add('cdx-color-tune__input');
+        textInput.addEventListener('change', () => {
+            this.data.textColor = textInput.value;
+            this._applyColors();
+        });
+        this.textInput = textInput;
+
+        const textReset = document.createElement('button');
+        textReset.type = 'button';
+        textReset.textContent = '×';
+        textReset.classList.add('cdx-color-tune__reset');
+        textReset.addEventListener('click', () => {
+            this.data.textColor = '';
+            textInput.value = '#000000';
+            this._applyColors();
+        });
+
+        textRow.appendChild(textLabel);
+        textRow.appendChild(textInput);
+        textRow.appendChild(textReset);
+
+        // Background color row
+        const bgRow = document.createElement('div');
+        bgRow.classList.add('cdx-color-tune__row');
+
+        const bgLabel = document.createElement('label');
+        bgLabel.classList.add('cdx-color-tune__label');
+        bgLabel.textContent = '背景色';
+
+        const bgInput = document.createElement('input');
+        bgInput.type = 'color';
+        bgInput.value = this.data.backgroundColor || '#ffffff';
+        bgInput.classList.add('cdx-color-tune__input');
+        bgInput.addEventListener('change', () => {
+            this.data.backgroundColor = bgInput.value;
+            this._applyColors();
+        });
+        this.bgInput = bgInput;
+
+        const bgReset = document.createElement('button');
+        bgReset.type = 'button';
+        bgReset.textContent = '×';
+        bgReset.classList.add('cdx-color-tune__reset');
+        bgReset.addEventListener('click', () => {
+            this.data.backgroundColor = '';
+            bgInput.value = '#ffffff';
+            this._applyColors();
+        });
+
+        bgRow.appendChild(bgLabel);
+        bgRow.appendChild(bgInput);
+        bgRow.appendChild(bgReset);
+
+        this.wrapper.appendChild(textRow);
+        this.wrapper.appendChild(bgRow);
+
+        // Apply initial colors
+        setTimeout(() => this._applyColors(), 0);
+
+        return this.wrapper;
+    }
+
+    _applyColors() {
+        if (this.block && this.block.holder) {
+            const content = this.block.holder.querySelector('.ce-block__content');
+            if (content) {
+                content.style.color = this.data.textColor || '';
+                content.style.backgroundColor = this.data.backgroundColor || '';
+                content.style.padding = this.data.backgroundColor ? '1rem' : '';
+                content.style.borderRadius = this.data.backgroundColor ? '0.5rem' : '';
+            }
+        }
+    }
+
+    save() {
+        return {
+            textColor: this.data.textColor || '',
+            backgroundColor: this.data.backgroundColor || ''
+        };
+    }
+}
+
 /* === カスタムブロック: Spacer === */
 class SpacerBlock {
     static get toolbox() {
@@ -1640,8 +1885,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 spacer: SpacerBlock,
                 group: GroupBlock,
                 cover: CoverBlock,
-                gallery: GalleryBlock
+                gallery: GalleryBlock,
+
+                // BlockTunes
+                alignmentTune: {
+                    class: AlignmentBlockTune
+                },
+                colorTune: {
+                    class: ColorBlockTune
+                }
             },
+
+            // グローバルtunes（全ブロックに適用）
+            tunes: ['alignmentTune', 'colorTune'],
 
             // インラインツール
             inlineToolbar: ['bold', 'italic', 'link', 'marker', 'inlineCode', 'underline'],
