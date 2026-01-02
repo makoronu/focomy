@@ -144,7 +144,7 @@ class WpIdResolver:
         """Resolve WordPress attachment ID to new media URL.
 
         This is a synchronous method as it only uses the cached mapping.
-        Call set_media_mapping() before using this method.
+        Call set_media_mapping() or add_media_mapping() before using this method.
 
         Args:
             wp_id: WordPress attachment post ID
@@ -153,6 +153,17 @@ class WpIdResolver:
             New media URL or None if not found
         """
         return self._media_id_to_url.get(wp_id)
+
+    def add_media_mapping(self, wp_id: int, new_url: str) -> None:
+        """Add a single media mapping.
+
+        Use this for incremental mapping during import loop.
+
+        Args:
+            wp_id: WordPress attachment post ID
+            new_url: New media URL after import
+        """
+        self._media_id_to_url[wp_id] = new_url
 
     async def get_default_channel(self) -> str:
         """Get or create the default channel for imported posts.

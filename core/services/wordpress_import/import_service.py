@@ -493,6 +493,12 @@ class WordPressImportService:
 
                 existing = await self._find_by_wp_id("category", cat.id)
                 if existing:
+                    self.error_collector.add_skip(
+                        phase="categories",
+                        item_id=cat.id,
+                        item_title=cat.name,
+                        reason="already_exists",
+                    )
                     await self._save_checkpoint(job_id, "categories", cat.id, "categories")
                     continue
 
@@ -517,7 +523,15 @@ class WordPressImportService:
                 )
 
             except Exception as e:
-                logger.warning(f"Failed to import category {cat.name}: {e}")
+                self.error_collector.add_error(
+                    phase="categories",
+                    item_id=cat.id,
+                    item_title=cat.name,
+                    error_type="import_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"slug": cat.slug},
+                )
 
         await self.update_job(job_id, categories_imported=count)
         if skipped:
@@ -542,6 +556,12 @@ class WordPressImportService:
 
                 existing = await self._find_by_wp_id("tag", tag.id)
                 if existing:
+                    self.error_collector.add_skip(
+                        phase="tags",
+                        item_id=tag.id,
+                        item_title=tag.name,
+                        reason="already_exists",
+                    )
                     await self._save_checkpoint(job_id, "tags", tag.id, "tags")
                     continue
 
@@ -565,7 +585,15 @@ class WordPressImportService:
                 )
 
             except Exception as e:
-                logger.warning(f"Failed to import tag {tag.name}: {e}")
+                self.error_collector.add_error(
+                    phase="tags",
+                    item_id=tag.id,
+                    item_title=tag.name,
+                    error_type="import_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"slug": tag.slug},
+                )
 
         await self.update_job(job_id, tags_imported=count)
         if skipped:
@@ -616,6 +644,12 @@ class WordPressImportService:
 
                 existing = await self._find_by_wp_id("media", media.id)
                 if existing:
+                    self.error_collector.add_skip(
+                        phase="media",
+                        item_id=media.id,
+                        item_title=media.title or "untitled",
+                        reason="already_exists",
+                    )
                     await self._save_checkpoint(job_id, "media", media.id, "media")
                     continue
 
@@ -629,6 +663,8 @@ class WordPressImportService:
                     "source_url": media.guid,
                     "wp_id": media.id,
                 }
+
+                new_url = None  # Track new URL for id_resolver mapping
 
                 # Download and process file if enabled
                 if media_importer and media.guid:
@@ -651,9 +687,17 @@ class WordPressImportService:
                         media_data["size"] = imported.file_size
                         media_data["width"] = imported.width
                         media_data["height"] = imported.height
+                        new_url = imported.new_url
 
                 await self.entity_svc.create("media", media_data)
                 count += 1
+
+                # Add to id_resolver mapping for featured_image resolution
+                if new_url:
+                    self.id_resolver.add_media_mapping(media.id, new_url)
+                elif media.guid:
+                    # Use original URL if not downloaded
+                    self.id_resolver.add_media_mapping(media.id, media.guid)
 
                 # Save checkpoint after successful import
                 await self._save_checkpoint(job_id, "media", media.id, "media")
@@ -665,7 +709,15 @@ class WordPressImportService:
                 )
 
             except Exception as e:
-                logger.warning(f"Failed to import media {media.id}: {e}")
+                self.error_collector.add_error(
+                    phase="media",
+                    item_id=media.id,
+                    item_title=media.title or "untitled",
+                    error_type="import_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"source_url": media.guid},
+                )
 
         await self.update_job(job_id, media_imported=count)
         if skipped:
@@ -864,7 +916,15 @@ class WordPressImportService:
                 )
 
             except Exception as e:
-                logger.warning(f"Failed to import menu {menu_name}: {e}")
+                self.error_collector.add_error(
+                    phase="menus",
+                    item_id=menu_name,
+                    item_title=menu_name,
+                    error_type="import_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"items_count": len(items)},
+                )
 
         await self.update_job(job_id, menus_imported=count)
         if skipped:
