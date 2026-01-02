@@ -18,6 +18,15 @@ class BlockConverter:
         re.DOTALL,
     )
 
+    # ショートコードパターン
+    # [shortcode attr="value"] or [shortcode attr="value"]content[/shortcode]
+    # Note: ショートコード名はハイフン許可（contact-form等）
+    SHORTCODE_PATTERN = re.compile(
+        r'\[([\w-]+)((?:\s+[\w-]+=["\'][^"\']*["\']|\s+[\w-]+=\S+)*)\s*/?]'
+        r'(?:(.*?)\[/\1])?',
+        re.DOTALL | re.IGNORECASE,
+    )
+
     def convert(self, html: str) -> dict:
         """Convert HTML to Editor.js block format.
 
@@ -384,8 +393,8 @@ class BlockConverter:
             if inner_blocks:
                 return inner_blocks
 
-        # Gutenbergブロックがなければrawで保持
-        return {"type": "raw", "data": {"html": content.strip()}}
+        # Gutenbergブロックがなければ通常HTMLとしてパース（ショートコード対応）
+        return self._parse_html(content.strip())
 
     def _convert_nested(self, content: str, depth: int) -> list | dict | None:
         """Convert nested blocks (columns, group, cover).
@@ -424,15 +433,271 @@ class BlockConverter:
 
         return None
 
-    def _parse_html(self, html: str) -> list[dict]:
+    def _process_shortcodes(self, html: str) -> list[dict]:
+        """Process WordPress shortcodes in HTML.
+
+        Args:
+            html: HTML content that may contain shortcodes
+
+        Returns:
+            List of Editor.js blocks from shortcodes
+        """
+        blocks = []
+        last_end = 0
+
+        for match in self.SHORTCODE_PATTERN.finditer(html):
+            # ショートコード前のテキスト
+            before = html[last_end : match.start()].strip()
+            if before:
+                # 前のテキストをHTMLとしてパース（再帰防止フラグ付き）
+                before_blocks = self._parse_html(before, _from_shortcode=True)
+                blocks.extend(before_blocks)
+
+            # ショートコード変換
+            shortcode = match.group(1).lower()
+            attrs_str = match.group(2) or ""
+            content = match.group(3) or ""
+
+            attrs = self._parse_shortcode_attrs(attrs_str)
+            block = self._convert_shortcode(shortcode, attrs, content)
+            if block:
+                if isinstance(block, list):
+                    blocks.extend(block)
+                else:
+                    blocks.append(block)
+
+            last_end = match.end()
+
+        # ショートコード後のテキスト
+        after = html[last_end:].strip()
+        if after:
+            after_blocks = self._parse_html(after, _from_shortcode=True)
+            blocks.extend(after_blocks)
+
+        return blocks
+
+    def _parse_shortcode_attrs(self, attrs_str: str) -> dict:
+        """Parse shortcode attributes string.
+
+        Args:
+            attrs_str: ' attr1="value1" attr2="value2"'
+
+        Returns:
+            {"attr1": "value1", "attr2": "value2"}
+        """
+        attrs = {}
+        # attr="value" or attr='value' or attr=value
+        pattern = re.compile(r'([\w-]+)=["\']([^"\']*)["\']|([\w-]+)=(\S+)')
+
+        for match in pattern.finditer(attrs_str):
+            if match.group(1):
+                attrs[match.group(1)] = match.group(2)
+            elif match.group(3):
+                attrs[match.group(3)] = match.group(4)
+
+        return attrs
+
+    def _convert_shortcode(self, name: str, attrs: dict, content: str) -> dict | list | None:
+        """Convert a single shortcode to Editor.js block.
+
+        Args:
+            name: Shortcode name (e.g., "gallery", "video")
+            attrs: Parsed attributes
+            content: Content between [shortcode] and [/shortcode]
+
+        Returns:
+            Editor.js block(s) or None
+        """
+        if name == "gallery":
+            return self._convert_gallery_shortcode(attrs)
+        elif name == "video":
+            return self._convert_video_shortcode(attrs)
+        elif name == "audio":
+            return self._convert_audio_shortcode(attrs)
+        elif name == "embed":
+            return self._convert_embed_shortcode(content)
+        elif name == "caption":
+            return self._convert_caption_shortcode(content, attrs)
+        elif name == "playlist":
+            return self._convert_playlist_shortcode(attrs)
+
+        # 未対応ショートコード → raw
+        shortcode_text = f"[{name}"
+        if attrs:
+            for k, v in attrs.items():
+                shortcode_text += f' {k}="{v}"'
+        shortcode_text += "]"
+        if content:
+            shortcode_text += f"{content}[/{name}]"
+
+        return {"type": "raw", "data": {"html": shortcode_text}}
+
+    def _convert_gallery_shortcode(self, attrs: dict) -> dict | None:
+        """Convert [gallery] shortcode.
+
+        [gallery ids="1,2,3" columns="3"]
+        """
+        ids_str = attrs.get("ids", "")
+        if not ids_str:
+            return None
+
+        # IDをリストに変換
+        ids = [img_id.strip() for img_id in ids_str.split(",") if img_id.strip()]
+        if not ids:
+            return None
+
+        # columns属性（不正値はデフォルト3）
+        try:
+            columns = int(attrs.get("columns", 3))
+        except (ValueError, TypeError):
+            columns = 3
+
+        # Editor.js galleryブロック形式
+        # Note: 実際のURLはインポート時にメディアIDから解決する必要がある
+        return {
+            "type": "gallery",
+            "data": {
+                "images": [{"id": img_id, "url": f"#media-{img_id}"} for img_id in ids],
+                "columns": columns,
+            },
+        }
+
+    def _convert_video_shortcode(self, attrs: dict) -> dict | None:
+        """Convert [video] shortcode.
+
+        [video src="url" poster="url"]
+        """
+        src = attrs.get("src", "")
+        if not src:
+            return None
+
+        return {
+            "type": "embed",
+            "data": {
+                "service": "video",
+                "source": src,
+                "embed": src,
+                "caption": "",
+            },
+        }
+
+    def _convert_audio_shortcode(self, attrs: dict) -> dict | None:
+        """Convert [audio] shortcode.
+
+        [audio src="url"]
+        """
+        src = attrs.get("src", "")
+        if not src:
+            return None
+
+        return {
+            "type": "embed",
+            "data": {
+                "service": "audio",
+                "source": src,
+                "embed": src,
+                "caption": "",
+            },
+        }
+
+    def _convert_embed_shortcode(self, content: str) -> dict | None:
+        """Convert [embed] shortcode.
+
+        [embed]https://youtube.com/watch?v=xxx[/embed]
+        """
+        url = content.strip()
+        if not url:
+            return None
+
+        # サービス判定
+        service = ""
+        embed_url = url
+        if "youtube" in url or "youtu.be" in url:
+            service = "youtube"
+            if "watch?v=" in url:
+                video_id = url.split("watch?v=")[-1].split("&")[0]
+                embed_url = f"https://www.youtube.com/embed/{video_id}"
+            elif "youtu.be/" in url:
+                video_id = url.split("youtu.be/")[-1].split("?")[0]
+                embed_url = f"https://www.youtube.com/embed/{video_id}"
+        elif "vimeo" in url:
+            service = "vimeo"
+        elif "twitter" in url or "x.com" in url:
+            service = "twitter"
+        elif "spotify" in url:
+            service = "spotify"
+
+        return {
+            "type": "embed",
+            "data": {
+                "service": service,
+                "source": url,
+                "embed": embed_url,
+                "caption": "",
+            },
+        }
+
+    def _convert_caption_shortcode(self, content: str, attrs: dict) -> dict | None:
+        """Convert [caption] shortcode.
+
+        [caption]<img src="...">Caption text[/caption]
+        """
+        if not content.strip():
+            return None
+
+        soup = BeautifulSoup(content, "html.parser")
+        img = soup.find("img")
+
+        if img:
+            url = img.get("src", "")
+            alt = img.get("alt", "")
+            # img以外のテキストがキャプション
+            img.extract()
+            caption = soup.get_text(strip=True) or alt
+
+            if url:
+                return {
+                    "type": "image",
+                    "data": {"file": {"url": url}, "caption": caption},
+                }
+
+        # imgがなければraw
+        return {"type": "raw", "data": {"html": content.strip()}}
+
+    def _convert_playlist_shortcode(self, attrs: dict) -> dict | None:
+        """Convert [playlist] shortcode.
+
+        [playlist ids="1,2,3" type="audio"]
+        """
+        ids_str = attrs.get("ids", "")
+        if not ids_str:
+            return None
+
+        playlist_type = attrs.get("type", "audio")
+
+        # プレイリストはrawで保持（Editor.jsに対応ブロックなし）
+        return {
+            "type": "raw",
+            "data": {
+                "html": f'<div class="wp-playlist" data-type="{playlist_type}" data-ids="{ids_str}"></div>'
+            },
+        }
+
+    def _parse_html(self, html: str, _from_shortcode: bool = False) -> list[dict]:
         """Parse classic HTML (no Gutenberg).
 
         Args:
             html: Plain HTML without Gutenberg comments
+            _from_shortcode: Internal flag to prevent infinite recursion
 
         Returns:
             List of Editor.js blocks
         """
+        # ショートコード検出（再帰呼び出し時はスキップ）
+        if not _from_shortcode and "[" in html and "]" in html:
+            if self.SHORTCODE_PATTERN.search(html):
+                return self._process_shortcodes(html)
+
         soup = BeautifulSoup(html, "html.parser")
         blocks = []
 
