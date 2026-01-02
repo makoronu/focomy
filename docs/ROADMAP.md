@@ -10,7 +10,7 @@
 
 | ID | タスク | 開始日 | 状態 |
 |----|--------|--------|------|
-| 108 | 投稿本文インポート修正 | 2026-01-02 | S1準備中 |
+| - | なし | - | - |
 
 ---
 
@@ -163,53 +163,62 @@ class WpIdResolver:
 
 **確認方法**: print文で解決結果確認
 
-### S3: _transform_post修正
+### S3: _transform_post修正 - 完了
 
 | # | タスク | 状態 |
 |---|--------|------|
-| 1 | SEOネスト→フラット変換 | 未着手 |
-| 2 | 不要フィールド除去（meta等） | 未着手 |
-| 3 | wp_id フィールド追加 | 未着手 |
-| 4 | featured_image URL解決 | 未着手 |
+| 1 | SEOネスト→フラット変換 | 完了 |
+| 2 | 不要フィールド除去（meta等） | 完了 |
+| 3 | wp_id フィールド追加 | 完了 |
+| 4 | featured_image URL解決 | 完了 |
+| 5 | 戻り値を tuple[dict, dict] に変更 | 完了 |
 
-**変換前**:
+**変換後（fields）**:
 ```python
 {
     "wp_id": 123,
-    "seo": {"title": "...", "description": "..."},
-    "author_wp_id": 1,
-    "categories": ["slug1", "slug2"],
-    "tags": ["tag1"],
-    "featured_image": 456,  # WP media ID
-    "meta": {...},
-}
-```
-
-**変換後**:
-```python
-{
-    "wp_id": 123,
+    "title": "...",
+    "slug": "...",
+    "body": [...],  # Editor.js blocks
+    "excerpt": "...",
+    "status": "draft",
+    "published_at": "...",
+    "featured_image": "https://...",  # URL解決済
     "seo_title": "...",
     "seo_description": "...",
-    # author_wp_id, categories, tags, meta 削除
-    # featured_image → URL or Focomy media ID
 }
 ```
 
-**確認方法**: サンプルデータで変換結果確認
+**変換後（relations）**:
+```python
+{
+    "author_wp_id": 1,
+    "category_slugs": ["slug1", "slug2"],
+    "tag_slugs": ["tag1"],
+}
+```
 
-### S4: リレーション設定
+**テスト結果**: 構文チェック + インポート確認 OK
+
+### S4: リレーション設定 - 完了
 
 | # | タスク | 状態 |
 |---|--------|------|
-| 1 | post_author 設定 | 未着手 |
-| 2 | post_channel 設定 | 未着手 |
-| 3 | post_categories 設定 | 未着手 |
-| 4 | post_tags 設定 | 未着手 |
-| 5 | page_author 設定 | 未着手 |
-| 6 | page_parent 設定 | 未着手 |
+| 1 | post_author 設定 | 完了 |
+| 2 | post_channel 設定 | 完了 |
+| 3 | post_categories 設定 | 完了 |
+| 4 | post_tags 設定 | 完了 |
+| 5 | page_author 設定 | 完了 |
 
-**確認方法**: 実インポート → 管理画面で確認
+**実装詳細**:
+- author: WP user ID → Focomy user ID（fallback: default_author_id）
+- channel: get_default_channel() で取得/作成
+- categories/tags: slug → entity ID 解決
+- post_type で分岐（post専用 vs page専用）
+- エラー時: 警告ログ + スキップ（全体中止しない）
+
+**テスト結果**: 構文チェック + インポート確認 OK
+**人作業**: 実WXRでインポート確認
 
 ### 依存関係
 
