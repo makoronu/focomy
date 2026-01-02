@@ -15,6 +15,7 @@ from .acf import ACFConverter
 from .analyzer import WordPressAnalyzer
 from .content_sanitizer import ContentSanitizer
 from .dry_run import DryRunService
+from .error_collector import ErrorCollector, ImportError
 from .id_resolver import WpIdResolver
 from .importer import WordPressImporter
 from .import_service import WordPressImportService
@@ -43,4 +44,6 @@ __all__ = [
     "PreviewService",
     "VerificationService",
     "WpIdResolver",
+    "ErrorCollector",
+    "ImportError",
 ]

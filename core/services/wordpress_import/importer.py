@@ -12,6 +12,7 @@ from typing import Any
 from .acf import ACFConverter
 from .constants import WP_STATUS_MAP
 from .analyzer import AnalysisReport, WordPressAnalyzer
+from .error_collector import ErrorCollector
 from .id_resolver import WpIdResolver
 from .media import MediaImporter, MediaImportResult, MediaItem
 from .redirects import RedirectGenerator, RedirectReport
@@ -145,6 +146,7 @@ class WordPressImporter:
         self._acf_converter = ACFConverter()
         self._redirect_generator: RedirectGenerator | None = None
         self._id_resolver: WpIdResolver | None = None
+        self._error_collector = ErrorCollector()
 
         self._wxr_data: WXRData | None = None
         self._analysis: AnalysisReport | None = None
@@ -268,16 +270,40 @@ class WordPressImporter:
             output_files = await self._export_results(result)
             result.output_files = output_files
 
-            result.success = True
+            result.success = not self._error_collector.has_errors()
             result.errors = self._analysis.warnings if self._analysis else []
 
         except Exception as e:
             logger.exception("Import failed")
             result.success = False
             result.errors.append(str(e))
+            self._error_collector.add_error(
+                phase="global",
+                item_id=0,
+                item_title="Import Process",
+                error_type="fatal",
+                message=str(e),
+                exc=e,
+            )
 
         # Calculate duration
         result.duration_seconds = (datetime.now(timezone.utc) - start_time).total_seconds()
+
+        # Phase 12: Write error log
+        if self._error_collector.has_errors() or self._error_collector.skipped:
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            log_file = self.config.output_dir / f"import_errors_{timestamp}.log"
+            json_file = self.config.output_dir / f"import_errors_{timestamp}.json"
+
+            self._error_collector.to_log_file(log_file)
+            self._error_collector.to_json(json_file)
+
+            result.output_files.append(str(log_file))
+            result.output_files.append(str(json_file))
+
+            # Log summary
+            logger.info(self._error_collector.print_summary())
+            logger.info(f"Error details: {log_file}")
 
         return result
 
@@ -330,19 +356,31 @@ class WordPressImporter:
                 )
             )
 
-            author_data = {
-                "wp_id": author.id,
-                "login": author.login,
-                "email": author.email,
-                "display_name": author.display_name,
-                "first_name": author.first_name,
-                "last_name": author.last_name,
-            }
+            try:
+                author_data = {
+                    "wp_id": author.id,
+                    "login": author.login,
+                    "email": author.email,
+                    "display_name": author.display_name,
+                    "first_name": author.first_name,
+                    "last_name": author.last_name,
+                }
 
-            if self.content_service:
-                await self.content_service.create("author", author_data)
+                if self.content_service:
+                    await self.content_service.create("author", author_data)
 
-            count += 1
+                count += 1
+            except Exception as e:
+                self._error_collector.add_error(
+                    phase="authors",
+                    item_id=author.id,
+                    item_title=author.display_name or author.login,
+                    error_type="create_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"email": author.email},
+                )
+
             self._save_checkpoint("authors", i + 1)
 
         return count
@@ -368,18 +406,30 @@ class WordPressImporter:
                 )
             )
 
-            cat_data = {
-                "wp_id": cat.id,
-                "name": cat.name,
-                "slug": cat.slug,
-                "description": cat.description,
-                "parent_wp_id": cat.parent_id,
-            }
+            try:
+                cat_data = {
+                    "wp_id": cat.id,
+                    "name": cat.name,
+                    "slug": cat.slug,
+                    "description": cat.description,
+                    "parent_wp_id": cat.parent_id,
+                }
 
-            if self.content_service:
-                await self.content_service.create("category", cat_data)
+                if self.content_service:
+                    await self.content_service.create("category", cat_data)
 
-            count += 1
+                count += 1
+            except Exception as e:
+                self._error_collector.add_error(
+                    phase="categories",
+                    item_id=cat.id,
+                    item_title=cat.name,
+                    error_type="create_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"slug": cat.slug},
+                )
+
             self._save_checkpoint("categories", i + 1)
 
         return count
@@ -405,17 +455,29 @@ class WordPressImporter:
                 )
             )
 
-            tag_data = {
-                "wp_id": tag.id,
-                "name": tag.name,
-                "slug": tag.slug,
-                "description": tag.description,
-            }
+            try:
+                tag_data = {
+                    "wp_id": tag.id,
+                    "name": tag.name,
+                    "slug": tag.slug,
+                    "description": tag.description,
+                }
 
-            if self.content_service:
-                await self.content_service.create("tag", tag_data)
+                if self.content_service:
+                    await self.content_service.create("tag", tag_data)
 
-            count += 1
+                count += 1
+            except Exception as e:
+                self._error_collector.add_error(
+                    phase="tags",
+                    item_id=tag.id,
+                    item_title=tag.name,
+                    error_type="create_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"slug": tag.slug},
+                )
+
             self._save_checkpoint("tags", i + 1)
 
         return count
@@ -495,39 +557,39 @@ class WordPressImporter:
                 )
             )
 
-            # Rewrite media URLs in raw HTML first
-            content = post.content
-            if self._media_importer and self._media_items:
-                # Get url_mapping from id_resolver if available
-                url_mapping = {}
-                if self._id_resolver:
-                    url_mapping = {
-                        item.original_url: self._id_resolver.resolve_media(item.post_id)
-                        for item in self._media_items
-                        if self._id_resolver.resolve_media(item.post_id)
-                    }
-                if url_mapping:
-                    content = self._media_importer.rewrite_content_urls(
-                        content,
-                        url_mapping,
-                        self.config.old_base_url,
+            try:
+                # Rewrite media URLs in raw HTML first
+                content = post.content
+                if self._media_importer and self._media_items:
+                    # Get url_mapping from id_resolver if available
+                    url_mapping = {}
+                    if self._id_resolver:
+                        url_mapping = {
+                            item.original_url: self._id_resolver.resolve_media(item.post_id)
+                            for item in self._media_items
+                            if self._id_resolver.resolve_media(item.post_id)
+                        }
+                    if url_mapping:
+                        content = self._media_importer.rewrite_content_urls(
+                            content,
+                            url_mapping,
+                            self.config.old_base_url,
+                        )
+
+                # Transform post data (converts content to Editor.js blocks)
+                # Returns (fields_dict, relations_dict)
+                post_data, relations_data = self._transform_post_with_content(post, content)
+
+                # Convert ACF fields
+                if self.config.convert_acf:
+                    acf_groups = self._acf_converter._field_groups
+                    post_data["acf_fields"] = self._acf_converter.convert_post_meta(
+                        post.postmeta,
+                        acf_groups,
                     )
 
-            # Transform post data (converts content to Editor.js blocks)
-            # Returns (fields_dict, relations_dict)
-            post_data, relations_data = self._transform_post_with_content(post, content)
-
-            # Convert ACF fields
-            if self.config.convert_acf:
-                acf_groups = self._acf_converter._field_groups
-                post_data["acf_fields"] = self._acf_converter.convert_post_meta(
-                    post.postmeta,
-                    acf_groups,
-                )
-
-            # S4: Set relations
-            if self._id_resolver:
-                try:
+                # S4: Set relations
+                if self._id_resolver:
                     # author解決（post/page共通、relation名は異なる）
                     author_relation = f"{post_type}_author"
                     author_id = None
@@ -541,9 +603,14 @@ class WordPressImporter:
                     elif self.config.default_author_id:
                         post_data[author_relation] = self.config.default_author_id
                     else:
-                        logger.warning(
-                            f"No author for {post_type} '{post.title}', skipping"
+                        self._error_collector.add_skip(
+                            phase=post_type,
+                            item_id=post.id,
+                            item_title=post.title,
+                            reason="no_author",
+                            context={"author_wp_id": relations_data.get("author_wp_id")},
                         )
+                        self._save_checkpoint(post_type, i + 1)
                         continue
 
                     # post専用のリレーション
@@ -566,16 +633,22 @@ class WordPressImporter:
                         if tag_ids:
                             post_data["post_tags"] = tag_ids
 
-                except Exception as e:
-                    logger.error(
-                        f"Failed to set relations for {post_type} '{post.title}': {e}"
-                    )
-                    continue
+                if self.content_service:
+                    await self.content_service.create(post_type, post_data)
 
-            if self.content_service:
-                await self.content_service.create(post_type, post_data)
+                count += 1
 
-            count += 1
+            except Exception as e:
+                self._error_collector.add_error(
+                    phase=post_type,
+                    item_id=post.id,
+                    item_title=post.title,
+                    error_type="import_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"slug": post.slug, "status": post.status},
+                )
+
             self._save_checkpoint(post_type, i + 1)
 
         return count
@@ -657,28 +730,39 @@ class WordPressImporter:
                 )
             )
 
-            menu_data = {
-                "name": menu_name,
-                "items": [
-                    {
-                        "wp_id": item.id,
-                        "title": item.title,
-                        "url": item.url,
-                        "parent_wp_id": item.parent_id,
-                        "order": item.order,
-                        "object_type": item.object_type,
-                        "object_id": item.object_id,
-                        "target": item.target,
-                        "classes": item.classes,
-                    }
-                    for item in items
-                ],
-            }
+            try:
+                menu_data = {
+                    "name": menu_name,
+                    "items": [
+                        {
+                            "wp_id": item.id,
+                            "title": item.title,
+                            "url": item.url,
+                            "parent_wp_id": item.parent_id,
+                            "order": item.order,
+                            "object_type": item.object_type,
+                            "object_id": item.object_id,
+                            "target": item.target,
+                            "classes": item.classes,
+                        }
+                        for item in items
+                    ],
+                }
 
-            if self.content_service:
-                await self.content_service.create("menu", menu_data)
+                if self.content_service:
+                    await self.content_service.create("menu", menu_data)
 
-            count += 1
+                count += 1
+            except Exception as e:
+                self._error_collector.add_error(
+                    phase="menus",
+                    item_id=menu_name,
+                    item_title=menu_name,
+                    error_type="create_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"item_count": len(items)},
+                )
 
         return count
 
