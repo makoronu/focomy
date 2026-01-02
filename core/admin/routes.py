@@ -95,6 +95,13 @@ def require_admin(request: Request, user: Entity | None = Depends(get_current_ad
     return user
 
 
+def require_admin_api(request: Request, user: Entity | None = Depends(get_current_admin)):
+    """Require admin authentication for API endpoints (returns 401, not redirect)."""
+    if not user:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    return user
+
+
 async def check_permission(
     db: AsyncSession,
     user: Entity,
@@ -1765,6 +1772,25 @@ async def check_for_updates(
         "has_update": update_info.has_update,
         "release_url": update_info.release_url,
     }
+
+
+@router.post("/api/preview/render")
+async def preview_render(
+    request: Request,
+    current_user: Entity = Depends(require_admin_api),
+):
+    """Render Editor.js blocks to HTML for preview."""
+    from ..services.theme import theme_service
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    content = body.get("content", {})
+    html = theme_service.render_blocks_html(content)
+
+    return {"html": html}
 
 
 @router.get("/system", response_class=HTMLResponse)

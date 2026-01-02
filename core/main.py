@@ -177,8 +177,8 @@ class CSRFMiddleware(BaseHTTPMiddleware):
     CSRF_HEADER_NAME = "x-csrf-token"
 
     async def dispatch(self, request: Request, call_next):
-        # Skip CSRF for API routes (use bearer tokens)
-        if request.url.path.startswith("/api/"):
+        # Skip CSRF for API routes (use bearer tokens or session auth)
+        if request.url.path.startswith("/api/") or request.url.path.startswith("/admin/api/"):
             return await call_next(request)
 
         # Get or create CSRF token

@@ -1108,6 +1108,10 @@ body {
 
         return "\n".join(html_parts)
 
+    def render_blocks_html(self, content: Any) -> str:
+        """Render Editor.js blocks to HTML (public API for preview)."""
+        return self._render_blocks(content)
+
     def render(
         self,
         template_name: str,
