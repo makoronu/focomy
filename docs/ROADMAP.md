@@ -43,43 +43,46 @@
 
 **テスト**: `curl -X POST -d '{"blocks":[...]}' /api/admin/preview/render` → 401（未認証）確認済
 
-### S2: 静的UI骨格（JS動作なし）
+### S2: 静的UI骨格（JS動作なし） - 完了
 
 | # | タスク | ファイル | 状態 |
 |---|--------|----------|------|
-| D1 | 分割レイアウトCSS | `entity_form.html` | 未着手 |
-| B1 | 分割レイアウトHTML構造 | `entity_form.html` | 未着手 |
-| B2 | レイアウト切替ボタンUI | `entity_form.html` | 未着手 |
-| B4 | レスポンシブ切替ボタンUI | `entity_form.html` | 未着手 |
+| D1 | 分割レイアウトCSS | `entity_form.html` | 完了 |
+| B1 | 分割レイアウトHTML構造 | `entity_form.html` | 完了 |
+| B2 | レイアウト切替ボタンUI | `entity_form.html` | 完了 |
+| B4 | レスポンシブ切替ボタンUI | `entity_form.html` | 完了 |
 
-**テスト**: ブラウザで見た目確認
+**テスト**: ブラウザで見た目確認済
 
-### S3: コア機能接続（最重要）
+### S3: コア機能接続（最重要） - 完了
 
 | # | タスク | ファイル | 状態 |
 |---|--------|----------|------|
-| C2 | デバウンス関数 | `editor.html` | 未着手 |
-| C1 | プレビュー更新関数 | `editor.html` | 未着手 |
-| C7 | エラーハンドリング | `editor.html` | 未着手 |
-| C6 | JSONモード時無効化 | `editor.html` | 未着手 |
+| C2 | デバウンス関数 | `editor.html` | 完了 |
+| C1 | プレビュー更新関数 | `editor.html` | 完了 |
+| C7 | エラーハンドリング | `editor.html` | 完了 |
+| C6 | JSONモード時無効化 | `editor.html` | 完了 |
+| - | レイアウト切替関数 | `editor.html` | 完了 |
+| - | デバイス切替関数 | `editor.html` | 完了 |
+| - | localStorage状態保持 | `editor.html` | 完了 |
 
 **テスト**: 文字入力 → 300ms後 → プレビュー反映
 
-### S4: レイアウト切替
+### S4: レイアウト切替 - 完了（S3に統合）
 
 | # | タスク | ファイル | 状態 |
 |---|--------|----------|------|
-| C3 | レイアウト切替関数 | `editor.html` | 未着手 |
-| - | 状態保持（localStorage） | `editor.html` | 未着手 |
+| C3 | レイアウト切替関数 | `editor.html` | 完了 |
+| - | 状態保持（localStorage） | `editor.html` | 完了 |
 
 **テスト**: 3モード切替動作、リロード後も維持
 
-### S5: レスポンシブプレビュー
+### S5: レスポンシブプレビュー - 完了（S3に統合）
 
 | # | タスク | ファイル | 状態 |
 |---|--------|----------|------|
-| C4 | レスポンシブ切替関数 | `editor.html` | 未着手 |
-| D2 | デバイスフレームCSS | `entity_form.html` | 未着手 |
+| C4 | レスポンシブ切替関数 | `editor.html` | 完了 |
+| D2 | デバイスフレームCSS | `entity_form.html` | 完了 |
 
 **テスト**: Desktop/Tablet/Mobile切替でiframe幅変更
 

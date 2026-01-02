@@ -2177,6 +2177,10 @@ document.addEventListener('DOMContentLoaded', function() {
                     const data = await editor.save();
                     if (input) {
                         input.value = JSON.stringify(data);
+                        // Trigger preview update (105 S3)
+                        if (window.epUpdatePreview) {
+                            window.epUpdatePreview(inputId, data);
+                        }
                     }
                 } catch (e) {
                     console.error('Failed to save:', e);
@@ -2305,4 +2309,153 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 });
+
+// === Editor Preview (105 S3) ===
+(function() {
+    // Debounce utility
+    function debounce(fn, delay) {
+        let timer = null;
+        return function(...args) {
+            clearTimeout(timer);
+            timer = setTimeout(() => fn.apply(this, args), delay);
+        };
+    }
+
+    // Preview update function
+    async function updatePreview(fieldName, content) {
+        const iframe = document.getElementById('ep-iframe-' + fieldName);
+        if (!iframe) return;
+
+        // Check if in JSON mode (preview disabled)
+        const wrapper = document.querySelector('.ep-wrapper[data-field="' + fieldName + '"]');
+        if (!wrapper || wrapper.dataset.layout === 'editor-only') return;
+
+        try {
+            const response = await fetch('/admin/api/preview/render', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'same-origin',
+                body: JSON.stringify({ content: content })
+            });
+
+            if (!response.ok) {
+                throw new Error('Preview failed: ' + response.status);
+            }
+
+            const data = await response.json();
+            const html = `
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                    <link rel="stylesheet" href="/css/theme.css">
+                    <style>
+                        body { padding: 1rem; font-family: system-ui, sans-serif; }
+                        img { max-width: 100%; height: auto; }
+                    </style>
+                </head>
+                <body>${data.html}</body>
+                </html>
+            `;
+            iframe.srcdoc = html;
+        } catch (err) {
+            console.error('Preview error:', err);
+            iframe.srcdoc = '<html><body style="padding:1rem;color:#ef4444;">Preview error: ' + err.message + '</body></html>';
+        }
+    }
+
+    // Debounced preview update (300ms)
+    const debouncedPreview = debounce(updatePreview, 300);
+
+    // Initialize preview controls
+    document.addEventListener('DOMContentLoaded', function() {
+        // Layout toggle
+        document.querySelectorAll('.ep-layout-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const layout = this.dataset.layout;
+                const controls = this.closest('.ep-controls');
+                const wrapper = controls.nextElementSibling;
+                const fieldName = wrapper.dataset.field;
+
+                // Update active state
+                controls.querySelectorAll('.ep-layout-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Update layout
+                wrapper.dataset.layout = layout;
+
+                // Save preference
+                localStorage.setItem('ep-layout-' + fieldName, layout);
+
+                // Trigger preview if needed
+                if (layout !== 'editor-only') {
+                    const input = document.getElementById(fieldName);
+                    if (input && input.value) {
+                        try {
+                            const content = JSON.parse(input.value);
+                            updatePreview(fieldName, content);
+                        } catch (e) {}
+                    }
+                }
+            });
+        });
+
+        // Device toggle
+        document.querySelectorAll('.ep-device-btn').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                const device = this.dataset.device;
+                const controls = this.closest('.ep-controls');
+                const wrapper = controls.nextElementSibling;
+                const fieldName = wrapper.dataset.field;
+                const iframe = document.getElementById('ep-iframe-' + fieldName);
+
+                // Update active state
+                controls.querySelectorAll('.ep-device-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // Update iframe
+                if (iframe) {
+                    iframe.dataset.device = device;
+                }
+
+                // Save preference
+                localStorage.setItem('ep-device-' + fieldName, device);
+            });
+        });
+
+        // Restore preferences
+        document.querySelectorAll('.ep-wrapper').forEach(function(wrapper) {
+            const fieldName = wrapper.dataset.field;
+            const savedLayout = localStorage.getItem('ep-layout-' + fieldName);
+            const savedDevice = localStorage.getItem('ep-device-' + fieldName);
+
+            if (savedLayout) {
+                wrapper.dataset.layout = savedLayout;
+                const controls = wrapper.previousElementSibling;
+                if (controls) {
+                    controls.querySelectorAll('.ep-layout-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.layout === savedLayout);
+                    });
+                }
+            }
+
+            if (savedDevice) {
+                const iframe = document.getElementById('ep-iframe-' + fieldName);
+                if (iframe) {
+                    iframe.dataset.device = savedDevice;
+                }
+                const controls = wrapper.previousElementSibling;
+                if (controls) {
+                    controls.querySelectorAll('.ep-device-btn').forEach(b => {
+                        b.classList.toggle('active', b.dataset.device === savedDevice);
+                    });
+                }
+            }
+        });
+    });
+
+    // Export for Editor.js onChange
+    window.epUpdatePreview = debouncedPreview;
+})();
 </script>
