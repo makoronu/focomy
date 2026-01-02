@@ -28,16 +28,15 @@ WordPress HTML/Gutenberg → Editor.jsブロック形式への変換
                        [S5: インポーター統合] ← [S4: クラシックHTML]
 ```
 
-### S1: 基盤 + paragraph（最小動作確認）
+### S1: 基盤 + paragraph（最小動作確認） - 完了
 
 | # | タスク | ファイル | 状態 |
 |---|--------|----------|------|
-| 1 | `block_converter.py`作成 | `services/block_converter.py` | 未着手 |
-| 2 | Gutenbergコメント検出 | 同上 | 未着手 |
-| 3 | paragraph変換 | 同上 | 未着手 |
+| 1 | `block_converter.py`作成 | `services/block_converter.py` | 完了 |
+| 2 | Gutenbergコメント検出 | 同上 | 完了 |
+| 3 | paragraph変換 | 同上 | 完了 |
 
-**人作業**: paragraph変換が動くか確認
-**デバッグ**: 1ブロックだけで動作確認
+**テスト結果**: 基本/属性付き/インラインHTML/複数ブロック/空/未知ブロック 全てOK
 
 ### S2: 基本ブロック追加
 
