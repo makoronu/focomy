@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.54] - 2026-01-02
+
+### Added
+- プレビュー機能強化（105）
+  - 分割画面リアルタイムプレビュー（エディタ|プレビュー並列表示）
+  - レイアウト切替（エディタのみ/分割/プレビューのみ）
+  - レスポンシブプレビュー（Desktop/Tablet/Mobile幅切替）
+  - デバウンス付きプレビュー更新（300ms）
+  - localStorage状態保持（リロード後も設定維持）
+  - プレビューAPI（POST /admin/api/preview/render）
+
 ## [0.1.53] - 2026-01-02
 
 ### Added
