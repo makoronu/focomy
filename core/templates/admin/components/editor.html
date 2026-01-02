@@ -667,6 +667,180 @@
 <script src="https://cdn.jsdelivr.net/npm/@editorjs/underline@1.1.0"></script>
 
 <script>
+/* === カスタムインラインツール === */
+
+// Strikethrough (取り消し線)
+class StrikethroughInlineTool {
+    static get isInline() { return true; }
+    static get title() { return '取り消し線'; }
+
+    get state() { return this._state; }
+    set state(state) { this._state = state; }
+
+    constructor({api}) {
+        this.api = api;
+        this._state = false;
+        this.tag = 'S';
+    }
+
+    render() {
+        this.button = document.createElement('button');
+        this.button.type = 'button';
+        this.button.classList.add('ce-inline-tool');
+        this.button.innerHTML = '<s>S</s>';
+        return this.button;
+    }
+
+    surround(range) {
+        if (this._state) {
+            this.unwrap(range);
+            return;
+        }
+        this.wrap(range);
+    }
+
+    wrap(range) {
+        const s = document.createElement(this.tag);
+        s.appendChild(range.extractContents());
+        range.insertNode(s);
+        this.api.selection.expandToTag(s);
+    }
+
+    unwrap(range) {
+        const s = this.api.selection.findParentTag(this.tag);
+        const text = range.extractContents();
+        s.remove();
+        range.insertNode(text);
+    }
+
+    checkState() {
+        const s = this.api.selection.findParentTag(this.tag);
+        this._state = !!s;
+        this.button.classList.toggle('ce-inline-tool--active', this._state);
+        return this._state;
+    }
+}
+
+// TextColor (文字色)
+class TextColorInlineTool {
+    static get isInline() { return true; }
+    static get title() { return '文字色'; }
+
+    get state() { return this._state; }
+    set state(state) { this._state = state; }
+
+    constructor({api}) {
+        this.api = api;
+        this._state = false;
+    }
+
+    render() {
+        this.button = document.createElement('button');
+        this.button.type = 'button';
+        this.button.classList.add('ce-inline-tool');
+        this.button.innerHTML = '<span style="color:#e53e3e;font-weight:bold">A</span>';
+        this.button.title = '文字色';
+        return this.button;
+    }
+
+    renderActions() {
+        this.colorPicker = document.createElement('input');
+        this.colorPicker.type = 'color';
+        this.colorPicker.value = '#e53e3e';
+        this.colorPicker.classList.add('ce-inline-tool-input');
+        this.colorPicker.style.cssText = 'width:32px;height:32px;padding:0;border:none;cursor:pointer;';
+        this.colorPicker.addEventListener('change', () => {
+            this.applyColor(this.colorPicker.value);
+        });
+        return this.colorPicker;
+    }
+
+    applyColor(color) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        if (range.collapsed) return;
+
+        const span = document.createElement('span');
+        span.style.color = color;
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        this.api.selection.expandToTag(span);
+    }
+
+    surround(range) {
+        // Color picker handles this via change event
+    }
+
+    checkState() {
+        const span = this.api.selection.findParentTag('SPAN');
+        this._state = !!(span && span.style.color);
+        this.button.classList.toggle('ce-inline-tool--active', this._state);
+        return this._state;
+    }
+}
+
+// HighlightColor (ハイライト色)
+class HighlightInlineTool {
+    static get isInline() { return true; }
+    static get title() { return 'ハイライト'; }
+
+    get state() { return this._state; }
+    set state(state) { this._state = state; }
+
+    constructor({api}) {
+        this.api = api;
+        this._state = false;
+    }
+
+    render() {
+        this.button = document.createElement('button');
+        this.button.type = 'button';
+        this.button.classList.add('ce-inline-tool');
+        this.button.innerHTML = '<span style="background:#fef08a;padding:0 2px">H</span>';
+        this.button.title = 'ハイライト';
+        return this.button;
+    }
+
+    renderActions() {
+        this.colorPicker = document.createElement('input');
+        this.colorPicker.type = 'color';
+        this.colorPicker.value = '#fef08a';
+        this.colorPicker.classList.add('ce-inline-tool-input');
+        this.colorPicker.style.cssText = 'width:32px;height:32px;padding:0;border:none;cursor:pointer;';
+        this.colorPicker.addEventListener('change', () => {
+            this.applyHighlight(this.colorPicker.value);
+        });
+        return this.colorPicker;
+    }
+
+    applyHighlight(color) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) return;
+        const range = selection.getRangeAt(0);
+        if (range.collapsed) return;
+
+        const mark = document.createElement('mark');
+        mark.style.backgroundColor = color;
+        mark.appendChild(range.extractContents());
+        range.insertNode(mark);
+        this.api.selection.expandToTag(mark);
+    }
+
+    surround(range) {
+        // Color picker handles this via change event
+    }
+
+    checkState() {
+        const mark = this.api.selection.findParentTag('MARK');
+        this._state = !!(mark && mark.style.backgroundColor);
+        this.button.classList.toggle('ce-inline-tool--active', this._state);
+        return this._state;
+    }
+}
+</script>
+
+<script>
 /* === カスタムブロック: Alert === */
 class AlertBlock {
     static get toolbox() {
@@ -1900,7 +2074,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tunes: ['alignmentTune', 'colorTune'],
 
             // インラインツール
-            inlineToolbar: ['bold', 'italic', 'link', 'marker', 'inlineCode', 'underline'],
+            inlineToolbar: ['bold', 'italic', 'link', 'strikethrough', 'textColor', 'highlightColor', 'marker', 'inlineCode', 'underline'],
 
             // インラインツール設定
             marker: {
@@ -1911,6 +2085,15 @@ document.addEventListener('DOMContentLoaded', function() {
             },
             underline: {
                 class: Underline
+            },
+            strikethrough: {
+                class: StrikethroughInlineTool
+            },
+            textColor: {
+                class: TextColorInlineTool
+            },
+            highlightColor: {
+                class: HighlightInlineTool
             },
 
             onChange: async function() {

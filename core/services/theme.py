@@ -713,18 +713,54 @@ body {
         return ""
 
     def _sanitize_html(self, html: str, allow_tags: set = None) -> str:
-        """Sanitize HTML allowing only specific tags."""
+        """Sanitize HTML allowing only specific tags with safe style attributes."""
         if allow_tags is None:
-            allow_tags = {"b", "i", "strong", "em", "a", "br", "u", "mark", "code"}
+            allow_tags = {"b", "i", "strong", "em", "a", "br", "u", "mark", "code", "s", "span"}
 
-        # Simple regex-based sanitizer for inline content
         import re
+        # Safe CSS properties for inline styles
+        safe_style_pattern = re.compile(
+            r"^(color|background|background-color)\s*:\s*"
+            r"(#[0-9a-fA-F]{3,6}|rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)|[a-zA-Z]+)\s*;?\s*$"
+        )
+
+        def sanitize_style(style_value: str) -> str:
+            """Validate and sanitize style attribute value."""
+            if not style_value:
+                return ""
+            # Split by semicolon and validate each property
+            safe_styles = []
+            for prop in style_value.split(";"):
+                prop = prop.strip()
+                if prop and safe_style_pattern.match(prop):
+                    safe_styles.append(prop)
+            return "; ".join(safe_styles) if safe_styles else ""
 
         def replace_tag(match):
-            tag = match.group(1).lower().split()[0]  # Get tag name without attributes
-            if tag.lstrip("/") in allow_tags:
+            full_tag = match.group(1)
+            tag_name = full_tag.lower().split()[0]
+            clean_tag = tag_name.lstrip("/")
+
+            if clean_tag not in allow_tags:
+                return escape(match.group(0))
+
+            # For closing tags, return as-is
+            if tag_name.startswith("/"):
                 return match.group(0)
-            return escape(match.group(0))
+
+            # Extract and sanitize style attribute
+            style_match = re.search(r'style\s*=\s*["\']([^"\']*)["\']', full_tag, re.I)
+            if style_match and clean_tag in ("span", "mark"):
+                safe_style = sanitize_style(style_match.group(1))
+                if safe_style:
+                    return f'<{clean_tag} style="{safe_style}">'
+                return f"<{clean_tag}>"
+
+            # For tags that shouldn't have style, strip attributes
+            if clean_tag in ("span", "mark", "s"):
+                return f"<{clean_tag}>"
+
+            return match.group(0)
 
         return re.sub(r"<(/?\w+[^>]*)>", replace_tag, html)
 
