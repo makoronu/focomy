@@ -300,6 +300,45 @@ class ErrorCollector:
         """Check if any errors occurred."""
         return len(self.errors) > 0
 
+    def to_dict(self) -> dict:
+        """Return error log as dictionary for DB storage.
+
+        Returns:
+            Dictionary for job.errors. Can be copied and pasted for debugging.
+        """
+        return {
+            "summary": self.summary(),
+            "errors": [
+                {
+                    "phase": e.phase,
+                    "item_id": e.item_id,
+                    "item_title": e.item_title,
+                    "error_type": e.error_type,
+                    "message": e.message,
+                    "context": e.context,
+                }
+                for e in self.errors
+            ],
+            "skipped": [
+                {
+                    "phase": s.phase,
+                    "item_id": s.item_id,
+                    "item_title": s.item_title,
+                    "reason": s.message,
+                }
+                for s in self.skipped
+            ],
+            "warnings": [
+                {
+                    "phase": w.phase,
+                    "item_id": w.item_id,
+                    "item_title": w.item_title,
+                    "message": w.message,
+                }
+                for w in self.warnings
+            ],
+        }
+
     def print_summary(self) -> str:
         """Get printable summary string.
 

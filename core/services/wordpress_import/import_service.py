@@ -355,6 +355,7 @@ class WordPressImportService:
 
             # Complete
             result.success = True
+            error_dict = self.error_collector.to_dict()
             await self.update_job(
                 job_id,
                 status=ImportJobStatus.COMPLETED,
@@ -368,7 +369,7 @@ class WordPressImportService:
                 authors_imported=result.authors_imported,
                 menus_imported=result.menus_imported,
                 progress_message=f"Import completed! Errors: {error_summary['total_errors']}, Skipped: {error_summary['total_skipped']}",
-                errors=[str(error_summary['total_errors'])] if error_summary['total_errors'] > 0 else None,
+                errors=error_dict,
             )
 
             # Clear error collector for next import
@@ -392,11 +393,22 @@ class WordPressImportService:
             except Exception as log_error:
                 logger.warning(f"Failed to write error log: {log_error}")
 
+            # Add fatal error to collector
+            self.error_collector.add_error(
+                phase="fatal",
+                item_id=0,
+                item_title="Import Process",
+                error_type="fatal_error",
+                message=str(e),
+                exc=e,
+            )
+            error_dict = self.error_collector.to_dict()
+
             await self.update_job(
                 job_id,
                 status=ImportJobStatus.FAILED,
                 completed_at=utcnow(),
-                errors=[str(e)],
+                errors=error_dict,
                 progress_message=f"Import failed: {str(e)}",
             )
 

@@ -1137,6 +1137,33 @@ function updateProgress(data) {
     message.textContent = data.progress?.message || '';
 }
 
+function renderErrorDetails(errors, title) {
+    // Handle both dict format (new) and array format (legacy)
+    if (typeof errors === 'object' && !Array.isArray(errors)) {
+        // New dict format with summary, errors, skipped, warnings
+        const summary = errors.summary || {};
+        let html = `
+            <div style="margin-top: 1rem; padding: 1rem; background: var(--bg-secondary); border-radius: 8px;">
+                <h4 style="margin-bottom: 0.5rem;">${title}</h4>
+                <div style="display: flex; gap: 1rem; margin-bottom: 0.5rem;">
+                    <span>Errors: <strong style="color: var(--danger);">${summary.total_errors || 0}</strong></span>
+                    <span>Skipped: <strong>${summary.total_skipped || 0}</strong></span>
+                    <span>Warnings: <strong style="color: var(--warning);">${summary.total_warnings || 0}</strong></span>
+                </div>
+                <details>
+                    <summary style="cursor: pointer; color: var(--primary);">Copy JSON for debugging</summary>
+                    <textarea readonly style="width: 100%; height: 200px; margin-top: 0.5rem; font-family: monospace; font-size: 12px;">${JSON.stringify(errors, null, 2)}</textarea>
+                </details>
+            </div>
+        `;
+        return html;
+    } else if (Array.isArray(errors)) {
+        // Legacy array format
+        return `<p>${errors.join('<br>')}</p>`;
+    }
+    return '';
+}
+
 function showResults(data) {
     document.getElementById('progress-card').classList.add('hidden');
     const card = document.getElementById('results-card');
@@ -1174,6 +1201,7 @@ function showResults(data) {
             <p style="text-align: center; margin-top: 1rem;">
                 <a href="/admin/post" class="btn btn-primary">View Posts</a>
             </p>
+            ${data.errors ? renderErrorDetails(data.errors, 'Import Details') : ''}
         `;
 
         // Show rollback option
@@ -1183,8 +1211,8 @@ function showResults(data) {
         content.innerHTML = `
             <div style="text-align: center; color: var(--danger);">
                 <h3>Import Failed</h3>
-                <p>${data.errors?.join('<br>') || 'Unknown error'}</p>
             </div>
+            ${data.errors ? renderErrorDetails(data.errors, 'Error Details') : '<p>Unknown error</p>'}
         `;
         document.getElementById('results-actions').style.display = 'none';
     }
