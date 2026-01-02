@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.52] - 2026-01-02
+
+### Fixed
+- インラインツールがツールバーに表示されない問題修正（102）
+  - インラインツール定義を`tools`オブジェクト内に移動
+
 ## [0.1.51] - 2026-01-02
 
 ### Added

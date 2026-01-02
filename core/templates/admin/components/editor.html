@@ -2067,6 +2067,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 colorTune: {
                     class: ColorBlockTune
+                },
+
+                // インラインツール（tools内に定義必須）
+                marker: {
+                    class: Marker
+                },
+                inlineCode: {
+                    class: InlineCode
+                },
+                underline: {
+                    class: Underline
+                },
+                strikethrough: {
+                    class: StrikethroughInlineTool
+                },
+                textColor: {
+                    class: TextColorInlineTool
+                },
+                highlightColor: {
+                    class: HighlightInlineTool
                 }
             },
 
@@ -2075,26 +2095,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // インラインツール
             inlineToolbar: ['bold', 'italic', 'link', 'strikethrough', 'textColor', 'highlightColor', 'marker', 'inlineCode', 'underline'],
-
-            // インラインツール設定
-            marker: {
-                class: Marker
-            },
-            inlineCode: {
-                class: InlineCode
-            },
-            underline: {
-                class: Underline
-            },
-            strikethrough: {
-                class: StrikethroughInlineTool
-            },
-            textColor: {
-                class: TextColorInlineTool
-            },
-            highlightColor: {
-                class: HighlightInlineTool
-            },
 
             onChange: async function() {
                 try {
