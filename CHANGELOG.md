@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.51] - 2026-01-02
+
+### Added
+- インラインツール拡充（102）
+  - Strikethrough（取り消し線）
+  - TextColorInlineTool（選択テキスト文字色）
+  - HighlightInlineTool（選択テキストハイライト色）
+- theme.py: s/spanタグ許可、style属性のセキュアサニタイズ
+
 ## [0.1.50] - 2026-01-02
 
 ### Added
