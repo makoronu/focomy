@@ -18,8 +18,11 @@ from ...models import Entity, ImportJob, ImportJobPhase, ImportJobStatus
 from ..entity import EntityService
 from ..field import field_service
 from .analyzer import WordPressAnalyzer
+from ..block_converter import BlockConverter
 from .content_sanitizer import ContentSanitizer, SanitizeResult
 from .constants import WP_STATUS_MAP
+from .error_collector import ErrorCollector
+from .id_resolver import WpIdResolver
 from .importer import ImportConfig, ImportProgress, ImportResult, WordPressImporter
 from .link_fixer import InternalLinkFixer, URLMapBuilder
 from .media import MediaImporter
@@ -45,6 +48,9 @@ class WordPressImportService:
         self.db = db
         self.entity_svc = EntityService(db)
         self.sanitizer = ContentSanitizer()
+        self.block_converter = BlockConverter()
+        self.id_resolver = WpIdResolver(self.entity_svc)
+        self.error_collector = ErrorCollector()
 
     async def create_job(
         self,
