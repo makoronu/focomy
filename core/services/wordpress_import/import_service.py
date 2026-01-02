@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import secrets
 from dataclasses import asdict
 from datetime import datetime, timezone
 
@@ -421,17 +422,25 @@ class WordPressImportService:
                 # Check if user already exists
                 existing = await self._find_by_wp_id("user", author.id)
                 if existing:
-                    # Save checkpoint even for duplicates
+                    self.error_collector.add_skip(
+                        phase="authors",
+                        item_id=author.id,
+                        item_title=author.display_name or author.login,
+                        reason="already_exists",
+                    )
                     await self._save_checkpoint(job_id, "authors", author.id, "authors")
                     continue
+
+                # Generate random password (required field)
+                random_password = secrets.token_urlsafe(16)
 
                 # Create user entity
                 user_data = {
                     "name": author.display_name or author.login,
                     "email": author.email or f"{author.login}@imported.local",
+                    "password": random_password,
                     "role": "author",
                     "wp_id": author.id,
-                    "wp_login": author.login,
                 }
 
                 await self.entity_svc.create("user", user_data)
@@ -443,11 +452,19 @@ class WordPressImportService:
                 await self.update_job(
                     job_id,
                     progress_current=i + 1,
-                    progress_message=f"Imported author: {author.display_name}",
+                    progress_message=f"Imported author: {author.display_name or author.login}",
                 )
 
             except Exception as e:
-                logger.warning(f"Failed to import author {author.login}: {e}")
+                self.error_collector.add_error(
+                    phase="authors",
+                    item_id=author.id,
+                    item_title=author.display_name or author.login,
+                    error_type="import_failed",
+                    message=str(e),
+                    exc=e,
+                    context={"login": author.login, "email": author.email},
+                )
 
         await self.update_job(job_id, authors_imported=count)
         if skipped:
