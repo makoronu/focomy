@@ -138,14 +138,18 @@ WordPress投稿をFocomyにインポートする際のデータ変換・リレ�
 
 **テスト結果**: YAML構文チェック OK
 
-### S2: ID解決ユーティリティ
+### S2: ID解決ユーティリティ - 完了
 
 | # | タスク | ファイル | 状態 |
 |---|--------|----------|------|
-| 1 | WpIdResolver クラス作成 | `services/wordpress_import/id_resolver.py` | 未着手 |
-| 2 | wp_id → entity_id 変換 | 同上 | 未着手 |
-| 3 | slug → entity_id 変換 | 同上 | 未着手 |
-| 4 | メディアURL解決 | 同上 | 未着手 |
+| 1 | WpIdResolver クラス作成 | `services/wordpress_import/id_resolver.py` | 完了 |
+| 2 | wp_id → entity_id 変換 | 同上 | 完了 |
+| 3 | slug → entity_id 変換 | 同上 | 完了 |
+| 4 | メディアURL解決 | 同上 | 完了 |
+| 5 | デフォルトチャンネル取得/作成 | 同上 | 完了 |
+| 6 | __init__.py エクスポート | 同上 | 完了 |
+
+**テスト結果**: 構文チェック + インポート確認 OK
 
 **インターフェース**:
 ```python

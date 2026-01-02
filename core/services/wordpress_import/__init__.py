@@ -15,6 +15,7 @@ from .acf import ACFConverter
 from .analyzer import WordPressAnalyzer
 from .content_sanitizer import ContentSanitizer
 from .dry_run import DryRunService
+from .id_resolver import WpIdResolver
 from .importer import WordPressImporter
 from .import_service import WordPressImportService
 from .link_fixer import InternalLinkFixer, URLMapBuilder
@@ -41,4 +42,5 @@ __all__ = [
     "DryRunService",
     "PreviewService",
     "VerificationService",
+    "WpIdResolver",
 ]
