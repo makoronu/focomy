@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.53] - 2026-01-02
+
+### Added
+- エディタUX改善（103+104）
+  - コードエディタ切替（Visual/JSON表示切替）
+  - Ctrl+S / Cmd+S キーボードショートカット保存
+
 ## [0.1.52] - 2026-01-02
 
 ### Fixed
