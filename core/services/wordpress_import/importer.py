@@ -15,6 +15,7 @@ from .analyzer import AnalysisReport, WordPressAnalyzer
 from .media import MediaImporter, MediaImportResult, MediaItem
 from .redirects import RedirectGenerator, RedirectReport
 from .wxr_parser import WXRData, WXRParser, WXRPost
+from ..block_converter import block_converter
 
 logger = logging.getLogger(__name__)
 
@@ -483,16 +484,17 @@ class WordPressImporter:
                 )
             )
 
-            # Transform post data
-            post_data = self._transform_post(post)
-
-            # Rewrite media URLs in content
+            # Rewrite media URLs in raw HTML first
+            content = post.content
             if self._media_importer and hasattr(self, "_media_result"):
-                post_data["content"] = self._media_importer.rewrite_content_urls(
-                    post_data["content"],
+                content = self._media_importer.rewrite_content_urls(
+                    content,
                     self._media_result.url_mapping,
                     self.config.old_base_url,
                 )
+
+            # Transform post data (converts content to Editor.js blocks)
+            post_data = self._transform_post_with_content(post, content)
 
             # Convert ACF fields
             if self.config.convert_acf:
@@ -510,13 +512,24 @@ class WordPressImporter:
 
         return count
 
-    def _transform_post(self, post: WXRPost) -> dict:
-        """Transform WXR post to Focomy format."""
+    def _transform_post_with_content(self, post: WXRPost, content: str) -> dict:
+        """Transform WXR post to Focomy format.
+
+        Args:
+            post: WXR post data
+            content: HTML content (may have rewritten URLs)
+
+        Returns:
+            Focomy post data with Editor.js blocks
+        """
+        # Convert HTML content to Editor.js blocks
+        body_blocks = block_converter.convert(content)
+
         return {
             "wp_id": post.id,
             "title": post.title,
             "slug": post.slug,
-            "content": post.content,
+            "body": body_blocks,  # Editor.js blocks format
             "excerpt": post.excerpt,
             "status": WP_STATUS_MAP.get(post.status, "draft"),
             "author_wp_id": post.author_id,
