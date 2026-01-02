@@ -648,6 +648,56 @@
     border-radius: 0.25rem;
     font-size: 0.875rem;
 }
+
+/* === Editor Mode Toggle (103) === */
+.editor-mode-toggle {
+    display: flex;
+    gap: 0.25rem;
+    padding: 0.5rem;
+    border-bottom: 1px solid var(--border);
+    background: #f8fafc;
+}
+.editor-mode-toggle button {
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: 0.25rem;
+    background: white;
+    font-size: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.editor-mode-toggle button:hover {
+    background: #f1f5f9;
+}
+.editor-mode-toggle button.active {
+    background: var(--primary);
+    color: white;
+    border-color: var(--primary);
+}
+.editor-json-view {
+    display: none;
+    width: 100%;
+    min-height: 400px;
+    padding: 1rem;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    border: none;
+    resize: vertical;
+    background: #1e293b;
+    color: #e2e8f0;
+}
+.editor-json-view:focus {
+    outline: none;
+}
+.editor-json-error {
+    color: #ef4444;
+    font-size: 0.75rem;
+    padding: 0.5rem;
+    background: #fef2f2;
+    border-top: 1px solid #fecaca;
+    display: none;
+}
 </style>
 
 <!-- Editor.js Core & Plugins -->
@@ -1924,6 +1974,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
+        // Mode Toggle UI (103)
+        const wrapper = document.createElement('div');
+        wrapper.className = 'editor-wrapper';
+        container.parentNode.insertBefore(wrapper, container);
+
+        const toggleBar = document.createElement('div');
+        toggleBar.className = 'editor-mode-toggle';
+        toggleBar.innerHTML = `
+            <button type="button" class="btn-visual active" data-mode="visual">Visual</button>
+            <button type="button" class="btn-json" data-mode="json">JSON</button>
+        `;
+        wrapper.appendChild(toggleBar);
+        wrapper.appendChild(container);
+
+        const jsonView = document.createElement('textarea');
+        jsonView.className = 'editor-json-view';
+        jsonView.placeholder = 'JSON data...';
+        wrapper.appendChild(jsonView);
+
+        const jsonError = document.createElement('div');
+        jsonError.className = 'editor-json-error';
+        wrapper.appendChild(jsonError);
+
+        let currentMode = 'visual';
+        let editorInstance = null;
+
         const editor = new EditorJS({
             holder: container.id,
             placeholder: 'ここをクリックして入力を開始...',
@@ -2164,6 +2240,66 @@ document.addEventListener('DOMContentLoaded', function() {
                             "Move down": "下へ移動"
                         }
                     }
+                }
+            }
+        });
+
+        // Store editor instance
+        editorInstance = editor;
+
+        // Mode Toggle Logic (103)
+        toggleBar.addEventListener('click', async function(e) {
+            const btn = e.target.closest('button[data-mode]');
+            if (!btn || btn.dataset.mode === currentMode) return;
+
+            const newMode = btn.dataset.mode;
+
+            if (newMode === 'json') {
+                // Visual → JSON
+                try {
+                    const data = await editorInstance.save();
+                    jsonView.value = JSON.stringify(data, null, 2);
+                    container.style.display = 'none';
+                    jsonView.style.display = 'block';
+                    jsonError.style.display = 'none';
+                } catch (err) {
+                    console.error('Failed to save editor data:', err);
+                    return;
+                }
+            } else {
+                // JSON → Visual
+                try {
+                    const data = JSON.parse(jsonView.value);
+                    await editorInstance.render(data);
+                    container.style.display = 'block';
+                    jsonView.style.display = 'none';
+                    jsonError.style.display = 'none';
+                    // Update hidden input
+                    if (input) {
+                        input.value = jsonView.value;
+                    }
+                } catch (err) {
+                    jsonError.textContent = 'JSON parse error: ' + err.message;
+                    jsonError.style.display = 'block';
+                    return;
+                }
+            }
+
+            currentMode = newMode;
+            toggleBar.querySelectorAll('button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+
+        // Sync JSON view on change when in JSON mode
+        jsonView.addEventListener('input', function() {
+            if (input) {
+                try {
+                    JSON.parse(jsonView.value);
+                    input.value = jsonView.value;
+                    jsonError.style.display = 'none';
+                } catch (err) {
+                    jsonError.textContent = 'JSON parse error: ' + err.message;
+                    jsonError.style.display = 'block';
                 }
             }
         });

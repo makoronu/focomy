@@ -394,6 +394,14 @@
             }
         });
     });
+
+    // Ctrl+S / Cmd+S to save (104)
+    document.addEventListener('keydown', function(e) {
+        if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+            e.preventDefault();
+            form.submit();
+        }
+    });
 })();
 
 {% if entity %}
