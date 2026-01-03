@@ -60,6 +60,7 @@ class FieldDefinition(BaseModel):
     admin_hidden: bool = False
     admin_only: bool = False
     admin_readonly: bool = False
+    sidebar: bool = False  # Show in sidebar (right column) in edit form
     show_in_list: bool = False  # Show in admin list view
     searchable: bool = False  # Include in search
     # Conditional logic

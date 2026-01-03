@@ -3,8 +3,259 @@
 {% block title %}{% if entity %}Edit{% else %}New{% endif %} {{ content_type.label }} - Focomy{% endblock %}
 {% block header_title %}{% if entity %}Edit{% else %}New{% endif %} {{ content_type.label }}{% endblock %}
 
+{# フィールドレンダリングマクロ #}
+{% macro render_field(field, entity) %}
+<div class="form-group">
+    <label class="form-label" for="{{ field.name }}">
+        {{ field.label or field.name }}
+        {% if field.required %}<span style="color: var(--error);">*</span>{% endif %}
+    </label>
+
+    {% if field.type == 'text' or field.type == 'string' %}
+        <input
+            type="text"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '') if entity else '' }}"
+            {% if field.required %}required{% endif %}
+        >
+
+    {% elif field.type == 'email' %}
+        <input
+            type="email"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '') if entity else '' }}"
+            {% if field.required %}required{% endif %}
+        >
+
+    {% elif field.type == 'password' %}
+        <input
+            type="password"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            {% if not entity %}required{% endif %}
+        >
+        {% if entity %}
+        <p class="form-hint">Leave empty to keep current password</p>
+        {% endif %}
+
+    {% elif field.type == 'slug' %}
+        <input
+            type="text"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '') if entity else '' }}"
+            pattern="[a-z0-9-]+"
+            {% if field.required %}required{% endif %}
+        >
+        <p class="form-hint">URL-friendly identifier (lowercase letters, numbers, hyphens)</p>
+
+    {% elif field.type == 'textarea' or field.type == 'richtext' %}
+        <textarea
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-textarea"
+            {% if field.required %}required{% endif %}
+        >{{ entity.get(field.name, '') if entity else '' }}</textarea>
+
+    {% elif field.type == 'blocks' %}
+        {% set blocks_value = entity.get(field.name, '') if entity else '' %}
+        <input
+            type="hidden"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            value="{{ blocks_value | tojson if blocks_value else '' }}"
+        >
+
+        <!-- プレビューコントロール (105) -->
+        <div class="ep-controls">
+            <div class="ep-layout-group">
+                <button type="button" class="ep-layout-btn active" data-layout="editor-only" title="エディタのみ">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
+                </button>
+                <button type="button" class="ep-layout-btn" data-layout="split" title="分割表示">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
+                </button>
+                <button type="button" class="ep-layout-btn" data-layout="preview-only" title="プレビューのみ">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
+                </button>
+            </div>
+            <div class="ep-device-group">
+                <button type="button" class="ep-device-btn active" data-device="desktop" title="デスクトップ (1200px)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+                </button>
+                <button type="button" class="ep-device-btn" data-device="tablet" title="タブレット (768px)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+                </button>
+                <button type="button" class="ep-device-btn" data-device="mobile" title="モバイル (375px)">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- 分割レイアウト (105) -->
+        <div class="ep-wrapper" data-layout="editor-only" data-field="{{ field.name }}">
+            <div class="ep-editor">
+                <div class="editor-container" id="editor-{{ field.name }}" data-editor="{{ field.name }}"></div>
+            </div>
+            <div class="ep-preview">
+                <iframe id="ep-iframe-{{ field.name }}" class="ep-iframe" data-device="desktop"></iframe>
+            </div>
+        </div>
+
+    {% elif field.type == 'number' or field.type == 'integer' %}
+        <input
+            type="number"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '') if entity else '' }}"
+            {% if field.min is defined %}min="{{ field.min }}"{% endif %}
+            {% if field.max is defined %}max="{{ field.max }}"{% endif %}
+            {% if field.required %}required{% endif %}
+        >
+
+    {% elif field.type == 'float' %}
+        <input
+            type="number"
+            step="any"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '') if entity else '' }}"
+            {% if field.required %}required{% endif %}
+        >
+
+    {% elif field.type == 'boolean' %}
+        <label class="checkbox-label">
+            <input
+                type="checkbox"
+                id="{{ field.name }}"
+                name="{{ field.name }}"
+                value="true"
+                {% if entity and entity.get(field.name) %}checked{% endif %}
+            >
+            <span>{{ field.description or '' }}</span>
+        </label>
+
+    {% elif field.type == 'select' %}
+        <select
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-select"
+            {% if field.required %}required{% endif %}
+        >
+            <option value="">-- Select --</option>
+            {% for option in field.options %}
+            {% set opt_value = option.value if option is mapping else option %}
+            {% set opt_label = option.label if option is mapping else option %}
+            <option value="{{ opt_value }}" {% if entity and entity.get(field.name) == opt_value %}selected{% endif %}>
+                {{ opt_label }}
+            </option>
+            {% endfor %}
+        </select>
+
+    {% elif field.type == 'datetime' %}
+        <input
+            type="datetime-local"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '')[:16] if entity and entity.get(field.name) else '' }}"
+            {% if field.required %}required{% endif %}
+        >
+
+    {% elif field.type == 'date' %}
+        <input
+            type="date"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '')[:10] if entity and entity.get(field.name) else '' }}"
+            {% if field.required %}required{% endif %}
+        >
+
+    {% elif field.type == 'image' or field.type == 'file' or field.type == 'media' %}
+        {% if entity and entity.get(field.name) %}
+        <div class="media-preview">
+            <img src="{{ entity.get(field.name) }}" alt="">
+        </div>
+        {% endif %}
+        <input
+            type="file"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            {% if field.type == 'image' or field.accept %}accept="{{ field.accept or 'image/*' }}"{% endif %}
+        >
+
+    {% elif field.type == 'url' %}
+        <input
+            type="url"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '') if entity else '' }}"
+            {% if field.required %}required{% endif %}
+        >
+
+    {% elif field.type == 'json' %}
+        <textarea
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-textarea"
+            style="font-family: monospace;"
+            {% if field.required %}required{% endif %}
+        >{{ entity.get(field.name, '{}') | tojson if entity else '{}' }}</textarea>
+        <p class="form-hint">JSON format</p>
+
+    {% else %}
+        <input
+            type="text"
+            id="{{ field.name }}"
+            name="{{ field.name }}"
+            class="form-input"
+            value="{{ entity.get(field.name, '') if entity else '' }}"
+            {% if field.required %}required{% endif %}
+        >
+    {% endif %}
+
+    {% if field.hint %}
+    <p class="form-hint">{{ field.hint }}</p>
+    {% endif %}
+    {% if field.description and field.type != 'boolean' %}
+    <p class="form-hint">{{ field.description }}</p>
+    {% endif %}
+</div>
+{% endmacro %}
+
 {% block content %}
-<div class="card">
+<form method="POST" action="/admin/{{ type_name }}{% if entity %}/{{ entity.id }}{% endif %}" enctype="multipart/form-data" class="entity-form">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+    <!-- ヘッダーバー (B4: ボタン右上) -->
+    <div class="form-header">
+        <div class="form-header-left">
+            {% if entity %}
+            <div id="autosave-status" class="autosave-status"></div>
+            {% endif %}
+        </div>
+        <div class="form-header-right">
+            <a href="/admin/{{ type_name }}" class="btn btn-secondary">Cancel</a>
+            {% if entity %}
+            <button type="button" class="btn btn-secondary" onclick="toggleRevisions()">History</button>
+            {% endif %}
+            <button type="submit" class="btn btn-primary">
+                {% if entity %}Update{% else %}Create{% endif %}
+            </button>
+        </div>
+    </div>
+
     {% if error %}
     <div class="alert alert-error">{{ error }}</div>
     {% endif %}
@@ -13,268 +264,140 @@
     <div class="alert alert-success">{{ message }}</div>
     {% endif %}
 
-    <form method="POST" action="/admin/{{ type_name }}{% if entity %}/{{ entity.id }}{% endif %}" enctype="multipart/form-data">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-        {% for field in content_type.fields %}
-        {% if not field.admin_hidden %}
-        <div class="form-group">
-            <label class="form-label" for="{{ field.name }}">
-                {{ field.label or field.name }}
-                {% if field.required %}<span style="color: var(--error);">*</span>{% endif %}
-            </label>
-
-            {% if field.type == 'text' or field.type == 'string' %}
-                <input
-                    type="text"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    value="{{ entity.get(field.name, '') if entity else '' }}"
-                    {% if field.required %}required{% endif %}
-                >
-
-            {% elif field.type == 'email' %}
-                <input
-                    type="email"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    value="{{ entity.get(field.name, '') if entity else '' }}"
-                    {% if field.required %}required{% endif %}
-                >
-
-            {% elif field.type == 'password' %}
-                <input
-                    type="password"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    {% if not entity %}required{% endif %}
-                >
-                {% if entity %}
-                <p class="form-hint">Leave empty to keep current password</p>
-                {% endif %}
-
-            {% elif field.type == 'slug' %}
-                <input
-                    type="text"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    value="{{ entity.get(field.name, '') if entity else '' }}"
-                    pattern="[a-z0-9-]+"
-                    {% if field.required %}required{% endif %}
-                >
-                <p class="form-hint">URL-friendly identifier (lowercase letters, numbers, hyphens)</p>
-
-            {% elif field.type == 'textarea' or field.type == 'richtext' %}
-                <textarea
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-textarea"
-                    {% if field.required %}required{% endif %}
-                >{{ entity.get(field.name, '') if entity else '' }}</textarea>
-
-            {% elif field.type == 'blocks' %}
-                {% set blocks_value = entity.get(field.name, '') if entity else '' %}
-                <input
-                    type="hidden"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    value="{{ blocks_value | tojson if blocks_value else '' }}"
-                >
-
-                <!-- プレビューコントロール (105) -->
-                <div class="ep-controls">
-                    <div class="ep-layout-group">
-                        <button type="button" class="ep-layout-btn active" data-layout="editor-only" title="エディタのみ">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="9" y1="3" x2="9" y2="21"/></svg>
-                        </button>
-                        <button type="button" class="ep-layout-btn" data-layout="split" title="分割表示">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="12" y1="3" x2="12" y2="21"/></svg>
-                        </button>
-                        <button type="button" class="ep-layout-btn" data-layout="preview-only" title="プレビューのみ">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><line x1="15" y1="3" x2="15" y2="21"/></svg>
-                        </button>
-                    </div>
-                    <div class="ep-device-group">
-                        <button type="button" class="ep-device-btn active" data-device="desktop" title="デスクトップ (1200px)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-                        </button>
-                        <button type="button" class="ep-device-btn" data-device="tablet" title="タブレット (768px)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="2" width="16" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
-                        </button>
-                        <button type="button" class="ep-device-btn" data-device="mobile" title="モバイル (375px)">
-                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="5" y="2" width="14" height="20" rx="2"/><line x1="12" y1="18" x2="12" y2="18"/></svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- 分割レイアウト (105) -->
-                <div class="ep-wrapper" data-layout="editor-only" data-field="{{ field.name }}">
-                    <div class="ep-editor">
-                        <div class="editor-container" id="editor-{{ field.name }}" data-editor="{{ field.name }}"></div>
-                    </div>
-                    <div class="ep-preview">
-                        <iframe id="ep-iframe-{{ field.name }}" class="ep-iframe" data-device="desktop"></iframe>
-                    </div>
-                </div>
-
-            {% elif field.type == 'number' or field.type == 'integer' %}
-                <input
-                    type="number"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    value="{{ entity.get(field.name, '') if entity else '' }}"
-                    {% if field.min is defined %}min="{{ field.min }}"{% endif %}
-                    {% if field.max is defined %}max="{{ field.max }}"{% endif %}
-                    {% if field.required %}required{% endif %}
-                >
-
-            {% elif field.type == 'float' %}
-                <input
-                    type="number"
-                    step="any"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    value="{{ entity.get(field.name, '') if entity else '' }}"
-                    {% if field.required %}required{% endif %}
-                >
-
-            {% elif field.type == 'boolean' %}
-                <input
-                    type="checkbox"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    value="true"
-                    {% if entity and entity.get(field.name) %}checked{% endif %}
-                >
-
-            {% elif field.type == 'select' %}
-                <select
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-select"
-                    {% if field.required %}required{% endif %}
-                >
-                    <option value="">-- Select --</option>
-                    {% for option in field.options %}
-                    {% set opt_value = option.value if option is mapping else option %}
-                    {% set opt_label = option.label if option is mapping else option %}
-                    <option value="{{ opt_value }}" {% if entity and entity.get(field.name) == opt_value %}selected{% endif %}>
-                        {{ opt_label }}
-                    </option>
-                    {% endfor %}
-                </select>
-
-            {% elif field.type == 'datetime' %}
-                <input
-                    type="datetime-local"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    value="{{ entity.get(field.name, '')[:16] if entity and entity.get(field.name) else '' }}"
-                    {% if field.required %}required{% endif %}
-                >
-
-            {% elif field.type == 'date' %}
-                <input
-                    type="date"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    value="{{ entity.get(field.name, '')[:10] if entity and entity.get(field.name) else '' }}"
-                    {% if field.required %}required{% endif %}
-                >
-
-            {% elif field.type == 'image' or field.type == 'file' or field.type == 'media' %}
-                {% if entity and entity.get(field.name) %}
-                <div class="mb-2">
-                    <img src="{{ entity.get(field.name) }}" alt="" style="max-width: 200px; max-height: 150px;">
-                </div>
-                {% endif %}
-                <input
-                    type="file"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    {% if field.type == 'image' %}accept="image/*"{% endif %}
-                >
-
-            {% elif field.type == 'json' %}
-                <textarea
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-textarea"
-                    style="font-family: monospace;"
-                    {% if field.required %}required{% endif %}
-                >{{ entity.get(field.name, '{}') | tojson if entity else '{}' }}</textarea>
-                <p class="form-hint">JSON format</p>
-
-            {% else %}
-                <input
-                    type="text"
-                    id="{{ field.name }}"
-                    name="{{ field.name }}"
-                    class="form-input"
-                    value="{{ entity.get(field.name, '') if entity else '' }}"
-                    {% if field.required %}required{% endif %}
-                >
-            {% endif %}
-
-            {% if field.hint %}
-            <p class="form-hint">{{ field.hint }}</p>
-            {% endif %}
-        </div>
-        {% endif %}
-        {% endfor %}
-
-        {% if relations %}
-        <hr style="margin: 2rem 0; border: none; border-top: 1px solid var(--border);">
-        <h3 style="margin-bottom: 1rem;">Relations</h3>
-
-        {% for rel in relations %}
-        <div class="form-group">
-            <label class="form-label" for="rel_{{ rel.name }}">
-                {{ rel.label or rel.name }}
-            </label>
-            <select
-                id="rel_{{ rel.name }}"
-                name="rel_{{ rel.name }}"
-                class="form-select"
-                {% if rel.multiple %}multiple style="min-height: 100px;"{% endif %}
-            >
-                {% if not rel.multiple %}
-                <option value="">-- Select --</option>
-                {% endif %}
-                {% for option in rel.options %}
-                <option value="{{ option.id }}" {% if option.selected %}selected{% endif %}>
-                    {{ option.label }}
-                </option>
+    <!-- 2カラムレイアウト (B3) -->
+    <div class="form-layout">
+        <!-- メインカラム -->
+        <div class="form-main">
+            <div class="card">
+                {% for field in content_type.fields %}
+                    {% if not field.admin_hidden and not field.sidebar %}
+                        {{ render_field(field, entity) }}
+                    {% endif %}
                 {% endfor %}
-            </select>
+            </div>
         </div>
-        {% endfor %}
-        {% endif %}
 
-        <div class="flex gap-2 mt-4">
-            <button type="submit" class="btn btn-primary">
-                {% if entity %}Update{% else %}Create{% endif %}
-            </button>
-            <a href="/admin/{{ type_name }}" class="btn btn-secondary">Cancel</a>
-            {% if entity %}
-            <button type="button" class="btn btn-secondary" onclick="toggleRevisions()" style="margin-left: auto;">
-                History
-            </button>
+        <!-- サイドバー -->
+        <div class="form-sidebar">
+            <!-- ステータス・公開設定 -->
+            {% set has_sidebar_fields = namespace(value=false) %}
+            {% for field in content_type.fields %}
+                {% if not field.admin_hidden and field.sidebar %}
+                    {% set has_sidebar_fields.value = true %}
+                {% endif %}
+            {% endfor %}
+
+            {% if has_sidebar_fields.value %}
+            <div class="card sidebar-card">
+                <h4 class="sidebar-title">公開設定</h4>
+                {% for field in content_type.fields %}
+                    {% if not field.admin_hidden and field.sidebar and field.name in ['status', 'published_at'] %}
+                        {{ render_field(field, entity) }}
+                    {% endif %}
+                {% endfor %}
+            </div>
+
+            <!-- アイキャッチ -->
+            {% for field in content_type.fields %}
+                {% if not field.admin_hidden and field.sidebar and field.name == 'featured_image' %}
+                <div class="card sidebar-card">
+                    <h4 class="sidebar-title">アイキャッチ</h4>
+                    {{ render_field(field, entity) }}
+                </div>
+                {% endif %}
+            {% endfor %}
+            {% endif %}
+
+            <!-- Relations -->
+            {% if relations %}
+            <div class="card sidebar-card">
+                <h4 class="sidebar-title">リレーション</h4>
+                {% for rel in relations %}
+                <div class="form-group">
+                    <label class="form-label" for="rel_{{ rel.name }}">
+                        {{ rel.label or rel.name }}
+                    </label>
+                    <select
+                        id="rel_{{ rel.name }}"
+                        name="rel_{{ rel.name }}"
+                        class="form-select"
+                        {% if rel.multiple %}multiple style="min-height: 80px;"{% endif %}
+                    >
+                        {% if not rel.multiple %}
+                        <option value="">-- Select --</option>
+                        {% endif %}
+                        {% for option in rel.options %}
+                        <option value="{{ option.id }}" {% if option.selected %}selected{% endif %}>
+                            {{ option.label }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- SEO設定 (折りたたみ) -->
+            {% set has_seo_fields = namespace(value=false) %}
+            {% for field in content_type.fields %}
+                {% if not field.admin_hidden and field.sidebar and field.name.startswith('seo_') %}
+                    {% set has_seo_fields.value = true %}
+                {% endif %}
+            {% endfor %}
+
+            {% if has_seo_fields.value %}
+            <details class="card sidebar-card sidebar-collapsible">
+                <summary class="sidebar-title">SEO設定</summary>
+                <div class="sidebar-content">
+                    {% for field in content_type.fields %}
+                        {% if not field.admin_hidden and field.sidebar and field.name.startswith('seo_') %}
+                            {{ render_field(field, entity) }}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            <!-- OG設定 (折りたたみ) -->
+            {% set has_og_fields = namespace(value=false) %}
+            {% for field in content_type.fields %}
+                {% if not field.admin_hidden and field.sidebar and field.name.startswith('og_') %}
+                    {% set has_og_fields.value = true %}
+                {% endif %}
+            {% endfor %}
+
+            {% if has_og_fields.value %}
+            <details class="card sidebar-card sidebar-collapsible">
+                <summary class="sidebar-title">SNS設定</summary>
+                <div class="sidebar-content">
+                    {% for field in content_type.fields %}
+                        {% if not field.admin_hidden and field.sidebar and field.name.startswith('og_') %}
+                            {{ render_field(field, entity) }}
+                        {% endif %}
+                    {% endfor %}
+                </div>
+            </details>
+            {% endif %}
+
+            <!-- その他のサイドバーフィールド -->
+            {% set other_sidebar_fields = [] %}
+            {% for field in content_type.fields %}
+                {% if not field.admin_hidden and field.sidebar and field.name not in ['status', 'published_at', 'featured_image'] and not field.name.startswith('seo_') and not field.name.startswith('og_') %}
+                    {% set _ = other_sidebar_fields.append(field) %}
+                {% endif %}
+            {% endfor %}
+
+            {% if other_sidebar_fields %}
+            <div class="card sidebar-card">
+                <h4 class="sidebar-title">その他</h4>
+                {% for field in other_sidebar_fields %}
+                    {{ render_field(field, entity) }}
+                {% endfor %}
+            </div>
             {% endif %}
         </div>
-        {% if entity %}
-        <div id="autosave-status" class="autosave-status"></div>
-        {% endif %}
-    </form>
-</div>
+    </div>
+</form>
 
 {% if entity %}
 <!-- Revision History Panel -->
@@ -287,11 +410,152 @@
         <p class="text-muted">Loading...</p>
     </div>
 </div>
+{% endif %}
 
 <style>
-.autosave-status {
-    margin-top: 0.5rem;
+/* === 2カラムレイアウト (B3) === */
+.entity-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.form-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem 1rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.form-header-left {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.form-header-right {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.form-layout {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 1.5rem;
+    align-items: start;
+}
+
+@media (max-width: 1024px) {
+    .form-layout {
+        grid-template-columns: 1fr;
+    }
+    .form-sidebar {
+        order: -1;
+    }
+}
+
+.form-main .card {
+    padding: 1.5rem;
+}
+
+.form-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    position: sticky;
+    top: 4rem;
+}
+
+.sidebar-card {
+    padding: 1rem;
+}
+
+.sidebar-card .form-group {
+    margin-bottom: 0.75rem;
+}
+
+.sidebar-card .form-group:last-child {
+    margin-bottom: 0;
+}
+
+.sidebar-title {
     font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--text);
+    margin: 0 0 0.75rem 0;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.sidebar-collapsible {
+    cursor: pointer;
+}
+
+.sidebar-collapsible summary {
+    list-style: none;
+    cursor: pointer;
+}
+
+.sidebar-collapsible summary::-webkit-details-marker {
+    display: none;
+}
+
+.sidebar-collapsible summary::after {
+    content: '+';
+    float: right;
+    font-size: 1.25rem;
+    line-height: 1;
+    color: var(--text-muted);
+}
+
+.sidebar-collapsible[open] summary::after {
+    content: '−';
+}
+
+.sidebar-collapsible .sidebar-content {
+    padding-top: 0.75rem;
+}
+
+/* メディアプレビュー */
+.media-preview {
+    margin-bottom: 0.5rem;
+}
+
+.media-preview img {
+    max-width: 100%;
+    max-height: 150px;
+    border-radius: 0.25rem;
+    border: 1px solid var(--border);
+}
+
+/* チェックボックスラベル */
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label input {
+    width: auto;
+}
+
+.checkbox-label span {
+    font-size: 0.875rem;
+    color: var(--text-muted);
+}
+
+/* === Autosave Status === */
+.autosave-status {
+    font-size: 0.75rem;
     color: var(--text-muted);
 }
 .autosave-status.saving {
@@ -304,6 +568,7 @@
     color: var(--error);
 }
 
+/* === Revisions Panel === */
 .revisions-panel {
     position: fixed;
     top: 0;
@@ -465,7 +730,6 @@
     max-width: 375px;
 }
 </style>
-{% endif %}
 
 {% set has_blocks = namespace(value=false) %}
 {% for field in content_type.fields %}
@@ -551,8 +815,10 @@
     }
 
     function showStatus(message, type) {
-        statusEl.textContent = message;
-        statusEl.className = 'autosave-status ' + type;
+        if (statusEl) {
+            statusEl.textContent = message;
+            statusEl.className = 'autosave-status ' + type;
+        }
     }
 
     async function autosave() {

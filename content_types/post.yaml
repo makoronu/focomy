@@ -36,10 +36,12 @@ fields:
     type: media
     label: アイキャッチ
     accept: image/*
+    sidebar: true
 
   - name: status
     type: select
     label: ステータス
+    sidebar: true
     options:
       - value: draft
         label: 下書き
@@ -57,12 +59,14 @@ fields:
   - name: published_at
     type: datetime
     label: 公開日時
+    sidebar: true
 
   - name: series_order
     type: integer
     label: シリーズ内順番
     default: 0
     description: シリーズ内での表示順序
+    sidebar: true
 
   # SEO fields
   - name: seo_title
@@ -70,47 +74,55 @@ fields:
     label: SEOタイトル
     description: 検索結果に表示されるタイトル（空の場合は投稿タイトル）
     max_length: 60
+    sidebar: true
 
   - name: seo_description
     type: text
     label: SEO説明文
     description: 検索結果に表示される説明文（空の場合は抜粋）
     max_length: 160
+    sidebar: true
 
   - name: seo_noindex
     type: boolean
     label: noindex
     description: 検索エンジンにインデックスさせない
     default: false
+    sidebar: true
 
   - name: seo_nofollow
     type: boolean
     label: nofollow
     description: リンクを追跡させない
     default: false
+    sidebar: true
 
   - name: seo_canonical
     type: url
     label: canonical URL
     description: 正規URLを上書き
+    sidebar: true
 
   - name: og_title
     type: string
     label: OGタイトル
     description: SNSシェア時のタイトル（空の場合はSEOタイトル）
     max_length: 60
+    sidebar: true
 
   - name: og_description
     type: text
     label: OG説明文
     description: SNSシェア時の説明文（空の場合はSEO説明文）
     max_length: 160
+    sidebar: true
 
   - name: og_image
     type: media
     label: OG画像
     description: SNSシェア時の画像（空の場合はアイキャッチ）
     accept: image/*
+    sidebar: true
 
   - name: wp_id
     type: integer
