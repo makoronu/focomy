@@ -57,8 +57,8 @@
 | 項目 | 内容 |
 |------|------|
 | 作業中 | なし |
-| 完了 | 001-092, Issue #128 S0-S2完了, エディタUX改善, フォームレイアウト2カラム化(B3/B4) |
-| 残り | Issue #128 S2.5(CSSライブ調整)/S3-S6(管理バー/ダッシュボード/チャンネル仕様/機能復活) |
+| 完了 | 001-092, Issue #128 S0-S2完了, S2.5-A(CSSライブ調整API)完了, エディタUX改善, フォームレイアウト2カラム化 |
+| 残り | Issue #128 S2.5-B/C/D(UI改善/永続化)/S3-S6(管理バー/ダッシュボード/チャンネル仕様/機能復活) |
 | 更新 | 2026-01-03 |
 
 ---
@@ -109,6 +109,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.45 | 2026-01-02 | [PyPI](https://pypi.org/project/focomy/0.1.45/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **編集画面フィールド整理** |
 | v0.1.57 | 2026-01-03 | [PyPI](https://pypi.org/project/focomy/0.1.57/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **エディタUX改善(128-S1-A4)** |
 | v0.1.58 | 2026-01-03 | [PyPI](https://pypi.org/project/focomy/0.1.58/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **フォームレイアウト2カラム化(128-S2)** |
+| v0.1.59 | 2026-01-03 | [PyPI](https://pypi.org/project/focomy/0.1.59/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **CSSライブ調整機能(128-S2.5-A)** |
 
 ---
 
