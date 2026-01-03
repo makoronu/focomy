@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 
 import httpx
 
-from core.cli import __version__
+from core import __version__
 
 PYPI_PACKAGE = "focomy"
 GITHUB_REPO = "focomy/focomy"
