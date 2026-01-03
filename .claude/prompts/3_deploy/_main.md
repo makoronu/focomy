@@ -48,6 +48,11 @@
 → 4_verify/log.md
 ```
 
+### 6. テスト依頼
+```
+→ 5_test_request/test_request.md
+```
+
 ---
 
 ## 完了時
