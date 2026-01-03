@@ -4,12 +4,12 @@ Provides common fixtures for database, services, and test data.
 """
 
 import asyncio
+import os
 from collections.abc import AsyncGenerator, Generator
 
 import pytest
 import pytest_asyncio
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-from sqlalchemy.pool import StaticPool
 
 from core.database import Base
 from core.services.auth import AuthService
@@ -17,8 +17,11 @@ from core.services.entity import EntityService
 from core.services.field import FieldService
 from core.services.relation import RelationService
 
-# Test database URL (in-memory SQLite)
-TEST_DATABASE_URL = "sqlite+aiosqlite:///:memory:"
+# Test database URL (PostgreSQL only)
+TEST_DATABASE_URL = os.getenv(
+    "TEST_DATABASE_URL",
+    "postgresql+asyncpg://focomy:focomy@localhost:5432/focomy_test",
+)
 
 
 @pytest.fixture(scope="session")
@@ -32,11 +35,7 @@ def event_loop() -> Generator:
 @pytest_asyncio.fixture(scope="function")
 async def engine():
     """Create async engine for each test."""
-    engine = create_async_engine(
-        TEST_DATABASE_URL,
-        connect_args={"check_same_thread": False},
-        poolclass=StaticPool,
-    )
+    engine = create_async_engine(TEST_DATABASE_URL)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)

@@ -78,44 +78,38 @@ class MigrationHelpers:
                 )
                 result["nullified_count"] += orphans["updated_by_orphans"]
 
-            # Add FK constraints (PostgreSQL syntax)
-            # Note: SQLite doesn't support adding FK constraints to existing tables
-
-            # Check database type
-            db_type = await self._get_database_type()
-
-            if db_type == "postgresql":
-                # Add created_by FK
-                try:
-                    await self.db.execute(
-                        text(
-                            """
-                        ALTER TABLE entities
-                        ADD CONSTRAINT fk_entities_created_by
-                        FOREIGN KEY (created_by) REFERENCES entities(id)
-                        ON DELETE SET NULL
-                    """
-                        )
+            # Add FK constraints (PostgreSQL only)
+            # Add created_by FK
+            try:
+                await self.db.execute(
+                    text(
+                        """
+                    ALTER TABLE entities
+                    ADD CONSTRAINT fk_entities_created_by
+                    FOREIGN KEY (created_by) REFERENCES entities(id)
+                    ON DELETE SET NULL
+                """
                     )
-                    result["constraints_added"].append("fk_entities_created_by")
-                except Exception:
-                    pass  # Constraint might already exist
+                )
+                result["constraints_added"].append("fk_entities_created_by")
+            except Exception:
+                pass  # Constraint might already exist
 
-                # Add updated_by FK
-                try:
-                    await self.db.execute(
-                        text(
-                            """
-                        ALTER TABLE entities
-                        ADD CONSTRAINT fk_entities_updated_by
-                        FOREIGN KEY (updated_by) REFERENCES entities(id)
-                        ON DELETE SET NULL
-                    """
-                        )
+            # Add updated_by FK
+            try:
+                await self.db.execute(
+                    text(
+                        """
+                    ALTER TABLE entities
+                    ADD CONSTRAINT fk_entities_updated_by
+                    FOREIGN KEY (updated_by) REFERENCES entities(id)
+                    ON DELETE SET NULL
+                """
                     )
-                    result["constraints_added"].append("fk_entities_updated_by")
-                except Exception:
-                    pass  # Constraint might already exist
+                )
+                result["constraints_added"].append("fk_entities_updated_by")
+            except Exception:
+                pass  # Constraint might already exist
 
             await self.db.commit()
             result["success"] = True
@@ -181,34 +175,31 @@ class MigrationHelpers:
         }
 
         try:
-            db_type = await self._get_database_type()
-
-            if db_type == "postgresql":
-                try:
-                    await self.db.execute(
-                        text(
-                            """
-                        ALTER TABLE entities
-                        DROP CONSTRAINT IF EXISTS fk_entities_created_by
-                    """
-                        )
+            try:
+                await self.db.execute(
+                    text(
+                        """
+                    ALTER TABLE entities
+                    DROP CONSTRAINT IF EXISTS fk_entities_created_by
+                """
                     )
-                    result["constraints_removed"].append("fk_entities_created_by")
-                except Exception:
-                    pass
+                )
+                result["constraints_removed"].append("fk_entities_created_by")
+            except Exception:
+                pass
 
-                try:
-                    await self.db.execute(
-                        text(
-                            """
-                        ALTER TABLE entities
-                        DROP CONSTRAINT IF EXISTS fk_entities_updated_by
-                    """
-                        )
+            try:
+                await self.db.execute(
+                    text(
+                        """
+                    ALTER TABLE entities
+                    DROP CONSTRAINT IF EXISTS fk_entities_updated_by
+                """
                     )
-                    result["constraints_removed"].append("fk_entities_updated_by")
-                except Exception:
-                    pass
+                )
+                result["constraints_removed"].append("fk_entities_updated_by")
+            except Exception:
+                pass
 
             await self.db.commit()
             result["success"] = True
@@ -269,24 +260,6 @@ class MigrationHelpers:
 
         return result
 
-    async def _get_database_type(self) -> str:
-        """Detect database type."""
-        try:
-            # Try PostgreSQL-specific query
-            await self.db.execute(text("SELECT version()"))
-            return "postgresql"
-        except Exception:
-            pass
-
-        try:
-            # Try SQLite-specific query
-            await self.db.execute(text("SELECT sqlite_version()"))
-            return "sqlite"
-        except Exception:
-            pass
-
-        return "unknown"
-
     async def verify_schema_integrity(self) -> dict:
         """
         Verify database schema integrity.
@@ -302,32 +275,20 @@ class MigrationHelpers:
         }
 
         required_tables = ["entities", "entity_values", "relations"]
-        db_type = await self._get_database_type()
 
         for table in required_tables:
             try:
-                if db_type == "postgresql":
-                    check = await self.db.execute(
-                        text(
-                            """
-                        SELECT EXISTS (
-                            SELECT FROM information_schema.tables
-                            WHERE table_name = :table
-                        )
-                    """
-                        ),
-                        {"table": table},
+                check = await self.db.execute(
+                    text(
+                        """
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables
+                        WHERE table_name = :table
                     )
-                else:
-                    check = await self.db.execute(
-                        text(
-                            """
-                        SELECT name FROM sqlite_master
-                        WHERE type='table' AND name=:table
-                    """
-                        ),
-                        {"table": table},
-                    )
+                """
+                    ),
+                    {"table": table},
+                )
 
                 exists = check.scalar()
                 if not exists:
