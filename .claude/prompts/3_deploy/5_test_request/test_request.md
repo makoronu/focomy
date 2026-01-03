@@ -21,10 +21,10 @@ Focomy v{VERSION} QAテスト依頼書
 
 【テスト対象】
 機能: {機能名}
-URL: https://focomy-cms.fly.dev/admin/{対象パス}
+URL: https://4690.tuishou.info/admin/{対象パス}
 
 【認証情報】
-URL: https://focomy-cms.fly.dev/admin/
+URL: https://4690.tuishou.info/admin/
 Email: admin@shirokuma.com
 Password: Shirokuma2024!
 

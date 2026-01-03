@@ -16,6 +16,33 @@ from .assets import get_asset_url, get_static_url, get_upload_url
 class ThemeConfig:
     """Theme configuration."""
 
+    # Default values for CSS variables (used when theme.yaml is incomplete)
+    DEFAULT_COLORS = {
+        "primary": "#2563eb",
+        "primary-hover": "#1d4ed8",
+        "background": "#ffffff",
+        "surface": "#f8fafc",
+        "text": "#1e293b",
+        "text-muted": "#64748b",
+        "border": "#e2e8f0",
+        "success": "#22c55e",
+        "error": "#ef4444",
+        "warning": "#f59e0b",
+    }
+    DEFAULT_FONTS = {
+        "sans": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+        "serif": "Georgia, 'Times New Roman', serif",
+        "mono": "ui-monospace, SFMono-Regular, Menlo, monospace",
+    }
+    DEFAULT_SPACING = {
+        "xs": "0.25rem",
+        "sm": "0.5rem",
+        "md": "1rem",
+        "lg": "1.5rem",
+        "xl": "2rem",
+        "2xl": "3rem",
+    }
+
     def __init__(self, data: dict):
         self.name = data.get("name", "default")
         self.label = data.get("label", "Default Theme")
@@ -24,10 +51,10 @@ class ThemeConfig:
         self.description = data.get("description", "")
         self.preview = data.get("preview", "")
 
-        # CSS variables
-        self.colors = data.get("colors", {})
-        self.fonts = data.get("fonts", {})
-        self.spacing = data.get("spacing", {})
+        # CSS variables (fallback to defaults if empty/missing)
+        self.colors = data.get("colors") or self.DEFAULT_COLORS
+        self.fonts = data.get("fonts") or self.DEFAULT_FONTS
+        self.spacing = data.get("spacing") or self.DEFAULT_SPACING
 
         # Customization config
         self.config = data.get("config", {})
