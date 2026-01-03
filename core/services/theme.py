@@ -1131,6 +1131,144 @@ body {
 
         return template.render(**context)
 
+    # === Customization Methods ===
+
+    def get_customizations(self, theme_name: str = None) -> dict:
+        """Get saved customizations for a theme.
+
+        Args:
+            theme_name: Theme name (uses current theme if not provided)
+
+        Returns:
+            Dict of customization values
+        """
+        theme = self.get_theme(theme_name)
+        if not theme:
+            return {}
+
+        customizations_file = self.themes_dir / theme.name / "customizations.json"
+        if customizations_file.exists():
+            try:
+                return json.loads(customizations_file.read_text(encoding="utf-8"))
+            except Exception:
+                return {}
+        return {}
+
+    def set_customizations(self, values: dict, theme_name: str = None) -> bool:
+        """Save customizations for a theme.
+
+        Args:
+            values: Dict of customization values
+            theme_name: Theme name (uses current theme if not provided)
+
+        Returns:
+            True if saved successfully
+        """
+        theme = self.get_theme(theme_name)
+        if not theme:
+            return False
+
+        customizations_file = self.themes_dir / theme.name / "customizations.json"
+        try:
+            customizations_file.write_text(
+                json.dumps(values, indent=2, ensure_ascii=False),
+                encoding="utf-8"
+            )
+            return True
+        except Exception:
+            return False
+
+    def get_customizable_settings(self, theme_name: str = None) -> list[dict]:
+        """Get list of customizable settings for a theme.
+
+        Args:
+            theme_name: Theme name (uses current theme if not provided)
+
+        Returns:
+            List of setting definitions with current values
+        """
+        theme = self.get_theme(theme_name)
+        if not theme:
+            return []
+
+        customizations = self.get_customizations(theme_name)
+        settings = []
+
+        # Colors
+        for name, default_value in theme.colors.items():
+            settings.append({
+                "id": f"color_{name}",
+                "type": "color",
+                "label": name.replace("-", " ").replace("_", " ").title(),
+                "category": "colors",
+                "default": default_value,
+                "value": customizations.get(f"color_{name}", default_value),
+            })
+
+        # Fonts
+        for name, default_value in theme.fonts.items():
+            settings.append({
+                "id": f"font_{name}",
+                "type": "font",
+                "label": name.replace("-", " ").replace("_", " ").title(),
+                "category": "fonts",
+                "default": default_value,
+                "value": customizations.get(f"font_{name}", default_value),
+            })
+
+        # Spacing
+        for name, default_value in theme.spacing.items():
+            settings.append({
+                "id": f"space_{name}",
+                "type": "spacing",
+                "label": name.replace("-", " ").replace("_", " ").title(),
+                "category": "spacing",
+                "default": default_value,
+                "value": customizations.get(f"space_{name}", default_value),
+            })
+
+        return settings
+
+    def generate_preview_css(self, preview_values: dict, theme_name: str = None) -> str:
+        """Generate CSS with preview values (not saved).
+
+        Args:
+            preview_values: Dict of values to override
+            theme_name: Theme name
+
+        Returns:
+            CSS string with overrides applied
+        """
+        theme = self.get_theme(theme_name)
+        if not theme:
+            return ""
+
+        # Start with saved customizations
+        values = self.get_customizations(theme_name)
+        # Override with preview values
+        values.update(preview_values)
+
+        lines = [":root {"]
+
+        # Colors - check for customization override
+        for name, default_value in theme.colors.items():
+            value = values.get(f"color_{name}", default_value)
+            lines.append(f"  --color-{name}: {value};")
+
+        # Fonts
+        for name, default_value in theme.fonts.items():
+            value = values.get(f"font_{name}", default_value)
+            lines.append(f"  --font-{name}: {value};")
+
+        # Spacing
+        for name, default_value in theme.spacing.items():
+            value = values.get(f"space_{name}", default_value)
+            lines.append(f"  --space-{name}: {value};")
+
+        lines.append("}")
+
+        return "\n".join(lines)
+
 
 # Singleton
 theme_service = ThemeService()
