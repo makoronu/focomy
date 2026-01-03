@@ -888,6 +888,103 @@ class HighlightInlineTool {
         return this._state;
     }
 }
+
+// HeadingLevel (見出しレベル変更) - A4-1
+class HeadingLevelInlineTool {
+    static get isInline() { return true; }
+    static get title() { return '見出しレベル'; }
+
+    constructor({api}) {
+        this.api = api;
+        this._state = false;
+        this.currentLevel = 2;
+    }
+
+    render() {
+        this.wrapper = document.createElement('div');
+        this.wrapper.classList.add('ce-inline-tool', 'heading-level-tool');
+        this.wrapper.style.cssText = 'position:relative;';
+
+        this.button = document.createElement('button');
+        this.button.type = 'button';
+        this.button.innerHTML = '<span class="heading-level-display">H2</span><span style="font-size:10px;margin-left:2px;">▼</span>';
+        this.button.style.cssText = 'display:flex;align-items:center;padding:4px 8px;border:none;background:none;cursor:pointer;font-weight:bold;';
+        this.wrapper.appendChild(this.button);
+
+        this.dropdown = document.createElement('div');
+        this.dropdown.className = 'heading-level-dropdown';
+        this.dropdown.style.cssText = 'display:none;position:absolute;top:100%;left:0;background:white;border:1px solid #ddd;border-radius:4px;box-shadow:0 2px 8px rgba(0,0,0,0.15);z-index:1000;';
+
+        for (let i = 1; i <= 6; i++) {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.textContent = 'H' + i;
+            item.dataset.level = i;
+            item.style.cssText = 'display:block;width:100%;padding:8px 16px;border:none;background:none;cursor:pointer;text-align:left;font-size:' + (20 - i * 2) + 'px;font-weight:bold;';
+            item.addEventListener('mouseenter', () => item.style.background = '#f0f0f0');
+            item.addEventListener('mouseleave', () => item.style.background = 'none');
+            item.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                this.setLevel(parseInt(item.dataset.level));
+                this.dropdown.style.display = 'none';
+            });
+            this.dropdown.appendChild(item);
+        }
+        this.wrapper.appendChild(this.dropdown);
+
+        this.button.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.dropdown.style.display = this.dropdown.style.display === 'none' ? 'block' : 'none';
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!this.wrapper.contains(e.target)) {
+                this.dropdown.style.display = 'none';
+            }
+        });
+
+        return this.wrapper;
+    }
+
+    setLevel(level) {
+        const blockIndex = this.api.blocks.getCurrentBlockIndex();
+        const block = this.api.blocks.getBlockByIndex(blockIndex);
+        if (block && block.name === 'header') {
+            block.call('setLevel', level);
+            this.currentLevel = level;
+            this.button.querySelector('.heading-level-display').textContent = 'H' + level;
+        }
+    }
+
+    surround(range) {
+        // Toggle dropdown instead
+    }
+
+    checkState() {
+        const blockIndex = this.api.blocks.getCurrentBlockIndex();
+        const block = this.api.blocks.getBlockByIndex(blockIndex);
+        if (block && block.name === 'header') {
+            this._state = true;
+            this.wrapper.style.display = '';
+            // Try to get current level
+            const headerEl = document.querySelector('.ce-block--focused .ce-header');
+            if (headerEl) {
+                const tag = headerEl.tagName;
+                const level = parseInt(tag.replace('H', ''));
+                if (level >= 1 && level <= 6) {
+                    this.currentLevel = level;
+                    this.button.querySelector('.heading-level-display').textContent = 'H' + level;
+                }
+            }
+        } else {
+            this._state = false;
+            this.wrapper.style.display = 'none';
+        }
+        return this._state;
+    }
+}
 </script>
 
 <script>
@@ -2163,6 +2260,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 },
                 highlightColor: {
                     class: HighlightInlineTool
+                },
+                headingLevel: {
+                    class: HeadingLevelInlineTool
                 }
             },
 
@@ -2170,7 +2270,7 @@ document.addEventListener('DOMContentLoaded', function() {
             tunes: ['alignmentTune', 'colorTune'],
 
             // インラインツール
-            inlineToolbar: ['bold', 'italic', 'link', 'strikethrough', 'textColor', 'highlightColor', 'marker', 'inlineCode', 'underline'],
+            inlineToolbar: ['headingLevel', 'bold', 'italic', 'link', 'strikethrough', 'textColor', 'highlightColor', 'marker', 'inlineCode', 'underline'],
 
             onChange: async function() {
                 try {
@@ -2189,6 +2289,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
             onReady: function() {
                 console.log('Editor.js is ready with 20 blocks!');
+
+                // A4-2: スラッシュコマンド実装
+                container.addEventListener('keydown', function(e) {
+                    if (e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey) {
+                        const selection = window.getSelection();
+                        if (selection.rangeCount > 0) {
+                            const range = selection.getRangeAt(0);
+                            const textBefore = range.startContainer.textContent?.slice(0, range.startOffset) || '';
+                            // 行頭または空白直後の「/」でツールボックスを開く
+                            if (textBefore === '' || textBefore.endsWith(' ') || textBefore.endsWith('\n')) {
+                                e.preventDefault();
+                                // ツールボックスを開く
+                                const plusBtn = container.parentElement.querySelector('.ce-toolbar__plus');
+                                if (plusBtn) {
+                                    plusBtn.click();
+                                }
+                            }
+                        }
+                    }
+                });
+
+                // A4-3: 右クリックでインラインツールバー表示
+                container.addEventListener('contextmenu', function(e) {
+                    const selection = window.getSelection();
+                    if (selection && selection.toString().trim().length > 0) {
+                        e.preventDefault();
+                        // テキスト選択時にインラインツールバーを表示
+                        // Editor.jsは選択時に自動でツールバーを表示するので、
+                        // selectionchangeイベントをトリガー
+                        document.dispatchEvent(new Event('selectionchange'));
+                    }
+                });
             },
 
             i18n: {
