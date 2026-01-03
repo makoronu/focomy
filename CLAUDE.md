@@ -57,9 +57,9 @@
 | 項目 | 内容 |
 |------|------|
 | 作業中 | なし |
-| 完了 | 001-092, Issue #35/#36/#37修正, プロトコル違反修正, パスワード更新修正(v0.1.48) |
-| 残り | P2: 例外ログ追加, HTTPステータス定数化 |
-| 更新 | 2026-01-02 |
+| 完了 | 001-092, Issue #128 S0-S1完了(v0.1.57), エディタUX改善(見出しドロップダウン/スラッシュコマンド/右クリック) |
+| 残り | Issue #128 S2-S6(フォームレイアウト/管理バー/ダッシュボード/チャンネル仕様/機能復活) |
+| 更新 | 2026-01-03 |
 
 ---
 
@@ -107,6 +107,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.20 | 2026-01-01 | [PyPI](https://pypi.org/project/focomy/0.1.20/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) |
 | v0.1.36 | 2026-01-01 | [PyPI](https://pypi.org/project/focomy/0.1.36/) / [GitHub](https://github.com/makoronu/focomy) - **チャンネル/シリーズ/タグ アーキテクチャ** |
 | v0.1.45 | 2026-01-02 | [PyPI](https://pypi.org/project/focomy/0.1.45/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **編集画面フィールド整理** |
+| v0.1.57 | 2026-01-03 | [PyPI](https://pypi.org/project/focomy/0.1.57/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **エディタUX改善(128-S1-A4)** |
 
 ---
 
