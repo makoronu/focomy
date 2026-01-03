@@ -878,6 +878,17 @@ async def customize_theme_page(
             grouped_settings[category] = []
         grouped_settings[category].append(setting)
 
+    # Debug log
+    import structlog
+    logger = structlog.get_logger()
+    logger.info(
+        "customize_theme_page",
+        theme_name=theme_name,
+        settings_count=len(settings),
+        grouped_keys=list(grouped_settings.keys()),
+        colors_count=len(grouped_settings.get("colors", [])),
+    )
+
     context = await get_context(request, db, current_user, "themes")
     context.update({
         "theme": {
