@@ -278,9 +278,11 @@ async def home(
 ):
     """Home page - list recent posts."""
     cache_key = "page:home"
-    cached_html = await cache_service.get(cache_key)
-    if cached_html:
-        return HTMLResponse(content=cached_html)
+    admin_info = await get_admin_user_optional(request, db)
+    if not admin_info:
+        cached_html = await cache_service.get(cache_key)
+        if cached_html:
+            return HTMLResponse(content=cached_html)
 
     entity_svc = EntityService(db)
 
@@ -1184,11 +1186,13 @@ async def content_type_listing(
     db: AsyncSession = Depends(get_db),
 ):
     """Listing page for content types with path_prefix."""
-    # Check cache (only first page)
+    # Check cache (only first page) - skip for admin users
     cache_key = f"page:{path_prefix}:list:{page}"
-    cached_html = await cache_service.get(cache_key)
-    if cached_html:
-        return HTMLResponse(content=cached_html)
+    admin_info = await get_admin_user_optional(request, db)
+    if not admin_info:
+        cached_html = await cache_service.get(cache_key)
+        if cached_html:
+            return HTMLResponse(content=cached_html)
 
     # Find content type by path prefix
     content_types = field_service.get_all_content_types()
@@ -1264,11 +1268,13 @@ async def view_content_by_path(
     db: AsyncSession = Depends(get_db),
 ):
     """Dynamic route for content types with path_prefix."""
-    # Check cache first
+    # Check cache first - skip for admin users
     cache_key = f"page:{path_prefix}:{slug}"
-    cached_html = await cache_service.get(cache_key)
-    if cached_html:
-        return HTMLResponse(content=cached_html)
+    admin_info = await get_admin_user_optional(request, db)
+    if not admin_info:
+        cached_html = await cache_service.get(cache_key)
+        if cached_html:
+            return HTMLResponse(content=cached_html)
 
     # Find content type by path prefix
     content_types = field_service.get_all_content_types()
