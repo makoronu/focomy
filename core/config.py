@@ -178,6 +178,10 @@ class MenusConfig(BaseModel):
     sidebar: list[MenuItemConfig] = []
 
 
+class ThemeConfig(BaseModel):
+    active: str = "default"
+
+
 def _get_base_dir() -> Path:
     """Get base directory - prefer cwd if config.yaml exists there."""
     cwd = Path.cwd()
@@ -202,6 +206,7 @@ class Settings(BaseSettings):
     seo: SEOConfig = SEOConfig()
     oauth: OAuthConfig = OAuthConfig()
     menus: MenusConfig = MenusConfig()
+    theme: ThemeConfig = ThemeConfig()
     features: FeaturesConfig = FeaturesConfig()
 
     class Config:

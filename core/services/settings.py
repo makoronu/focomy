@@ -234,6 +234,7 @@ class SettingsService:
             "seo": app_settings.seo,
             "media": app_settings.media,
             "security": app_settings.security,
+            "theme": app_settings.theme,
         }
 
         config_obj = config_map.get(category)

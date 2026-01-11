@@ -38,6 +38,27 @@ seo:
   default_description: ""
   default_og_image: ""
 
+# Theme configuration
+theme:
+  active: corporate
+
+# Menu configuration (fallback when DB is empty)
+menus:
+  header:
+    - label: ホーム
+      url: /
+    - label: ブログ
+      url: /posts
+    - label: 会社概要
+      url: /about
+  footer:
+    - label: プライバシーポリシー
+      url: /privacy
+    - label: 利用規約
+      url: /terms
+    - label: お問い合わせ
+      url: /contact
+
 # Feature flags for phased stabilization
 # See docs/STABILIZATION_PLAN.md for details
 features:
