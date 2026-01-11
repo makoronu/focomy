@@ -70,8 +70,8 @@
 | 項目 | 内容 |
 |------|------|
 | 作業中 | なし |
-| 完了 | 001-092, Issue #128 S0-S2完了, S2.5-A(CSSライブ調整API)完了, エディタUX改善, フォームレイアウト2カラム化, テーマ・メニュー デフォルト設定追加 |
-| 残り | Issue #128 S2.5-B/C/D(UI改善/永続化)/S3-S6(管理バー/ダッシュボード/チャンネル仕様/機能復活) |
+| 完了 | 001-092, Issue #128 S0-S2完了, S2.5-A(CSSライブ調整API)完了, S3(管理バー)完了, エディタUX改善, フォームレイアウト2カラム化, テーマ・メニュー デフォルト設定追加 |
+| 残り | Issue #128 S2.5-B/C/D(UI改善/永続化)/S4-S6(ダッシュボード/チャンネル仕様/機能復活) |
 | 更新 | 2026-01-11 |
 
 ---
@@ -126,6 +126,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.62 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.62/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **メニュー・ウィジェット機能有効化** |
 | v0.1.63 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.63/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **テーマ・メニュー デフォルト設定追加** |
 | v0.1.65 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.65/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **テーマ設定読み込みバグ修正** |
+| v0.1.68 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.68/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **管理バー機能(128-S3)** |
 
 ---
 
