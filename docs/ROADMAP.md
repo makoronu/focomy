@@ -27,7 +27,11 @@
     ↓
 [S1: エディタ機能]
     ↓
-[S2: フォームレイアウト]
+[S2: フォームレイアウト] ✅
+    ↓
+[S2.5: CSSライブ調整]
+    ↓
+[S2.6: テーマテンプレートフォールバック] ← NEW
     ↓
 [S3: 管理バー]
     ↓
@@ -35,7 +39,7 @@
     ↓
 [S5: チャンネル仕様]
     ↓
-[S6: 機能復活]
+[S6: 機能復活] ← S2.6完了が前提
 ```
 
 ### S0: デプロイ調査（最優先）
@@ -105,6 +109,36 @@
 | D2 | 設定ファイル保存 | ThemeService | 未着手 |
 | D3 | ページリロード時に設定復元 | 同上 | 未着手 |
 | D4 | フロント（公開サイト）への反映 | theme.py | 未着手 |
+
+### S2.6: テーマテンプレートフォールバック
+
+**備考**: S6（メニュー/ウィジェット復活）の前提。corporateテーマでpost.html等が表示されない問題の修正
+
+**原因**: `theme.py`が`theme_inheritance.py`を使用していない
+
+#### 修正内容
+
+| # | タスク | ファイル | 状態 |
+|---|--------|----------|------|
+| A1 | `get_template_env()`で継承サービス使用 | `core/services/theme.py` | 未着手 |
+| A2 | `FileSystemLoader`を複数ディレクトリ対応に変更 | 同上 | 未着手 |
+| B1 | corporateテーマに`parent: default`追加 | `themes/corporate/theme.yaml` | 未着手 |
+
+**修正箇所詳細** (`core/services/theme.py:654-662`):
+```python
+# 現在: 単一ディレクトリ
+loader=FileSystemLoader(str(theme_dir))
+
+# 修正後: 継承チェーンの全ディレクトリ
+from .theme_inheritance import ThemeInheritanceService
+inheritance_svc = ThemeInheritanceService(self.themes_dir)
+template_paths = inheritance_svc.get_template_paths(theme_name)
+loader=FileSystemLoader([str(p) for p in template_paths])
+```
+
+**期待動作**:
+- corporate/post.html が無い → default/post.html を使用
+- corporateのCSS変数・スタイルは維持
 
 ### S3: 管理バー
 

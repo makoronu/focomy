@@ -654,10 +654,25 @@ body {
     def get_template_env(self, theme_name: str = None) -> Environment:
         """Get Jinja2 environment for theme."""
         theme = self.get_theme(theme_name)
-        theme_dir = self.themes_dir / (theme.name if theme else "default") / "templates"
+        active_theme = theme.name if theme else "default"
+
+        # Use theme inheritance for template fallback
+        from .theme_inheritance import ThemeInheritanceService
+
+        inheritance_svc = ThemeInheritanceService(self.themes_dir)
+        template_paths = inheritance_svc.get_template_paths(active_theme)
+
+        # Always include default as final fallback
+        default_templates = self.themes_dir / "default" / "templates"
+        if default_templates not in template_paths and default_templates.exists():
+            template_paths.append(default_templates)
+
+        # Fallback if no paths found
+        if not template_paths:
+            template_paths = [default_templates]
 
         env = Environment(
-            loader=FileSystemLoader(str(theme_dir)),
+            loader=FileSystemLoader([str(p) for p in template_paths]),
             autoescape=select_autoescape(["html", "xml"]),
         )
 

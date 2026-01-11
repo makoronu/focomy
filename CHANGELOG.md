@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.67] - 2026-01-11
+
+### Fixed
+- テーマテンプレートフォールバック追加
+  - 非defaultテーマで不足テンプレートをdefaultから継承
+  - theme_inheritance サービスを ThemeService に統合
+
 ## [0.1.66] - 2026-01-11
 
 ### Fixed
