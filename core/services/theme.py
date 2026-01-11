@@ -662,14 +662,17 @@ body {
         inheritance_svc = ThemeInheritanceService(self.themes_dir)
         template_paths = inheritance_svc.get_template_paths(active_theme)
 
-        # Always include default as final fallback
-        default_templates = self.themes_dir / "default" / "templates"
-        if default_templates not in template_paths and default_templates.exists():
-            template_paths.append(default_templates)
+        # Package default theme takes priority (for pip upgrade compatibility)
+        package_default = Path(__file__).parent.parent.parent / "themes" / "default" / "templates"
+        if package_default.exists():
+            # Remove site-local default if exists, package default takes priority
+            site_default = self.themes_dir / "default" / "templates"
+            template_paths = [p for p in template_paths if p != site_default]
+            template_paths.insert(0, package_default)
 
         # Fallback if no paths found
         if not template_paths:
-            template_paths = [default_templates]
+            template_paths = [package_default]
 
         env = Environment(
             loader=FileSystemLoader([str(p) for p in template_paths]),

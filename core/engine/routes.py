@@ -150,6 +150,10 @@ async def render_theme(
     active_theme = await get_active_theme(db)
     theme_service.set_current_theme(active_theme)
 
+    # Set site_name from context or settings
+    if "site" in context and "name" in context["site"]:
+        context.setdefault("site_name", context["site"]["name"])
+
     # Add admin bar context if logged in
     if request:
         admin_info = await get_admin_user_optional(request, db)

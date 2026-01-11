@@ -121,10 +121,14 @@
 <body>
     {% if is_admin %}
     <div id="admin-bar">
+        <a href="/" class="admin-bar-site">{{ site_name }}</a>
         <a href="/admin">ダッシュボード</a>
+        <a href="/admin/post/new">+ 新規投稿</a>
         {% if edit_url %}
         <a href="{{ edit_url }}">編集</a>
         {% endif %}
+        <span class="admin-bar-spacer"></span>
+        <span class="admin-bar-user">{{ admin_user.display_name or admin_user.email or 'Admin' }}</span>
         <a href="/admin/logout">ログアウト</a>
     </div>
     <style>
@@ -149,6 +153,15 @@
         }
         #admin-bar a:hover {
             text-decoration: underline;
+        }
+        .admin-bar-site {
+            font-weight: 600;
+        }
+        .admin-bar-spacer {
+            flex: 1;
+        }
+        .admin-bar-user {
+            color: #94a3b8;
         }
         body { padding-top: 32px; }
     </style>
