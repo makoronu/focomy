@@ -128,6 +128,8 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.65 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.65/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **テーマ設定読み込みバグ修正** |
 | v0.1.68 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.68/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **管理バー機能(128-S3)** |
 | v0.1.69 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.69/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **管理バーキャッシュバイパス修正** |
+| v0.1.70 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.70/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **管理バー改善・テーマ読み込みロジック修正** |
+| v0.1.71 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.71/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **Pathインポート修正(v0.1.70バグ修正)** |
 
 ---
 
