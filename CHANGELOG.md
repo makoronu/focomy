@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.66] - 2026-01-11
+
+### Fixed
+- CSP: Google Fonts (fonts.googleapis.com) を style-src に追加
+
 ## [0.1.65] - 2026-01-11
 
 ### Fixed

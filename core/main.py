@@ -70,7 +70,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     ADMIN_CSP = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.jsdelivr.net https://unpkg.com; "
-        "style-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "img-src 'self' data: https: blob:; "
         "font-src 'self' https://fonts.gstatic.com; "
         "frame-src https://www.youtube.com https://player.vimeo.com https://open.spotify.com "
@@ -82,7 +82,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     PUBLIC_CSP = (
         "default-src 'self'; "
         "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; "
-        "style-src 'self' 'unsafe-inline'; "
+        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "img-src 'self' data: https: blob:; "
         "font-src 'self' https://fonts.gstatic.com; "
         "frame-src https://www.youtube.com https://player.vimeo.com https://open.spotify.com "
