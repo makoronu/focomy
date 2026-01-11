@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.63] - 2026-01-11
+
+### Fixed
+- テーマ・メニューのYAMLフォールバック設定追加
+  - config.yaml に theme/menus セクション追加
+  - ThemeConfig クラス追加
+  - settings.py の config_map に "theme" 追加
+  - DB未設定時でもテーマ/メニューが表示されるように
+
 ## [0.1.62] - 2026-01-11
 
 ### Changed
