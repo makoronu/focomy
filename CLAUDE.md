@@ -6,13 +6,26 @@
 
 ## 工程プロンプト（必ず読め）
 
+### 基本フロー
 | 作業 | ファイル |
 |------|---------|
 | ロードマップ | `.claude/prompts/0_roadmap/_main.md` |
-| 開発 | `.claude/prompts/2_dev/_main.md` |
 | 検証 | `.claude/prompts/1_audit/_main.md` |
+| 開発 | `.claude/prompts/2_dev/_main.md` |
 | デプロイ | `.claude/prompts/3_deploy/_main.md` |
 | 振り返り | `.claude/prompts/4_retrospective/_main.md` |
+
+### 運用・保守
+| 作業 | ファイル |
+|------|---------|
+| デバッグ | `.claude/prompts/5_debug/_main.md` |
+| 本番環境整備 | `.claude/prompts/5_production/_main.md` |
+| エラーログ | `.claude/prompts/6_error_log/_main.md` |
+| マニュアル生成 | `.claude/prompts/6_manual/_main.md` |
+
+### サブ工程
+| 作業 | ファイル |
+|------|---------|
 | インポート修正 | `.claude/prompts/2_dev/1_import/_main.md` |
 | 緊急 | `.claude/prompts/emergency.md` |
 
