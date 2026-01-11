@@ -270,6 +270,8 @@ def get_settings() -> Settings:
         settings.menus = MenusConfig(**parsed_menus)
     if "features" in yaml_config:
         settings.features = FeaturesConfig(**yaml_config["features"])
+    if "theme" in yaml_config:
+        settings.theme = ThemeConfig(**yaml_config["theme"])
 
     return settings
 

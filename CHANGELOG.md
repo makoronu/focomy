@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.65] - 2026-01-11
+
+### Fixed
+- _get_all_yaml_settingsにthemeが含まれていないバグを修正
+
+## [0.1.64] - 2026-01-11
+
+### Fixed
+- config.yamlのtheme設定がget_settings()で読み込まれないバグを修正
+
 ## [0.1.63] - 2026-01-11
 
 ### Fixed

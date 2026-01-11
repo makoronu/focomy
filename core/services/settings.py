@@ -252,6 +252,7 @@ class SettingsService:
             "seo": app_settings.seo,
             "media": app_settings.media,
             "security": app_settings.security,
+            "theme": app_settings.theme,
         }
 
         categories = [category] if category else config_map.keys()
