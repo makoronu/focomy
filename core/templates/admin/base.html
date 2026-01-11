@@ -531,6 +531,11 @@
                     {{ ch.title }}
                 </a>
                 {% endfor %}
+                {% if orphan_post_count > 0 %}
+                <a href="/admin/posts/orphan" class="nav-item nav-item-sub {% if is_orphan_view %}active{% endif %}" style="color: var(--warning);">
+                    未分類 ({{ orphan_post_count }})
+                </a>
+                {% endif %}
                 {% else %}
                 <div class="nav-section">チャンネル</div>
                 <a href="/admin/channel" class="nav-item {% if current_page == 'channel' %}active{% endif %}">

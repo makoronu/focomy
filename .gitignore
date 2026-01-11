@@ -55,3 +55,4 @@ test_screenshots/
 
 # Logs
 *.log
+.env.prod

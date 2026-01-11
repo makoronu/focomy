@@ -151,6 +151,10 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
             elif not request.url.path.startswith("/api"):
                 response.headers[csp_header] = self.PUBLIC_CSP
 
+        # Cache-Control for admin pages (prevent stale content)
+        if request.url.path.startswith("/admin"):
+            response.headers["Cache-Control"] = "no-store, must-revalidate"
+
         # Permissions Policy
         if headers_config.permissions_policy_enabled:
             response.headers["Permissions-Policy"] = self.PERMISSIONS_POLICY

@@ -181,6 +181,19 @@ async def get_context(
         import logging
         logging.debug(f"Channel content type not available: {e}")
 
+    # Get orphan posts count (posts without channel)
+    orphan_post_count = 0
+    try:
+        from ..services.relation import RelationService
+        relation_svc = RelationService(db)
+        all_posts = await entity_svc.find("post", limit=1000)
+        for post in all_posts:
+            related_channels = await relation_svc.get_related(post.id, "post_channel")
+            if not related_channels:
+                orphan_post_count += 1
+    except Exception:
+        pass  # Post content type may not exist
+
     return {
         "request": request,
         "content_types": content_types,
@@ -190,6 +203,7 @@ async def get_context(
         "pending_comment_count": pending_comment_count,
         "user_role": user_role,
         "channels": channels,
+        "orphan_post_count": orphan_post_count,
     }
 
 
@@ -3541,6 +3555,92 @@ async def channel_posts(
             "channel": channel_data,
             "channel_slug": channel_slug,
             "is_channel_view": True,
+        }
+    )
+
+    return templates.TemplateResponse("admin/entity_list.html", context)
+
+
+@router.get("/posts/orphan", response_class=HTMLResponse)
+async def orphan_posts(
+    request: Request,
+    page: int = 1,
+    q: str = "",
+    status_filter: str = "",
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """List posts without channel assignment."""
+    entity_svc = EntityService(db)
+    from ..services.relation import RelationService
+
+    relation_svc = RelationService(db)
+
+    content_type = field_service.get_content_type("post")
+    if not content_type:
+        raise HTTPException(status_code=404, detail="Post content type not found")
+
+    per_page = get_settings().admin.per_page
+    offset = (page - 1) * per_page
+
+    # Get all posts and filter those without channel
+    filters = {}
+    if status_filter:
+        filters["status"] = status_filter
+
+    all_posts = await entity_svc.find(
+        "post",
+        limit=1000,
+        order_by="-created_at",
+        filters=filters,
+    )
+
+    # Filter posts without channel relation
+    orphan_posts_list = []
+    for post in all_posts:
+        related_channels = await relation_svc.get_related(post.id, "post_channel")
+        if not related_channels:
+            orphan_posts_list.append(post)
+
+    # Apply text search
+    if q:
+        q_lower = q.lower()
+        filtered = []
+        for post in orphan_posts_list:
+            data = entity_svc.serialize(post)
+            if data.get("title") and q_lower in str(data["title"]).lower():
+                filtered.append(post)
+            elif data.get("body") and q_lower in str(data.get("body", "")).lower():
+                filtered.append(post)
+        orphan_posts_list = filtered
+
+    # Pagination
+    total = len(orphan_posts_list)
+    total_pages = (total + per_page - 1) // per_page
+    paginated_posts = orphan_posts_list[offset : offset + per_page]
+
+    entities = [entity_svc.serialize(p) for p in paginated_posts]
+
+    # Get list fields
+    list_fields = []
+    for field in content_type.fields[:4]:
+        if field.name not in ("password", "body", "blocks"):
+            list_fields.append(field)
+
+    context = await get_context(request, db, current_user, "post")
+    context.update(
+        {
+            "type_name": "post",
+            "content_type": content_type.model_dump(),
+            "entities": entities,
+            "list_fields": [f.model_dump() for f in list_fields],
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
+            "message": request.query_params.get("message"),
+            "search_query": q,
+            "status_filter": status_filter,
+            "is_orphan_view": True,
         }
     )
 
