@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.62] - 2026-01-11
+
+### Changed
+- メニュー・ウィジェット機能を有効化（config.yaml features.menu/widget = true）
+
 ## [0.1.57] - 2026-01-03
 
 ### Added

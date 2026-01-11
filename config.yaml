@@ -51,8 +51,8 @@ features:
   acf_alternative: false
 
   # Phase 4: Auxiliary features
-  menu: false
-  widget: false
+  menu: true
+  widget: true
   revision: false
   preview: false
   workflow: false

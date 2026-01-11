@@ -110,6 +110,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.57 | 2026-01-03 | [PyPI](https://pypi.org/project/focomy/0.1.57/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **エディタUX改善(128-S1-A4)** |
 | v0.1.58 | 2026-01-03 | [PyPI](https://pypi.org/project/focomy/0.1.58/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **フォームレイアウト2カラム化(128-S2)** |
 | v0.1.59 | 2026-01-03 | [PyPI](https://pypi.org/project/focomy/0.1.59/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **CSSライブ調整機能(128-S2.5-A)** |
+| v0.1.62 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.62/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **メニュー・ウィジェット機能有効化** |
 
 ---
 
