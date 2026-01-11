@@ -119,6 +119,40 @@
     </style>
 </head>
 <body>
+    {% if is_admin %}
+    <div id="admin-bar">
+        <a href="/admin">ダッシュボード</a>
+        {% if edit_url %}
+        <a href="{{ edit_url }}">編集</a>
+        {% endif %}
+        <a href="/admin/logout">ログアウト</a>
+    </div>
+    <style>
+        #admin-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 32px;
+            background: #1e293b;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: 0 1rem;
+            font-size: 0.75rem;
+            z-index: 9999;
+        }
+        #admin-bar a {
+            color: white;
+            text-decoration: none;
+        }
+        #admin-bar a:hover {
+            text-decoration: underline;
+        }
+        body { padding-top: 32px; }
+    </style>
+    {% endif %}
     <header class="site-header">
         {% block header %}
         <div class="container">

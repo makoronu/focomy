@@ -7,6 +7,7 @@ from fastapi.responses import HTMLResponse, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..services.auth import AuthService
 from ..services.cache import cache_service
 from ..services.entity import EntityService, QueryParams
 from ..services.field import field_service
@@ -18,6 +19,28 @@ from ..services.widget import WidgetService
 from ..utils import utcnow
 
 router = APIRouter(tags=["public"])
+
+
+async def get_admin_user_optional(
+    request: Request,
+    db: AsyncSession,
+) -> dict | None:
+    """Get admin user from session if logged in (optional, no error)."""
+    token = request.cookies.get("session")
+    if not token:
+        return None
+
+    auth_svc = AuthService(db)
+    user = await auth_svc.get_current_user(token)
+    if not user:
+        return None
+
+    entity_svc = EntityService(db)
+    user_data = entity_svc.serialize(user)
+    if user_data.get("role") not in ("admin", "editor", "author"):
+        return None
+
+    return {"user": user, "user_data": user_data}
 
 
 def generate_breadcrumbs(items: list[dict], site_url: str) -> dict:
@@ -119,10 +142,25 @@ async def render_theme(
     db: AsyncSession,
     template_name: str,
     context: dict,
+    request: Request = None,
+    entity=None,
+    content_type: str = None,
 ) -> str:
     """Render template with active theme."""
     active_theme = await get_active_theme(db)
     theme_service.set_current_theme(active_theme)
+
+    # Add admin bar context if logged in
+    if request:
+        admin_info = await get_admin_user_optional(request, db)
+        if admin_info:
+            context["is_admin"] = True
+            context["admin_user"] = admin_info["user_data"]
+            # Build edit URL if entity provided
+            if entity and content_type:
+                context["edit_url"] = f"/admin/{content_type}/{entity.id}/edit"
+        else:
+            context["is_admin"] = False
 
     try:
         return theme_service.render(template_name, context, active_theme)
@@ -278,6 +316,7 @@ async def home(
             **widgets_ctx,
             **seo_ctx,
         },
+        request=request,
     )
 
     await cache_service.set(cache_key, html, LIST_CACHE_TTL)
@@ -330,6 +369,9 @@ async def view_page(
             **seo_ctx,
             **breadcrumb_ctx,
         },
+        request=request,
+        entity=page,
+        content_type="page",
     )
 
     return HTMLResponse(content=html)
@@ -396,6 +438,7 @@ async def view_category(
             **menus_ctx,
             **seo_ctx,
         },
+        request=request,
     )
 
     return HTMLResponse(content=html)
@@ -460,6 +503,7 @@ async def view_archive(
             **menus_ctx,
             **seo_ctx,
         },
+        request=request,
     )
 
     return HTMLResponse(content=html)
@@ -525,6 +569,7 @@ async def search(
             **menus_ctx,
             **seo_ctx,
         },
+        request=request,
     )
 
     return HTMLResponse(content=html)
@@ -1122,6 +1167,7 @@ async def content_type_archive(
             "content_type": target_ct,
             **menus_ctx,
         },
+        request=request,
     )
 
     return HTMLResponse(content=html)
@@ -1200,6 +1246,7 @@ async def content_type_listing(
             **widgets_ctx,
             **seo_ctx,
         },
+        request=request,
     )
 
     await cache_service.set(cache_key, html, LIST_CACHE_TTL)
@@ -1292,6 +1339,9 @@ async def view_content_by_path(
                 **seo_ctx,
                 **breadcrumb_ctx,
             },
+            request=request,
+            entity=entity,
+            content_type=target_ct.name,
         )
     except Exception:
         # Fallback to post.html
@@ -1306,6 +1356,9 @@ async def view_content_by_path(
                 **seo_ctx,
                 **breadcrumb_ctx,
             },
+            request=request,
+            entity=entity,
+            content_type=target_ct.name,
         )
 
     # Cache the rendered HTML

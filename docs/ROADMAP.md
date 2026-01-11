@@ -69,76 +69,23 @@
 | B3 | 右サイドバー（アイキャッチ、ステータス、SEO、Relations） | 完了 |
 | B4 | Create/Cancelボタン右上移動 | 完了 |
 
-### S2.5: CSSライブ調整機能（B7）
+### S2.5: CSSライブ調整機能（B7） ✅
 
-**備考**: S2から分離。ThemeService拡張アプローチ採用
+**完了日**: 2026-01-11
 
-**アーキテクチャ決定**: ThemeManager/ThemeCustomizer（未使用）ではなく、ThemeService拡張で実装
+| Seg | 内容 | 状態 |
+|-----|------|------|
+| A | APIエンドポイント（4件） | 完了 |
+| B | UI骨格（customize.html） | 完了 |
+| C | ライブプレビュー | 完了 |
+| D | 永続化 | 完了 |
 
-#### Seg-A: APIエンドポイント
+### S2.6: テーマテンプレートフォールバック ✅
 
-| # | タスク | ファイル | 状態 |
-|---|--------|----------|------|
-| A1 | `GET /admin/themes/{name}/customize` ルート | routes.py | 未着手 |
-| A2 | `GET /api/admin/theme/settings` 設定取得 | routes.py | 未着手 |
-| A3 | `POST /api/admin/theme/settings` 設定保存 | routes.py | 未着手 |
-| A4 | `POST /api/admin/theme/preview-css` プレビューCSS | routes.py | 未着手 |
+**完了日**: 2026-01-11
 
-#### Seg-B: UI骨格
-
-| # | タスク | ファイル | 状態 |
-|---|--------|----------|------|
-| B1 | customize.html テンプレート作成 | templates/admin/ | 未着手 |
-| B2 | 2カラムレイアウト（設定/プレビュー） | 同上 | 未着手 |
-| B3 | カラーピッカー配置 | 同上 | 未着手 |
-| B4 | フォント選択配置 | 同上 | 未着手 |
-
-#### Seg-C: ライブプレビュー
-
-| # | タスク | ファイル | 状態 |
-|---|--------|----------|------|
-| C1 | 設定変更→CSS変数更新JS | customize.html | 未着手 |
-| C2 | iframe内プレビュー更新 | 同上 | 未着手 |
-| C3 | デバウンス処理（300ms） | 同上 | 未着手 |
-
-#### Seg-D: 永続化
-
-| # | タスク | ファイル | 状態 |
-|---|--------|----------|------|
-| D1 | 保存ボタン→API呼び出し | customize.html | 未着手 |
-| D2 | 設定ファイル保存 | ThemeService | 未着手 |
-| D3 | ページリロード時に設定復元 | 同上 | 未着手 |
-| D4 | フロント（公開サイト）への反映 | theme.py | 未着手 |
-
-### S2.6: テーマテンプレートフォールバック
-
-**備考**: S6（メニュー/ウィジェット復活）の前提。corporateテーマでpost.html等が表示されない問題の修正
-
-**原因**: `theme.py`が`theme_inheritance.py`を使用していない
-
-#### 修正内容
-
-| # | タスク | ファイル | 状態 |
-|---|--------|----------|------|
-| A1 | `get_template_env()`で継承サービス使用 | `core/services/theme.py` | 未着手 |
-| A2 | `FileSystemLoader`を複数ディレクトリ対応に変更 | 同上 | 未着手 |
-| B1 | corporateテーマに`parent: default`追加 | `themes/corporate/theme.yaml` | 未着手 |
-
-**修正箇所詳細** (`core/services/theme.py:654-662`):
-```python
-# 現在: 単一ディレクトリ
-loader=FileSystemLoader(str(theme_dir))
-
-# 修正後: 継承チェーンの全ディレクトリ
-from .theme_inheritance import ThemeInheritanceService
-inheritance_svc = ThemeInheritanceService(self.themes_dir)
-template_paths = inheritance_svc.get_template_paths(theme_name)
-loader=FileSystemLoader([str(p) for p in template_paths])
-```
-
-**期待動作**:
-- corporate/post.html が無い → default/post.html を使用
-- corporateのCSS変数・スタイルは維持
+theme.pyでdefaultテンプレートを常にフォールバックとして追加済み。
+corporateテーマでpost.html等が無い場合、default/post.htmlを使用
 
 ### S3: 管理バー
 
