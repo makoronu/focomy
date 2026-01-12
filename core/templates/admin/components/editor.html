@@ -11,10 +11,41 @@
 }
 
 /* === Popover/Toolbox 修正 === */
-.ce-popover--opened {
+/* ポップオーバーがbody直下に移動された場合のスタイル */
+body > .ce-popover {
+    position: fixed !important;
+    background: white !important;
+    border: 1px solid #e5e7eb !important;
+    border-radius: 8px !important;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15) !important;
+    z-index: 10000 !important;
+    width: 220px !important;
+    max-height: 400px !important;
+    padding: 6px !important;
+}
+
+body > .ce-popover.ce-popover--opened {
+    display: flex !important;
+    flex-direction: column !important;
     opacity: 1 !important;
     visibility: visible !important;
-    pointer-events: auto !important;
+}
+
+body > .ce-popover .ce-popover__items {
+    max-height: 350px !important;
+    overflow-y: auto !important;
+}
+
+body > .ce-popover .ce-popover-item {
+    display: flex !important;
+    align-items: center !important;
+    padding: 8px 10px !important;
+    border-radius: 4px !important;
+    cursor: pointer !important;
+}
+
+body > .ce-popover .ce-popover-item:hover {
+    background: #f3f4f6 !important;
 }
 
 .editor-container:focus-within {
@@ -2296,6 +2327,60 @@ document.addEventListener('DOMContentLoaded', function() {
 
             onReady: function() {
                 console.log('Editor.js is ready with 20 blocks!');
+
+                // ポップオーバーをbody直下に移動（overflow:hiddenの親要素を回避）
+                const observer = new MutationObserver(function(mutations) {
+                    mutations.forEach(function(mutation) {
+                        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+                            const popover = mutation.target;
+                            if (popover.classList.contains('ce-popover--opened')) {
+                                // ポップオーバーが開いた
+                                if (popover.parentElement !== document.body) {
+                                    popover._originalParent = popover.parentElement;
+                                    popover._originalNextSibling = popover.nextSibling;
+
+                                    // エディタの現在フォーカスブロックの位置を取得
+                                    const focusedBlock = container.querySelector('.ce-block--focused');
+                                    let top = 100, left = 300;  // デフォルト
+
+                                    if (focusedBlock) {
+                                        const blockRect = focusedBlock.getBoundingClientRect();
+                                        top = blockRect.top + window.scrollY;
+                                        left = blockRect.left;
+                                    } else {
+                                        // フォーカスブロックがない場合はエディタの位置
+                                        const editorRect = container.getBoundingClientRect();
+                                        top = editorRect.top + window.scrollY + 50;
+                                        left = editorRect.left + 30;
+                                    }
+
+                                    document.body.appendChild(popover);
+                                    popover.style.top = top + 'px';
+                                    popover.style.left = left + 'px';
+                                }
+                            } else if (popover._originalParent) {
+                                // ポップオーバーが閉じた - 元の位置に戻す
+                                if (popover._originalNextSibling) {
+                                    popover._originalParent.insertBefore(popover, popover._originalNextSibling);
+                                } else {
+                                    popover._originalParent.appendChild(popover);
+                                }
+                                popover.style.top = '';
+                                popover.style.left = '';
+                                popover._originalParent = null;
+                                popover._originalNextSibling = null;
+                            }
+                        }
+                    });
+                });
+
+                // ポップオーバー要素を監視
+                setTimeout(function() {
+                    const popovers = container.parentElement.querySelectorAll('.ce-popover');
+                    popovers.forEach(function(popover) {
+                        observer.observe(popover, { attributes: true });
+                    });
+                }, 500);
 
                 // A4-2: スラッシュコマンド実装
                 container.addEventListener('keydown', function(e) {
