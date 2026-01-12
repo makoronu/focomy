@@ -4208,12 +4208,22 @@ async def entity_update(
 
     form_data = await request.form()
 
+    # DEBUG: フォームデータをログ出力
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info(f"[DEBUG] entity_update form_data keys: {list(form_data.keys())}")
+    for k, v in form_data.items():
+        if 'body' in k.lower() or 'content' in k.lower() or 'block' in k.lower():
+            logger.info(f"[DEBUG] form_data[{k}] = {str(v)[:200] if v else 'None'}")
+
     # Build entity data from form
     import json as json_module
 
     data = {}
     for field in content_type.fields:
         value = form_data.get(field.name)
+        if field.type == 'blocks':
+            logger.info(f"[DEBUG] blocks field '{field.name}' value: {str(value)[:200] if value else 'None/Empty'}")
         if value is not None and value != "":
             # Type conversion
             if field.type in ("number", "integer"):
