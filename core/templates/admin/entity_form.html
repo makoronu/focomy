@@ -64,14 +64,6 @@
         >{{ entity.get(field.name, '') if entity else '' }}</textarea>
 
     {% elif field.type == 'blocks' %}
-        {% set blocks_value = entity.get(field.name, '') if entity else '' %}
-        <input
-            type="hidden"
-            id="{{ field.name }}"
-            name="{{ field.name }}"
-            value="{{ blocks_value | tojson if blocks_value else '' }}"
-        >
-
         <!-- プレビューコントロール (105) -->
         <div class="ep-controls">
             <div class="ep-layout-group">
