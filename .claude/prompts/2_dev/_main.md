@@ -25,6 +25,7 @@
 → 1_prepare/plan.md      ← 計画提示・承認取得
 → 1_prepare/backup.md
 → 1_prepare/schema.md
+→ 1_prepare/architecture.md ← アーキテクチャ境界チェック
 → 1_prepare/design.md    ← 設計原則チェック
 → 1_prepare/api.md       ← API設計チェック
 → 1_prepare/existing.md

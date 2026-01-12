@@ -19,5 +19,4 @@ WHERE table_name = '[対象テーブル]';
 ## 中断条件
 - スキーマにないカラム → 停止して確認
 
-## 次の工程
-→ existing.md
+## 次 → architecture.md

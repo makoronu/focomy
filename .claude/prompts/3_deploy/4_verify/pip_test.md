@@ -42,14 +42,29 @@ ls themes/default/templates/
 # - search.html
 ```
 
+## アップグレードテスト（必須）
+```bash
+# 旧バージョンでサイト作成
+pip install focomy==前バージョン
+focomy init upgrade_test && cd upgrade_test
+
+# アップグレード
+pip install --upgrade focomy
+
+# コア機能が壊れていないこと
+focomy serve &
+sleep 3
+curl -s http://localhost:8000/admin/login | head -5
+kill %1
+```
+
 ## 完了条件
 - [ ] インストール成功
 - [ ] `focomy version` 動作
 - [ ] `focomy init` でサイト作成成功
-- [ ] **テンプレート6種が全て存在**（home/post/category/archive/search/base）
+- [ ] **テンプレート6種が全て存在**
 - [ ] `focomy serve` でサーバー起動
-- [ ] `/` トップページ表示
-- [ ] `/admin/login` ログイン画面表示（テンプレート解決）
-- [ ] `/api/health` ヘルスチェック応答
+- [ ] 各エンドポイント応答
+- [ ] **pip upgrade後も既存サイトが動作**
 
 ## 次 → log.md
