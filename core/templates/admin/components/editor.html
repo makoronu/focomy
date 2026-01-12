@@ -736,6 +736,50 @@ body > .ce-popover .ce-popover-item:hover {
     border-top: 1px solid #fecaca;
     display: none;
 }
+
+/* === カスタムコンテキストメニュー === */
+.editor-context-menu {
+    position: fixed;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    padding: 4px;
+    z-index: 10001;
+    min-width: 160px;
+    display: none;
+}
+.editor-context-menu.visible {
+    display: block;
+}
+.editor-context-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+    color: #374151;
+}
+.editor-context-menu-item:hover {
+    background: #f3f4f6;
+}
+.editor-context-menu-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+.editor-context-menu-item svg {
+    width: 16px;
+    height: 16px;
+    stroke: currentColor;
+    fill: none;
+}
+.editor-context-menu-divider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 4px 0;
+}
 </style>
 
 <!-- Editor.js Core & Plugins -->
@@ -2099,6 +2143,72 @@ class GalleryBlock {
 window.editors = window.editors || {};
 
 document.addEventListener('DOMContentLoaded', function() {
+    // カスタムコンテキストメニューを作成
+    let contextMenu = document.getElementById('editor-context-menu');
+    if (!contextMenu) {
+        contextMenu = document.createElement('div');
+        contextMenu.id = 'editor-context-menu';
+        contextMenu.className = 'editor-context-menu';
+        contextMenu.innerHTML = `
+            <div class="editor-context-menu-item" data-action="cut">
+                <svg viewBox="0 0 24 24" stroke-width="2"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+                切り取り
+            </div>
+            <div class="editor-context-menu-item" data-action="copy">
+                <svg viewBox="0 0 24 24" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                コピー
+            </div>
+            <div class="editor-context-menu-item" data-action="paste">
+                <svg viewBox="0 0 24 24" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+                貼り付け
+            </div>
+            <div class="editor-context-menu-divider"></div>
+            <div class="editor-context-menu-item" data-action="selectAll">
+                <svg viewBox="0 0 24 24" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 9h6v6H9z"/></svg>
+                すべて選択
+            </div>
+        `;
+        document.body.appendChild(contextMenu);
+
+        // メニュー項目クリック処理
+        contextMenu.addEventListener('click', function(e) {
+            const item = e.target.closest('.editor-context-menu-item');
+            if (!item || item.classList.contains('disabled')) return;
+
+            const action = item.dataset.action;
+            contextMenu.classList.remove('visible');
+
+            if (action === 'cut') {
+                document.execCommand('cut');
+            } else if (action === 'copy') {
+                document.execCommand('copy');
+            } else if (action === 'paste') {
+                navigator.clipboard.readText().then(text => {
+                    document.execCommand('insertText', false, text);
+                }).catch(() => {
+                    // フォールバック
+                    document.execCommand('paste');
+                });
+            } else if (action === 'selectAll') {
+                document.execCommand('selectAll');
+            }
+        });
+
+        // メニュー外クリックで閉じる
+        document.addEventListener('click', function(e) {
+            if (!contextMenu.contains(e.target)) {
+                contextMenu.classList.remove('visible');
+            }
+        });
+
+        // Escキーで閉じる
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                contextMenu.classList.remove('visible');
+            }
+        });
+    }
+
     document.querySelectorAll('[data-editor]').forEach(function(container) {
         const inputId = container.dataset.editor;
         const input = document.getElementById(inputId);
@@ -2416,16 +2526,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
 
-                // A4-3: 右クリックでインラインツールバー表示
+                // A4-3: 右クリックでカスタムコンテキストメニュー表示
                 container.addEventListener('contextmenu', function(e) {
+                    e.preventDefault(); // 常にブラウザのデフォルトメニューを抑制
+
+                    const contextMenu = document.getElementById('editor-context-menu');
+                    if (!contextMenu) return;
+
                     const selection = window.getSelection();
-                    if (selection && selection.toString().trim().length > 0) {
-                        e.preventDefault();
-                        // テキスト選択時にインラインツールバーを表示
-                        // Editor.jsは選択時に自動でツールバーを表示するので、
-                        // selectionchangeイベントをトリガー
+                    const hasSelection = selection && selection.toString().trim().length > 0;
+
+                    // メニュー項目の有効/無効を設定
+                    const cutItem = contextMenu.querySelector('[data-action="cut"]');
+                    const copyItem = contextMenu.querySelector('[data-action="copy"]');
+                    if (cutItem) cutItem.classList.toggle('disabled', !hasSelection);
+                    if (copyItem) copyItem.classList.toggle('disabled', !hasSelection);
+
+                    // テキスト選択時はEditor.jsのインラインツールバーも表示
+                    if (hasSelection) {
                         document.dispatchEvent(new Event('selectionchange'));
                     }
+
+                    // メニュー位置を設定（画面端の場合は調整）
+                    let x = e.clientX;
+                    let y = e.clientY;
+                    const menuRect = { width: 180, height: 180 }; // 概算サイズ
+                    if (x + menuRect.width > window.innerWidth) {
+                        x = window.innerWidth - menuRect.width - 10;
+                    }
+                    if (y + menuRect.height > window.innerHeight) {
+                        y = window.innerHeight - menuRect.height - 10;
+                    }
+
+                    contextMenu.style.left = x + 'px';
+                    contextMenu.style.top = y + 'px';
+                    contextMenu.classList.add('visible');
                 });
             },
 
