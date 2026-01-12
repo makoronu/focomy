@@ -230,7 +230,7 @@
 {% endmacro %}
 
 {% block content %}
-<form method="POST" action="/admin/{{ type_name }}{% if entity %}/{{ entity.id }}{% endif %}" enctype="multipart/form-data" class="entity-form">
+<form method="POST" action="{% if is_channel_view %}/admin/channel/{{ channel_slug }}/posts{% if entity %}/{{ entity.id }}{% endif %}{% else %}/admin/{{ type_name }}{% if entity %}/{{ entity.id }}{% endif %}{% endif %}" enctype="multipart/form-data" class="entity-form">
     <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
 
     <!-- ヘッダーバー (B4: ボタン右上) -->
@@ -241,7 +241,7 @@
             {% endif %}
         </div>
         <div class="form-header-right">
-            <a href="/admin/{{ type_name }}" class="btn btn-secondary">Cancel</a>
+            <a href="{% if is_channel_view %}/admin/channel/{{ channel_slug }}/posts{% else %}/admin/{{ type_name }}{% endif %}" class="btn btn-secondary">Cancel</a>
             {% if entity %}
             <button type="button" class="btn btn-secondary" onclick="toggleRevisions()">History</button>
             {% endif %}
