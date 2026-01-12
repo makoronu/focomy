@@ -3728,7 +3728,7 @@ async def channel_post_create(
     data = parse_form_fields(content_type.fields, form_data)
 
     try:
-        entity = await entity_svc.create("post", data, created_by=current_user.id)
+        entity = await entity_svc.create("post", data, user_id=current_user.id)
 
         # Save relations - ensure channel is linked
         from ..services.relation import RelationService
