@@ -842,6 +842,21 @@
     }
 
     async function autosave() {
+        // Editor.jsのデータを先に保存してhidden inputを更新
+        if (window.editors) {
+            for (const [fieldName, editor] of Object.entries(window.editors)) {
+                try {
+                    const data = await editor.save();
+                    const input = document.getElementById(fieldName);
+                    if (input) {
+                        input.value = JSON.stringify(data);
+                    }
+                } catch (e) {
+                    console.error('Autosave: Failed to save editor:', fieldName, e);
+                }
+            }
+        }
+
         const currentData = getFormData();
         const dataStr = JSON.stringify(currentData);
 
