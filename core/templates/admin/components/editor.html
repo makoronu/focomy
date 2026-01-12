@@ -2106,9 +2106,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (input && input.value) {
             try {
-                initialData = JSON.parse(input.value);
+                const parsed = JSON.parse(input.value);
+                // Editor.jsはblocksキーを持つオブジェクトを期待
+                if (parsed && typeof parsed === 'object') {
+                    if (Array.isArray(parsed.blocks)) {
+                        initialData = parsed;
+                    } else {
+                        // blocksがない場合はデフォルト構造を使用
+                        initialData = { blocks: [] };
+                    }
+                }
             } catch (e) {
                 console.warn('Failed to parse editor data:', e);
+                initialData = { blocks: [] };
             }
         }
 
@@ -2316,7 +2326,8 @@ document.addEventListener('DOMContentLoaded', function() {
             onChange: async function() {
                 try {
                     const data = await editor.save();
-                    if (input) {
+                    // blocksキーがある正常なデータのみ保存
+                    if (input && data && Array.isArray(data.blocks)) {
                         input.value = JSON.stringify(data);
                         // Trigger preview update (105 S3)
                         if (window.epUpdatePreview) {
