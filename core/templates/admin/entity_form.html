@@ -740,8 +740,13 @@
 <script>
 // Unsaved changes warning
 (function() {
+    console.log('[DEBUG] Script started');
     const form = document.querySelector('form');
-    if (!form) return;
+    console.log('[DEBUG] form element:', form);
+    if (!form) {
+        console.log('[DEBUG] form not found, returning');
+        return;
+    }
 
     let formChanged = false;
     let isSubmitting = false;
