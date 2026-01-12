@@ -208,14 +208,16 @@ def cmd_init(args):
     # Copy config.yaml from template
     _copy_scaffold_file(scaffold_path, target, "config.yaml.template", "config.yaml", replacements)
 
-    # Copy content_types
-    _copy_scaffold_dir(scaffold_path, target, "content_types")
-
-    # Copy themes
+    # Copy themes (user customizable)
     _copy_scaffold_dir(scaffold_path, target, "themes")
 
-    # Copy relations.yaml
-    _copy_scaffold_file(scaffold_path, target, "relations.yaml")
+    # Create plugins directory for user extensions
+    (target / "plugins").mkdir()
+    (target / "plugins" / ".gitkeep").touch()
+
+    # Note: content_types and relations.yaml are NOT copied
+    # They are always loaded from the package (core/content_types/, core/relations.yaml)
+    # Users can add custom content_types via plugins/
 
     # Copy .env from template
     _copy_scaffold_file(scaffold_path, target, ".env.template", ".env", replacements)
@@ -580,26 +582,16 @@ def _merge_content_type_fields(scaffold_file: Path, local_file: Path) -> bool:
 
 
 def _sync_scaffold_files():
-    """Sync missing files from scaffold to current site."""
+    """Sync missing files from scaffold to current site.
+
+    Note: content_types and relations.yaml are NOT synced.
+    They are always loaded from the package (core/content_types/, core/relations.yaml).
+    This function only syncs theme templates.
+    """
     scaffold_path = _get_scaffold_path()
     synced = []
 
-    print("Syncing missing files from scaffold...")
-
-    # Sync content_types (merge new fields into existing files)
-    ct_scaffold = scaffold_path / "content_types"
-    ct_local = Path("content_types")
-    if ct_scaffold.exists() and ct_local.exists():
-        for yaml_file in ct_scaffold.glob("*.yaml"):
-            local_file = ct_local / yaml_file.name
-            if not local_file.exists():
-                shutil.copy(yaml_file, local_file)
-                synced.append(f"content_types/{yaml_file.name}")
-            else:
-                # Merge new fields from scaffold into existing local file
-                merged = _merge_content_type_fields(yaml_file, local_file)
-                if merged:
-                    synced.append(f"content_types/{yaml_file.name} (fields merged)")
+    print("Syncing missing theme files from scaffold...")
 
     # Sync themes (only missing files, don't overwrite)
     themes_scaffold = scaffold_path / "themes"
@@ -723,15 +715,15 @@ def cmd_backup(args):
         if Path("config.yaml").exists():
             zf.write("config.yaml", "config.yaml")
 
-        # Backup content types
-        ct_dir = Path("content_types")
-        if ct_dir.exists():
-            for file in ct_dir.glob("*.yaml"):
-                zf.write(file, f"content_types/{file.name}")
+        # Note: content_types and relations.yaml are NOT backed up
+        # They are always loaded from the package (core/content_types/, core/relations.yaml)
 
-        # Backup relations
-        if Path("relations.yaml").exists():
-            zf.write("relations.yaml", "relations.yaml")
+        # Backup plugins (user extensions)
+        plugins_dir = Path("plugins")
+        if plugins_dir.exists():
+            for file in plugins_dir.rglob("*"):
+                if file.is_file() and file.name != ".gitkeep":
+                    zf.write(file, f"plugins/{file.relative_to(plugins_dir)}")
 
         # Backup themes
         themes_dir = Path("themes")
@@ -805,15 +797,8 @@ def cmd_createuser(args):
     """Create a new user."""
     import getpass
 
-    # Ensure user.yaml exists
-    user_yaml = Path("content_types/user.yaml")
-    if not user_yaml.exists():
-        scaffold_path = _get_scaffold_path()
-        scaffold_user = scaffold_path / "content_types" / "user.yaml"
-        if scaffold_user.exists():
-            user_yaml.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy(scaffold_user, user_yaml)
-            print(f"Created: {user_yaml}")
+    # Note: user.yaml is now always loaded from package (core/content_types/user.yaml)
+    # No need to check or copy it locally
 
     email = args.email
     name = args.name

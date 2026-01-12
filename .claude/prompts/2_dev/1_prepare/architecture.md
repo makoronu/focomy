@@ -1,10 +1,10 @@
 # アーキテクチャ境界
 
 ## チェック
-- [ ] コア定義（post/page/user/channel）はパッケージ内のみ
-- [ ] ユーザー層は追加のみ、上書き不可
-- [ ] pip upgrade で壊れない設計
-- [ ] ユーザー設定がコア機能を無効化できない
+- [ ] コア定義は`core/content_types/`、`core/relations.yaml`のみ
+- [ ] `focomy init`でcontent_types/をコピーしていない
+- [ ] ユーザー拡張は`plugins/`からのみ（上書き不可）
+- [ ] pip upgrade で壊れない
 
 ## 完了条件
 - [ ] 全項目OK

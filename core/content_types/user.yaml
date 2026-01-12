@@ -1,0 +1,63 @@
+name: user
+label: ユーザー
+label_plural: ユーザー一覧
+icon: user
+admin_menu: true
+auth_entity: true
+
+fields:
+  - name: name
+    type: string
+    label: 名前
+    required: true
+    max_length: 100
+
+  - name: email
+    type: email
+    label: メールアドレス
+    required: true
+    unique: true
+    auth_field: true
+
+  - name: password
+    type: password
+    label: パスワード
+    required: true
+    min_length: 8
+
+  - name: role
+    type: select
+    label: 権限
+    options:
+      - value: admin
+        label: 管理者
+      - value: editor
+        label: 編集者
+      - value: author
+        label: 投稿者
+    default: author
+
+  - name: avatar
+    type: media
+    label: アバター
+    accept: image/*
+
+  - name: bio
+    type: text
+    label: 自己紹介
+    max_length: 500
+
+  - name: oauth_provider
+    type: string
+    label: OAuth プロバイダー
+    admin_hidden: true
+
+  - name: oauth_id
+    type: string
+    label: OAuth ID
+    admin_hidden: true
+
+  - name: wp_id
+    type: integer
+    label: WordPress ID
+    indexed: true

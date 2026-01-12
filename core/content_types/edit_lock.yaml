@@ -1,0 +1,35 @@
+name: edit_lock
+label: 編集ロック
+label_plural: 編集ロック
+icon: lock
+admin_menu: false
+searchable: false
+
+fields:
+  - name: entity_id
+    type: string
+    label: エンティティID
+    required: true
+    indexed: true
+    unique: true
+
+  - name: user_id
+    type: string
+    label: ユーザーID
+    required: true
+    indexed: true
+
+  - name: user_name
+    type: string
+    label: ユーザー名
+
+  - name: acquired_at
+    type: datetime
+    label: 取得日時
+    required: true
+
+  - name: expires_at
+    type: datetime
+    label: 有効期限
+    required: true
+    indexed: true

@@ -1,0 +1,44 @@
+name: form_submission
+label: フォーム送信
+label_plural: フォーム送信一覧
+icon: inbox
+admin_menu: true
+searchable: false
+
+fields:
+  - name: form_id
+    type: string
+    label: フォームID
+    required: true
+    indexed: true
+
+  - name: form_title
+    type: string
+    label: フォーム名
+    indexed: true
+
+  - name: data
+    type: json
+    label: 送信データ
+
+  - name: ip_address
+    type: string
+    label: IPアドレス
+
+  - name: user_agent
+    type: string
+    label: ユーザーエージェント
+
+  - name: status
+    type: select
+    label: ステータス
+    options:
+      - value: new
+        label: 新規
+      - value: read
+        label: 既読
+      - value: replied
+        label: 返信済み
+      - value: archived
+        label: アーカイブ
+    default: new

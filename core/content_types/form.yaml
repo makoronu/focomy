@@ -1,0 +1,73 @@
+name: form
+label: フォーム
+label_plural: フォーム一覧
+icon: form
+admin_menu: true
+searchable: false
+
+fields:
+  - name: title
+    type: string
+    label: フォーム名
+    required: true
+    max_length: 200
+
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: title
+
+  - name: description
+    type: text
+    label: 説明文
+    hint: フォームの上部に表示されます
+
+  - name: fields_config
+    type: json
+    label: フィールド設定
+    hint: |
+      フォームフィールドをJSON配列で定義します。
+      例: [{"name": "email", "type": "email", "label": "メールアドレス", "required": true}]
+
+  - name: steps
+    type: json
+    label: ステップ設定
+    hint: |
+      ウィザード形式の場合、ステップを定義します。
+      例: [{"title": "基本情報", "fields": ["name", "email"]}, {"title": "詳細", "fields": ["message"]}]
+
+  - name: submit_label
+    type: string
+    label: 送信ボタンテキスト
+    default: 送信する
+
+  - name: success_message
+    type: text
+    label: 送信完了メッセージ
+    default: お問い合わせありがとうございます。
+
+  - name: redirect_url
+    type: string
+    label: 送信後リダイレクトURL
+    hint: 空の場合は完了メッセージを表示
+
+  - name: notify_email
+    type: email
+    label: 通知先メールアドレス
+    hint: 送信時にこのアドレスに通知
+
+  - name: status
+    type: select
+    label: ステータス
+    options:
+      - value: draft
+        label: 下書き
+      - value: published
+        label: 公開
+    default: draft
+
+  - name: recaptcha_enabled
+    type: boolean
+    label: reCAPTCHA有効
+    default: false

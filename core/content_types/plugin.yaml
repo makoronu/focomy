@@ -1,0 +1,156 @@
+name: plugin
+label: プラグイン
+label_plural: プラグイン一覧
+admin_menu: false
+searchable: true
+
+fields:
+  - name: name
+    type: string
+    label: プラグイン名
+    required: true
+    max_length: 100
+
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: name
+
+  - name: description
+    type: text
+    label: 説明
+    required: true
+    max_length: 500
+
+  - name: long_description
+    type: blocks
+    label: 詳細説明
+
+  - name: category
+    type: select
+    label: カテゴリ
+    required: true
+    options:
+      - value: theme
+        label: テーマ
+      - value: block
+        label: ブロック
+      - value: field_type
+        label: フィールドタイプ
+      - value: auth_provider
+        label: 認証プロバイダー
+      - value: seo
+        label: SEO拡張
+      - value: media
+        label: メディア処理
+      - value: integration
+        label: 外部連携
+      - value: utility
+        label: ユーティリティ
+
+  - name: version
+    type: string
+    label: バージョン
+    required: true
+    pattern: '^\d+\.\d+\.\d+$'
+
+  - name: min_focomy_version
+    type: string
+    label: 最小Focomyバージョン
+    default: "0.1.0"
+
+  - name: pricing_type
+    type: select
+    label: 料金タイプ
+    required: true
+    options:
+      - value: free
+        label: 無料
+      - value: one_time
+        label: 買い切り
+      - value: subscription
+        label: サブスクリプション
+
+  - name: price
+    type: integer
+    label: 価格（USD セント）
+    min: 0
+    max: 2000
+    help: 最大 $20.00（2000セント）。ぼったくり防止。
+
+  - name: subscription_price
+    type: integer
+    label: 月額（USD セント）
+    min: 0
+    max: 500
+    help: 最大 $5.00/月（500セント）。ぼったくり防止。
+
+  - name: repository_url
+    type: url
+    label: リポジトリURL
+    required: true
+
+  - name: download_url
+    type: url
+    label: ダウンロードURL
+
+  - name: documentation_url
+    type: url
+    label: ドキュメントURL
+
+  - name: icon
+    type: image
+    label: アイコン
+
+  - name: screenshots
+    type: gallery
+    label: スクリーンショット
+    max_items: 5
+
+  - name: download_count
+    type: integer
+    label: ダウンロード数
+    default: 0
+    admin_readonly: true
+
+  - name: rating_average
+    type: decimal
+    label: 平均評価
+    decimal_places: 1
+    default: 0
+    admin_readonly: true
+
+  - name: rating_count
+    type: integer
+    label: 評価数
+    default: 0
+    admin_readonly: true
+
+  - name: status
+    type: select
+    label: ステータス
+    required: true
+    options:
+      - value: pending
+        label: 審査待ち
+      - value: approved
+        label: 承認済み
+      - value: rejected
+        label: 却下
+      - value: suspended
+        label: 停止中
+
+  - name: review_notes
+    type: text
+    label: 審査コメント
+    admin_only: true
+
+  - name: is_featured
+    type: boolean
+    label: おすすめ
+    default: false
+
+  - name: tags
+    type: tags
+    label: タグ

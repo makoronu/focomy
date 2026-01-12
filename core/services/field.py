@@ -5,10 +5,13 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
+import structlog
 import yaml
 from pydantic import BaseModel, Field
 
 from ..config import settings
+
+logger = structlog.get_logger(__name__)
 
 # Email regex pattern (RFC 5322 simplified)
 EMAIL_PATTERN = re.compile(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$")
@@ -167,30 +170,30 @@ class FieldService:
         self._loaded = False
 
     def _load_all(self):
-        """Load all content type and relation definitions."""
+        """Load all content type and relation definitions.
+
+        Architecture:
+        1. Core content_types: Always loaded from package (non-overridable)
+        2. Plugin content_types: Additive only (cannot override core)
+        3. Core relations: Always loaded from package (non-overridable)
+        4. Plugin relations: Additive only (cannot override core)
+        """
         if self._loaded:
             return
 
-        # Scaffold directory (fallback for pip installed packages)
-        scaffold_dir = Path(__file__).parent.parent / "scaffold"
+        # Core directory (package内、単一情報源)
+        core_dir = Path(__file__).parent.parent
 
-        # Load content types from user's directory first
-        content_types_dir = settings.base_dir / "content_types"
-        if content_types_dir.exists():
-            for path in content_types_dir.glob("*.yaml"):
+        # 1. Load core content_types from package (常に読み込み、上書き不可)
+        core_ct_dir = core_dir / "content_types"
+        if core_ct_dir.exists():
+            for path in core_ct_dir.glob("*.yaml"):
                 ct = self._load_content_type(path)
                 if ct:
                     self._content_types[ct.name] = ct
-        else:
-            # Fallback to scaffold content types (pip install without focomy init)
-            scaffold_ct_dir = scaffold_dir / "content_types"
-            if scaffold_ct_dir.exists():
-                for path in scaffold_ct_dir.glob("*.yaml"):
-                    ct = self._load_content_type(path)
-                    if ct:
-                        self._content_types[ct.name] = ct
+                    logger.debug("core_content_type_loaded", name=ct.name)
 
-        # Load plugin content types
+        # 2. Load plugin content_types (追加のみ、コア上書き禁止)
         plugins_dir = settings.base_dir / "plugins"
         if plugins_dir.exists():
             for plugin_dir in plugins_dir.iterdir():
@@ -200,24 +203,32 @@ class FieldService:
                         for path in ct_dir.glob("*.yaml"):
                             ct = self._load_content_type(path)
                             if ct:
+                                if ct.name in self._content_types:
+                                    logger.warning(
+                                        "plugin_cannot_override_core",
+                                        plugin=plugin_dir.name,
+                                        content_type=ct.name,
+                                    )
+                                    continue  # コア上書き禁止
                                 self._content_types[ct.name] = ct
+                                logger.debug(
+                                    "plugin_content_type_loaded",
+                                    plugin=plugin_dir.name,
+                                    name=ct.name,
+                                )
 
-        # Load relations from user's directory first, fallback to scaffold
-        relations_path = settings.base_dir / "relations.yaml"
-        if relations_path.exists():
-            self._load_relations(relations_path)
-        else:
-            scaffold_relations = scaffold_dir / "relations.yaml"
-            if scaffold_relations.exists():
-                self._load_relations(scaffold_relations)
+        # 3. Load core relations from package (常に読み込み)
+        core_relations = core_dir / "relations.yaml"
+        if core_relations.exists():
+            self._load_relations(core_relations, is_core=True)
 
-        # Load plugin relations
+        # 4. Load plugin relations (追加のみ、コア上書き禁止)
         if plugins_dir.exists():
             for plugin_dir in plugins_dir.iterdir():
                 if plugin_dir.is_dir():
                     rel_path = plugin_dir / "relations.yaml"
                     if rel_path.exists():
-                        self._load_relations(rel_path)
+                        self._load_relations(rel_path, is_core=False, plugin_name=plugin_dir.name)
 
         self._loaded = True
 
@@ -232,18 +243,36 @@ class FieldService:
             print(f"Error loading content type {path}: {e}")
         return None
 
-    def _load_relations(self, path: Path):
-        """Load relation definitions from YAML."""
+    def _load_relations(self, path: Path, is_core: bool = True, plugin_name: str | None = None):
+        """Load relation definitions from YAML.
+
+        Args:
+            path: Path to relations.yaml
+            is_core: If True, these are core relations (always loaded)
+            plugin_name: Name of the plugin (for logging)
+        """
         try:
             with open(path, encoding="utf-8") as f:
                 data = yaml.safe_load(f)
                 if data:
                     for name, rel_data in data.items():
+                        # プラグインからのコア上書き禁止
+                        if not is_core and name in self._relation_types:
+                            logger.warning(
+                                "plugin_cannot_override_core_relation",
+                                plugin=plugin_name,
+                                relation=name,
+                            )
+                            continue
                         rel_data["from"] = rel_data.pop("from", "")
                         rel_data["to"] = rel_data.pop("to", "")
                         self._relation_types[name] = RelationTypeDefinition(**rel_data)
+                        if is_core:
+                            logger.debug("core_relation_loaded", name=name)
+                        else:
+                            logger.debug("plugin_relation_loaded", plugin=plugin_name, name=name)
         except Exception as e:
-            print(f"Error loading relations {path}: {e}")
+            logger.error("error_loading_relations", path=str(path), error=str(e))
 
     def get_content_type(self, type_name: str) -> ContentType | None:
         """Get content type definition by name."""

@@ -1,0 +1,123 @@
+# Relation definitions
+# All relationships between entities are defined here
+
+post_author:
+  from: post
+  to: user
+  type: many_to_one
+  required: true
+  label: 著者
+
+post_channel:
+  from: post
+  to: channel
+  type: many_to_one
+  required: true
+  label: チャンネル
+
+post_series:
+  from: post
+  to: series
+  type: many_to_one
+  required: false
+  label: シリーズ
+
+post_tags:
+  from: post
+  to: tag
+  type: many_to_many
+  label: タグ
+
+post_categories:
+  from: post
+  to: category
+  type: many_to_many
+  label: カテゴリ
+
+post_related:
+  from: post
+  to: post
+  type: many_to_many
+  label: 関連記事
+
+page_author:
+  from: page
+  to: user
+  type: many_to_one
+  required: true
+  label: 著者
+
+page_parent:
+  from: page
+  to: page
+  type: many_to_one
+  label: 親ページ
+  self_referential: true
+
+category_parent:
+  from: category
+  to: category
+  type: many_to_one
+  label: 親カテゴリ
+  self_referential: true
+
+menu_item_parent:
+  from: menu_item
+  to: menu_item
+  type: many_to_one
+  label: 親メニュー
+  self_referential: true
+
+comment_post:
+  from: comment
+  to: post
+  type: many_to_one
+  required: true
+  label: 投稿
+  cascade_delete: true  # Comments are deleted when post is deleted
+
+comment_parent:
+  from: comment
+  to: comment
+  type: many_to_one
+  label: 返信先
+  self_referential: true
+  cascade_delete: true  # Child comments deleted when parent comment is deleted
+
+# Plugin marketplace relations
+plugin_developer:
+  from: plugin
+  to: plugin_developer
+  type: many_to_one
+  required: true
+  label: 開発者
+
+plugin_review_plugin:
+  from: plugin_review
+  to: plugin
+  type: many_to_one
+  required: true
+  label: プラグイン
+  cascade_delete: true  # Reviews deleted when plugin is deleted
+
+plugin_review_user:
+  from: plugin_review
+  to: user
+  type: many_to_one
+  required: true
+  label: レビュアー
+
+plugin_developer_user:
+  from: plugin_developer
+  to: user
+  type: many_to_one
+  required: true
+  label: ユーザーアカウント
+
+# Channel/Series relations
+series_channel:
+  from: series
+  to: channel
+  type: many_to_one
+  required: true
+  label: 所属チャンネル

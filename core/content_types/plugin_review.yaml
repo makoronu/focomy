@@ -1,0 +1,51 @@
+name: plugin_review
+label: プラグインレビュー
+label_plural: レビュー一覧
+admin_menu: false
+
+fields:
+  - name: rating
+    type: integer
+    label: 評価
+    required: true
+    min: 1
+    max: 5
+
+  - name: title
+    type: string
+    label: タイトル
+    max_length: 100
+
+  - name: content
+    type: text
+    label: レビュー本文
+    required: true
+    max_length: 2000
+
+  - name: version_reviewed
+    type: string
+    label: レビュー時バージョン
+
+  - name: is_verified_purchase
+    type: boolean
+    label: 購入済み
+    default: false
+    admin_readonly: true
+
+  - name: helpful_count
+    type: integer
+    label: 参考になった
+    default: 0
+    admin_readonly: true
+
+  - name: status
+    type: select
+    label: ステータス
+    options:
+      - value: pending
+        label: 審査待ち
+      - value: approved
+        label: 承認済み
+      - value: rejected
+        label: 却下
+    default: pending

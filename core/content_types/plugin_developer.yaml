@@ -1,0 +1,66 @@
+name: plugin_developer
+label: プラグイン開発者
+label_plural: 開発者一覧
+admin_menu: false
+
+fields:
+  - name: display_name
+    type: string
+    label: 表示名
+    required: true
+    max_length: 50
+
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: display_name
+
+  - name: bio
+    type: text
+    label: 自己紹介
+    max_length: 500
+
+  - name: website
+    type: url
+    label: ウェブサイト
+
+  - name: github_username
+    type: string
+    label: GitHub ユーザー名
+
+  - name: avatar
+    type: image
+    label: アバター
+
+  - name: total_downloads
+    type: integer
+    label: 総ダウンロード数
+    default: 0
+    admin_readonly: true
+
+  - name: total_earnings
+    type: integer
+    label: 総収益（セント）
+    default: 0
+    admin_readonly: true
+
+  - name: payout_email
+    type: email
+    label: PayPal メールアドレス
+    help: 収益の支払い先
+
+  - name: is_verified
+    type: boolean
+    label: 認証済み
+    default: false
+
+  - name: status
+    type: select
+    label: ステータス
+    options:
+      - value: active
+        label: アクティブ
+      - value: suspended
+        label: 停止中
+    default: active

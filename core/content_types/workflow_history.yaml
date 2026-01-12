@@ -1,0 +1,28 @@
+name: workflow_history
+label: ワークフロー履歴
+label_plural: ワークフロー履歴
+icon: history
+admin_menu: false
+searchable: false
+
+fields:
+  - name: entity_id
+    type: string
+    label: エンティティID
+    required: true
+    indexed: true
+
+  - name: from_state
+    type: string
+    label: 遷移元ステート
+    required: true
+
+  - name: to_state
+    type: string
+    label: 遷移先ステート
+    required: true
+
+  - name: comment
+    type: text
+    label: コメント
+    max_length: 1000

@@ -1,0 +1,45 @@
+name: category
+label: カテゴリ
+label_plural: カテゴリ一覧
+icon: folder
+admin_menu: false  # ブログ設計変更に伴い非表示化
+hierarchical: true
+
+fields:
+  - name: name
+    type: string
+    label: 名前
+    required: true
+    indexed: true
+    max_length: 100
+
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: name
+
+  - name: description
+    type: text
+    label: 説明
+    max_length: 500
+
+  - name: sort_order
+    type: integer
+    label: 表示順
+    default: 0
+
+  - name: wp_id
+    type: integer
+    label: WordPress ID
+    indexed: true
+
+  - name: wp_parent_id
+    type: integer
+    label: WordPress Parent ID
+
+relations:
+  - type: category_parent
+    label: 親カテゴリ
+    target: category
+    self_referential: true

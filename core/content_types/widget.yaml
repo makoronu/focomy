@@ -1,0 +1,64 @@
+name: widget
+label: ウィジェット
+label_plural: ウィジェット
+icon: widget
+admin_menu: false
+searchable: false
+
+fields:
+  - name: title
+    type: string
+    label: タイトル
+    max_length: 100
+
+  - name: widget_type
+    type: select
+    label: ウィジェットタイプ
+    required: true
+    options:
+      - value: recent_posts
+        label: 最近の投稿
+      - value: categories
+        label: カテゴリ一覧
+      - value: search
+        label: 検索
+      - value: custom_html
+        label: カスタムHTML
+      - value: archives
+        label: アーカイブ
+    default: recent_posts
+
+  - name: area
+    type: select
+    label: 配置エリア
+    required: true
+    options:
+      - value: sidebar
+        label: サイドバー
+      - value: footer_1
+        label: フッター1
+      - value: footer_2
+        label: フッター2
+      - value: footer_3
+        label: フッター3
+    default: sidebar
+
+  - name: sort_order
+    type: integer
+    label: 表示順
+    default: 0
+
+  - name: config
+    type: json
+    label: 設定
+    hint: ウィジェット固有の設定（JSON形式）
+
+  - name: custom_html
+    type: text
+    label: カスタムHTML
+    hint: widget_type=custom_html の場合に使用
+
+  - name: is_active
+    type: boolean
+    label: 有効
+    default: true

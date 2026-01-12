@@ -3,23 +3,26 @@ label: タグ
 label_plural: タグ一覧
 icon: tag
 admin_menu: true
-list_display:
-  - name
-  - slug
+
 fields:
   - name: name
     type: string
-    label: Name
-    required: true
-  - name: slug
-    type: slug
-    label: Slug
-    source: name
+    label: 名前
     required: true
     indexed: true
+    max_length: 100
+
+  - name: slug
+    type: slug
+    label: スラッグ
+    unique: true
+    auto_generate: name
+
   - name: description
     type: text
-    label: Description
+    label: 説明
+    max_length: 500
+
   - name: wp_id
     type: integer
     label: WordPress ID

@@ -91,11 +91,8 @@ Issues = "https://github.com/focomy/focomy/issues"
 [tool.hatch.build.targets.sdist]
 include = [
     "/core",
-    "/content_types",
     "/themes",
     "/static",
-    "/config.yaml",
-    "/relations.yaml",
 ]
 
 [tool.hatch.build.targets.wheel]
