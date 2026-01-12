@@ -24,6 +24,7 @@ from ..schemas.import_schema import (
     ErrorResponse,
 )
 from ..utils import require_feature
+from .url import AdminURL
 
 import json as json_module
 from typing import Any
@@ -3687,6 +3688,8 @@ async def channel_post_new(
             "channel": channel_data,
             "channel_slug": channel_slug,
             "is_channel_view": True,
+            "form_action": AdminURL.entity_form_action("post", None, channel_slug),
+            "cancel_url": AdminURL.entity_list("post", channel_slug),
         }
     )
 
@@ -3770,6 +3773,8 @@ async def channel_post_create(
                 "channel": channel_data,
                 "channel_slug": channel_slug,
                 "is_channel_view": True,
+                "form_action": AdminURL.entity_form_action("post", None, channel_slug),
+                "cancel_url": AdminURL.entity_list("post", channel_slug),
             }
         )
         return templates.TemplateResponse("admin/entity_form.html", context)
@@ -3815,6 +3820,8 @@ async def channel_post_edit(
             "channel": channel_data,
             "channel_slug": channel_slug,
             "is_channel_view": True,
+            "form_action": AdminURL.entity_form_action("post", entity_id, channel_slug),
+            "cancel_url": AdminURL.entity_list("post", channel_slug),
         }
     )
 
@@ -3904,6 +3911,8 @@ async def channel_post_update(
                 "channel": channel_data,
                 "channel_slug": channel_slug,
                 "is_channel_view": True,
+                "form_action": AdminURL.entity_form_action("post", entity_id, channel_slug),
+                "cancel_url": AdminURL.entity_list("post", channel_slug),
             }
         )
         return templates.TemplateResponse("admin/entity_form.html", context)
@@ -4018,6 +4027,8 @@ async def entity_new(
             "content_type": content_type.model_dump(),
             "entity": None,
             "relations": relations,
+            "form_action": AdminURL.entity_form_action(type_name),
+            "cancel_url": AdminURL.entity_list(type_name),
         }
     )
 
@@ -4142,6 +4153,8 @@ async def entity_create(
                 "entity": data,
                 "relations": relations,
                 "error": str(e),
+                "form_action": AdminURL.entity_form_action(type_name),
+                "cancel_url": AdminURL.entity_list(type_name),
             }
         )
         return templates.TemplateResponse("admin/entity_form.html", context)
@@ -4179,6 +4192,8 @@ async def entity_edit(
             "entity": entity,
             "relations": relations,
             "message": request.query_params.get("message"),
+            "form_action": AdminURL.entity_form_action(type_name, entity_id),
+            "cancel_url": AdminURL.entity_list(type_name),
         }
     )
 
@@ -4326,6 +4341,8 @@ async def entity_update(
                 "entity": entity,
                 "relations": relations,
                 "error": str(e),
+                "form_action": AdminURL.entity_form_action(type_name, entity_id),
+                "cancel_url": AdminURL.entity_list(type_name),
             }
         )
         return templates.TemplateResponse("admin/entity_form.html", context)
