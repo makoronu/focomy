@@ -3738,11 +3738,11 @@ async def channel_post_create(
         for rel in content_type.relations:
             if rel.type == "post_channel":
                 # Always link to channel
-                await relation_svc.sync(entity.id, rel.type, [channel.id])
+                await relation_svc.sync(entity.id, [channel.id], rel.type)
             else:
                 rel_ids = form_data.getlist(rel.type)
                 if rel_ids:
-                    await relation_svc.sync(entity.id, rel.type, rel_ids)
+                    await relation_svc.sync(entity.id, rel_ids, rel.type)
 
         # Audit log
         if hasattr(request.app.state, "settings") and request.app.state.settings.audit_enabled:
@@ -3876,10 +3876,10 @@ async def channel_post_update(
 
         for rel in content_type.relations:
             if rel.type == "post_channel":
-                await relation_svc.sync(entity_id, rel.type, [channel.id])
+                await relation_svc.sync(entity_id, [channel.id], rel.type)
             else:
                 rel_ids = form_data.getlist(rel.type)
-                await relation_svc.sync(entity_id, rel.type, rel_ids if rel_ids else [])
+                await relation_svc.sync(entity_id, rel_ids if rel_ids else [], rel.type)
 
         # Audit log
         if hasattr(request.app.state, "settings") and request.app.state.settings.audit_enabled:
