@@ -45,6 +45,7 @@
 
 ### 5. 検証
 ```
+→ 4_verify/migration.md
 → 4_verify/pip_test.md
 → 4_verify/log.md
 ```
