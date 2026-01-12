@@ -98,6 +98,9 @@
             </div>
         </div>
 
+        <!-- Editor.js用 hidden input -->
+        <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value="{{ entity.get(field.name, '') | tojson if entity and entity.get(field.name) else '' }}">
+
         <!-- 分割レイアウト (105) -->
         <div class="ep-wrapper" data-layout="editor-only" data-field="{{ field.name }}">
             <div class="ep-editor">
