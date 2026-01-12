@@ -527,7 +527,7 @@
                     チャンネル管理
                 </a>
                 {% for ch in channels %}
-                <a href="/admin/channel/{{ ch.slug }}/posts" class="nav-item nav-item-sub {% if channel_slug == ch.slug %}active{% endif %}">
+                <a href="{{ AdminURL.entity_list('post', ch.slug) }}" class="nav-item nav-item-sub {% if channel_slug == ch.slug %}active{% endif %}">
                     {{ ch.title }}
                 </a>
                 {% endfor %}

@@ -34,11 +34,7 @@
                     {% for post in recent_posts %}
                     <tr>
                         <td>
-                            {% if post.channel_slug %}
-                            <a href="/admin/channel/{{ post.channel_slug }}/posts/{{ post.id }}/edit">{{ post.title or 'Untitled' }}</a>
-                            {% else %}
-                            <a href="/admin/post/{{ post.id }}/edit">{{ post.title or 'Untitled' }}</a>
-                            {% endif %}
+                            <a href="{{ AdminURL.entity_edit('post', post.id, post.channel_slug) }}">{{ post.title or 'Untitled' }}</a>
                         </td>
                         <td class="text-muted">{{ post.channel_title or '-' }}</td>
                         <td>
