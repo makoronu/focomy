@@ -755,9 +755,34 @@
         formChanged = true;
     });
 
-    // Mark as submitting when form is submitted
-    form.addEventListener('submit', function() {
+    // Editor.jsの保存を待ってからフォーム送信
+    async function saveEditorsAndSubmit() {
         isSubmitting = true;
+
+        // 全てのEditor.jsインスタンスを保存
+        if (window.editors) {
+            for (const [fieldName, editor] of Object.entries(window.editors)) {
+                try {
+                    const data = await editor.save();
+                    const input = document.getElementById(fieldName);
+                    if (input) {
+                        input.value = JSON.stringify(data);
+                    }
+                } catch (e) {
+                    console.error('Failed to save editor:', fieldName, e);
+                }
+            }
+        }
+
+        form.submit();
+    }
+
+    // フォーム送信時にEditor.jsを保存してから送信
+    form.addEventListener('submit', function(e) {
+        if (!isSubmitting) {
+            e.preventDefault();
+            saveEditorsAndSubmit();
+        }
     });
 
     // Warning before leaving page
@@ -784,7 +809,7 @@
     document.addEventListener('keydown', function(e) {
         if ((e.ctrlKey || e.metaKey) && e.key === 's') {
             e.preventDefault();
-            form.submit();
+            saveEditorsAndSubmit();
         }
     });
 })();

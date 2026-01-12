@@ -2095,6 +2095,9 @@ class GalleryBlock {
 }
 
 /* === エディタ初期化 === */
+// グローバルにEditor.jsインスタンスを保持（フォーム送信時にアクセス用）
+window.editors = window.editors || {};
+
 document.addEventListener('DOMContentLoaded', function() {
     document.querySelectorAll('[data-editor]').forEach(function(container) {
         const inputId = container.dataset.editor;
@@ -2474,6 +2477,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Store editor instance
         editorInstance = editor;
+
+        // グローバルに登録（フォーム送信時にsave()呼び出し用）
+        window.editors[inputId] = editor;
 
         // Mode Toggle Logic (103)
         toggleBar.addEventListener('click', async function(e) {
