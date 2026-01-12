@@ -757,23 +757,33 @@
 
     // Editor.jsの保存を待ってからフォーム送信
     async function saveEditorsAndSubmit() {
+        console.log('[DEBUG] saveEditorsAndSubmit called');
+        console.log('[DEBUG] window.editors:', window.editors);
         isSubmitting = true;
 
         // 全てのEditor.jsインスタンスを保存
         if (window.editors) {
+            console.log('[DEBUG] editors keys:', Object.keys(window.editors));
             for (const [fieldName, editor] of Object.entries(window.editors)) {
+                console.log('[DEBUG] Saving editor:', fieldName);
                 try {
                     const data = await editor.save();
+                    console.log('[DEBUG] Editor data:', JSON.stringify(data).substring(0, 200));
                     const input = document.getElementById(fieldName);
+                    console.log('[DEBUG] Input element:', input);
                     if (input) {
                         input.value = JSON.stringify(data);
+                        console.log('[DEBUG] Input value set, length:', input.value.length);
                     }
                 } catch (e) {
                     console.error('Failed to save editor:', fieldName, e);
                 }
             }
+        } else {
+            console.log('[DEBUG] window.editors is undefined/null');
         }
 
+        console.log('[DEBUG] Submitting form...');
         form.submit();
     }
 
