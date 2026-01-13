@@ -152,6 +152,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.71 | 2026-01-11 | [PyPI](https://pypi.org/project/focomy/0.1.71/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **Pathインポート修正(v0.1.70バグ修正)** |
 | v0.1.72 | 2026-01-12 | [PyPI](https://pypi.org/project/focomy/0.1.72/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **管理画面に「サイトを表示」リンク追加** |
 | v0.1.88 | 2026-01-13 | [PyPI](https://pypi.org/project/focomy/0.1.88/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **コア/ユーザー層分離アーキテクチャ** |
+| v0.1.89 | 2026-01-13 | [PyPI](https://pypi.org/project/focomy/0.1.89/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **一括操作URL・menus/widgetsエラーハンドリング修正** |
 
 ---
 
