@@ -45,8 +45,9 @@ class AdminURL:
 
     @staticmethod
     def entity_bulk(type_name: str, channel_slug: str | None = None) -> str:
-        """一括操作URL"""
-        return f"{AdminURL.entity_list(type_name, channel_slug)}/bulk"
+        """一括操作URL - 常にtype_name形式（ルートが/{type_name}/bulkのため）"""
+        # channel_slugがあっても、ルートは/{type_name}/bulk形式
+        return f"/admin/{type_name}/bulk"
 
     @staticmethod
     def entity_pagination(

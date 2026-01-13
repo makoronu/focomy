@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.89] - 2026-01-13
+
+### Fixed
+- 一括操作（削除・下書き戻し等）がチャンネル経由で動作しない問題
+  - `AdminURL.entity_bulk()` が常に正しいルート形式を返すよう修正
+- menus/widgets ページのエラーハンドリング追加
+  - 500エラー発生時もページを表示、ログ出力
+
+## [0.1.88] - 2026-01-12
+
+### Changed
+- コア/ユーザー層分離アーキテクチャ
+  - content_types/relations.yamlを`core/`に移動（単一情報源）
+  - FieldServiceの読み込みロジック刷新（コアは常にパッケージから）
+  - focomy initでcontent_types/をコピーしない
+  - プラグインは追加のみ、コア上書き禁止
+
+### Fixed
+- pip upgrade後に既存サイトが壊れる問題を根本解決
+
 ## [0.1.67] - 2026-01-11
 
 ### Fixed

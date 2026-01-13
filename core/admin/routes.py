@@ -661,7 +661,13 @@ async def widgets_page(
 
     widget_svc = WidgetService(db)
 
-    widgets = await widget_svc.get_widgets_for_area(area)
+    # Get widgets with error handling
+    try:
+        widgets = await widget_svc.get_widgets_for_area(area)
+    except Exception as e:
+        logger.error("widgets_page_error", area=area, error=str(e))
+        widgets = []
+
     widget_types = WidgetService.get_available_widget_types()
 
     areas = [
@@ -1206,10 +1212,16 @@ async def menu_list(
 
     menu_svc = MenuService(db)
 
-    # Get menu items for the selected location
-    items = await menu_svc.get_flat_menu_items(location)
-    menu_tree = await menu_svc.get_menu(location)
-    has_db_items = await menu_svc.has_db_menu(location)
+    # Get menu items for the selected location with error handling
+    try:
+        items = await menu_svc.get_flat_menu_items(location)
+        menu_tree = await menu_svc.get_menu(location)
+        has_db_items = await menu_svc.has_db_menu(location)
+    except Exception as e:
+        logger.error("menu_list_error", location=location, error=str(e))
+        items = []
+        menu_tree = []
+        has_db_items = False
 
     context = await get_context(request, db, current_user, "menus")
     context.update(

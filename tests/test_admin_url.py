@@ -54,7 +54,8 @@ class TestAdminURL:
         assert AdminURL.entity_bulk("post") == "/admin/post/bulk"
 
     def test_entity_bulk_channel(self):
-        assert AdminURL.entity_bulk("post", "news") == "/admin/channel/news/posts/bulk"
+        # bulk操作は常にtype_name形式（ルートが/{type_name}/bulkのため）
+        assert AdminURL.entity_bulk("post", "news") == "/admin/post/bulk"
 
     # entity_pagination
     def test_entity_pagination_normal(self):
