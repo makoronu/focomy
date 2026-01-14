@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.99] - 2026-01-14
+
+### Fixed
+- メニューのYAMLフォールバック削除
+  - DB項目のみ表示（yaml_* IDの謎項目が消える）
+  - Import from YAML機能は維持
+
 ## [0.1.98] - 2026-01-14
 
 ### Fixed
