@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.93] - 2026-01-14
+
+### Added
+- 手動アップデート機能
+  - システム情報ページに「手動アップデート」ボタン追加
+  - `/admin/api/update-execute` エンドポイント追加
+  - UpdateService.execute_update() メソッド追加
+
+### Fixed
+- 「更新をチェック」ボタンがJSONを表示する問題を修正
+  - HTML形式でレスポンスを返すように変更（HTMX対応）
+
 ## [0.1.92] - 2026-01-14
 
 ### Added
