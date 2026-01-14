@@ -1,8 +1,7 @@
 """MenuService - navigation menu management.
 
-Hybrid approach: YAML defaults + Database overrides.
-If menu items exist in DB for a location, use those.
-Otherwise, fall back to config.yaml menus.
+Database-only approach: menus are stored in DB.
+YAML config is only used for initial import via import_from_yaml().
 """
 
 from dataclasses import dataclass, field
@@ -62,18 +61,13 @@ class MenuService:
         """
         Get menu items for a location.
 
-        Returns DB items if any exist, otherwise YAML config.
+        Returns DB items only. No YAML fallback.
         """
         if location not in self.LOCATIONS:
             return []
 
-        # Try DB first
         db_items = await self._get_db_menu_items(location)
-        if db_items:
-            return self._build_tree(db_items)
-
-        # Fall back to YAML config
-        return self._get_yaml_menu(location)
+        return self._build_tree(db_items)
 
     async def get_all_menus(self) -> dict[str, list[MenuItem]]:
         """Get all menus for all locations."""
