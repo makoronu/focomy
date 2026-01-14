@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.98] - 2026-01-14
+
+### Fixed
+- 手動アップデート「既に最新」でも自動再起動するよう修正
+- UIメッセージを「数秒後にページを更新してください」に変更
+
 ## [0.1.97] - 2026-01-14
 
 ### Added

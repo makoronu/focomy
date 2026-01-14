@@ -1980,7 +1980,7 @@ async def execute_update(
     if result.success:
         html = f'''<div class="alert alert-success mb-0">
             <strong>{result.message}</strong>
-            <p class="mb-0 mt-2 small">サーバーを再起動して反映してください。</p>
+            <p class="mb-0 mt-2 small">数秒後にページを更新してください。</p>
         </div>'''
     else:
         html = f'''<div class="alert alert-danger mb-0">

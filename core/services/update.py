@@ -196,17 +196,17 @@ class UpdateService:
                 new_version=new_version,
             )
 
+            # Schedule restart after response is sent
+            self._schedule_restart()
+
             if old_version == new_version:
                 return UpdateResult(
                     success=True,
-                    message=f"既に最新バージョン ({new_version}) です",
+                    message=f"既に最新バージョン ({new_version}) です（再起動中...）",
                     old_version=old_version,
                     new_version=new_version,
                     output=result.stdout,
                 )
-
-            # Schedule restart after response is sent
-            self._schedule_restart()
 
             return UpdateResult(
                 success=True,
