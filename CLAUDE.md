@@ -90,9 +90,9 @@
 | 項目 | 内容 |
 |------|------|
 | 作業中 | なし |
-| 完了 | 001-092, Issue #128 S0-S3, コア/ユーザー層分離アーキテクチャ(v0.1.88) |
+| 完了 | 001-092, Issue #128 S0-S3, コア/ユーザー層分離(v0.1.88), bulk操作404修正(v0.1.90) |
 | 残り | Issue #128 S2.5-B/C/D/S4-S6 |
-| 更新 | 2026-01-13 |
+| 更新 | 2026-01-14 |
 
 ---
 
@@ -153,6 +153,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.72 | 2026-01-12 | [PyPI](https://pypi.org/project/focomy/0.1.72/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **管理画面に「サイトを表示」リンク追加** |
 | v0.1.88 | 2026-01-13 | [PyPI](https://pypi.org/project/focomy/0.1.88/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **コア/ユーザー層分離アーキテクチャ** |
 | v0.1.89 | 2026-01-13 | [PyPI](https://pypi.org/project/focomy/0.1.89/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **一括操作URL・menus/widgetsエラーハンドリング修正** |
+| v0.1.90 | 2026-01-14 | [PyPI](https://pypi.org/project/focomy/0.1.90/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **bulk操作404修正（ルート順序問題）** |
 
 ---
 
