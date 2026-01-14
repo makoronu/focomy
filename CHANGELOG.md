@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.91] - 2026-01-14
+
+### Fixed
+- /admin/menus 500エラーを修正
+  - Jinja2マクロ`render_menu_items`が使用箇所より後に定義されていた
+  - マクロ定義を使用箇所より前に移動
+
 ## [0.1.90] - 2026-01-14
 
 ### Fixed

@@ -4,6 +4,32 @@
 
 {% block header_title %}Menu Management{% endblock %}
 
+{# Macro must be defined before use in Jinja2 #}
+{% macro render_menu_items(items, depth) %}
+<ul class="menu-list" data-depth="{{ depth }}">
+    {% for item in items %}
+    <li class="menu-item" data-id="{{ item.id }}" data-parent="">
+        <div class="menu-item-content">
+            <span class="drag-handle">&#9776;</span>
+            <span class="menu-label">{{ item.label }}</span>
+            <span class="menu-url text-muted">{{ item.url }}</span>
+            <div class="menu-actions">
+                <button type="button" class="btn btn-secondary btn-sm" onclick="editItem('{{ item.id }}')">Edit</button>
+                <button type="button" class="btn btn-danger btn-sm"
+                        hx-delete="/admin/menus/item/{{ item.id }}"
+                        hx-confirm="Delete this menu item?"
+                        hx-target="closest li"
+                        hx-swap="outerHTML">Delete</button>
+            </div>
+        </div>
+        {% if item.children %}
+        {{ render_menu_items(item.children, depth + 1) }}
+        {% endif %}
+    </li>
+    {% endfor %}
+</ul>
+{% endmacro %}
+
 {% block content %}
 <div class="card">
     <div class="card-header">
@@ -46,32 +72,6 @@
     </div>
     {% endif %}
 </div>
-
-<!-- Macros -->
-{% macro render_menu_items(items, depth) %}
-<ul class="menu-list" data-depth="{{ depth }}">
-    {% for item in items %}
-    <li class="menu-item" data-id="{{ item.id }}" data-parent="">
-        <div class="menu-item-content">
-            <span class="drag-handle">&#9776;</span>
-            <span class="menu-label">{{ item.label }}</span>
-            <span class="menu-url text-muted">{{ item.url }}</span>
-            <div class="menu-actions">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="editItem('{{ item.id }}')">Edit</button>
-                <button type="button" class="btn btn-danger btn-sm"
-                        hx-delete="/admin/menus/item/{{ item.id }}"
-                        hx-confirm="Delete this menu item?"
-                        hx-target="closest li"
-                        hx-swap="outerHTML">Delete</button>
-            </div>
-        </div>
-        {% if item.children %}
-        {{ render_menu_items(item.children, depth + 1) }}
-        {% endif %}
-    </li>
-    {% endfor %}
-</ul>
-{% endmacro %}
 
 <!-- Add/Edit Modal -->
 <div id="menu-modal" class="modal" style="display: none;">
