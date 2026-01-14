@@ -2,13 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.96] - 2026-01-14
+
+### Fixed
+- メニューDelete機能の正しいエラーハンドリング実装
+  - YAML項目削除時: 400エラー + ユーザー向けメッセージ表示
+  - 存在しないID: 404エラー + メッセージ表示
+  - HTMXエラーハンドラー追加でToast通知
+  - Deleteボタンを全項目で表示（v0.1.95の誤修正を取り消し）
+
 ## [0.1.95] - 2026-01-14
 
 ### Fixed
 - メニューLink Typeからpost/category削除（channel/series主体に整理）
-- YAMLメニュー項目のEdit/Deleteボタン非表示化
-  - YAML由来の項目（yaml_*ID）は編集・削除不可
-  - DBインポート後のみ編集可能に
 
 ## [0.1.94] - 2026-01-14
 
