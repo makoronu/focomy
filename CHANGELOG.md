@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.90] - 2026-01-14
+
+### Fixed
+- 一括操作（bulk action）が404エラーになる問題を修正
+  - FastAPIルート順序問題: `/{type_name}/bulk`が`/{type_name}/{entity_id}`より後に定義されていた
+  - "bulk"がentity_idとして解釈され、エンティティが見つからず404
+  - `/{type_name}/bulk`ルートを`/{type_name}/{entity_id}`より前に移動
+
 ## [0.1.89] - 2026-01-13
 
 ### Fixed

@@ -4175,6 +4175,64 @@ async def entity_create(
         return templates.TemplateResponse("admin/entity_form.html", context)
 
 
+# === Bulk Actions ===
+# NOTE: This must be defined BEFORE /{type_name}/{entity_id} routes
+# to prevent "bulk" from being interpreted as an entity_id
+
+
+@router.post("/{type_name}/bulk")
+async def entity_bulk_action(
+    request: Request,
+    type_name: str,
+    ids: str = Form(...),
+    action: str = Form(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin),
+):
+    """Perform bulk action on entities."""
+    content_type = field_service.get_content_type(type_name)
+    if not content_type:
+        raise HTTPException(status_code=404, detail="Content type not found")
+
+    entity_svc = EntityService(db)
+    user_data = entity_svc.serialize(current_user)
+    user_id = user_data.get("id")
+
+    entity_ids = [eid.strip() for eid in ids.split(",") if eid.strip()]
+    if not entity_ids:
+        raise HTTPException(status_code=400, detail="No entities selected")
+
+    count = 0
+    for entity_id in entity_ids:
+        entity = await entity_svc.get(entity_id)
+        if not entity or entity.type != type_name:
+            continue
+
+        if action == "delete":
+            await entity_svc.delete(entity_id, user_id=user_id)
+            count += 1
+        elif action in ("publish", "draft", "archive"):
+            status_map = {
+                "publish": "published",
+                "draft": "draft",
+                "archive": "archived",
+            }
+            await entity_svc.update(entity_id, {"status": status_map[action]}, user_id=user_id)
+            count += 1
+
+    action_msg = {
+        "delete": "deleted",
+        "publish": "published",
+        "draft": "set to draft",
+        "archive": "archived",
+    }.get(action, "updated")
+
+    return RedirectResponse(
+        url=f"/admin/{type_name}?message={count}+items+{action_msg}",
+        status_code=303,
+    )
+
+
 # === Entity Edit ===
 
 
@@ -4450,62 +4508,6 @@ async def entity_delete_post(
     # Redirect to list page for regular form submissions
     return RedirectResponse(
         url=f"/admin/{type_name}?message=Deleted+successfully",
-        status_code=303,
-    )
-
-
-# === Bulk Actions ===
-
-
-@router.post("/{type_name}/bulk")
-async def entity_bulk_action(
-    request: Request,
-    type_name: str,
-    ids: str = Form(...),
-    action: str = Form(...),
-    db: AsyncSession = Depends(get_db),
-    current_user: Entity = Depends(require_admin),
-):
-    """Perform bulk action on entities."""
-    content_type = field_service.get_content_type(type_name)
-    if not content_type:
-        raise HTTPException(status_code=404, detail="Content type not found")
-
-    entity_svc = EntityService(db)
-    user_data = entity_svc.serialize(current_user)
-    user_id = user_data.get("id")
-
-    entity_ids = [eid.strip() for eid in ids.split(",") if eid.strip()]
-    if not entity_ids:
-        raise HTTPException(status_code=400, detail="No entities selected")
-
-    count = 0
-    for entity_id in entity_ids:
-        entity = await entity_svc.get(entity_id)
-        if not entity or entity.type != type_name:
-            continue
-
-        if action == "delete":
-            await entity_svc.delete(entity_id, user_id=user_id)
-            count += 1
-        elif action in ("publish", "draft", "archive"):
-            status_map = {
-                "publish": "published",
-                "draft": "draft",
-                "archive": "archived",
-            }
-            await entity_svc.update(entity_id, {"status": status_map[action]}, user_id=user_id)
-            count += 1
-
-    action_msg = {
-        "delete": "deleted",
-        "publish": "published",
-        "draft": "set to draft",
-        "archive": "archived",
-    }.get(action, "updated")
-
-    return RedirectResponse(
-        url=f"/admin/{type_name}?message={count}+items+{action_msg}",
         status_code=303,
     )
 
