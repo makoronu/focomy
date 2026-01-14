@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block title %}{{ series.title }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="series-page">
+    <header class="series-header">
+        <h1>{{ series.title }}</h1>
+        {% if series.description %}
+        <p class="series-description">{{ series.description }}</p>
+        {% endif %}
+        {% if channel %}
+        <p class="series-channel">
+            <a href="/channel/{{ channel.slug }}">{{ channel.title }}</a> のシリーズ
+        </p>
+        {% endif %}
+    </header>
+
+    <div class="series-posts">
+        {% for post in entities %}
+        <article class="series-post-item">
+            <span class="post-number">{{ loop.index }}</span>
+            <div class="post-info">
+                <h2>
+                    {% if post.channel_slug %}
+                    <a href="/channel/{{ post.channel_slug }}/{{ post.slug }}">{{ post.title }}</a>
+                    {% else %}
+                    <a href="/post/{{ post.slug }}">{{ post.title }}</a>
+                    {% endif %}
+                </h2>
+                {% if post.excerpt %}
+                <p class="post-excerpt">{{ post.excerpt }}</p>
+                {% endif %}
+                <time class="post-date">{{ post.published_at[:10] if post.published_at else post.created_at[:10] }}</time>
+            </div>
+        </article>
+        {% else %}
+        <p class="no-posts">このシリーズにはまだ記事がありません。</p>
+        {% endfor %}
+    </div>
+</div>
+
+<style>
+.series-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+.series-header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.series-header h1 {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.series-description {
+    color: var(--color-text-muted);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.series-channel {
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+}
+
+.series-channel a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.series-channel a:hover {
+    text-decoration: underline;
+}
+
+.series-posts {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.series-post-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    padding: 1.5rem;
+    background: var(--color-surface);
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.post-number {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.5rem;
+    height: 2.5rem;
+    background: var(--color-primary);
+    color: white;
+    border-radius: 50%;
+    font-weight: bold;
+    flex-shrink: 0;
+}
+
+.post-info {
+    flex: 1;
+}
+
+.post-info h2 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.post-info h2 a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.post-info h2 a:hover {
+    color: var(--color-primary);
+}
+
+.post-excerpt {
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+    line-height: 1.6;
+}
+
+.post-date {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.no-posts {
+    text-align: center;
+    color: var(--color-text-muted);
+    padding: 2rem;
+}
+</style>
+{% endblock %}

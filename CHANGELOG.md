@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.92] - 2026-01-14
+
+### Added
+- チャンネル一覧テンプレート `channel.html` 新規作成
+- シリーズ一覧テンプレート `series.html` 新規作成
+
+### Fixed
+- `/channel/{slug}` および `/series/{slug}` ルートが404になる問題を修正
+  - テンプレートが存在しなかったため追加
+- チャンネル/シリーズルートでメニュー・ウィジェットが表示されない問題を修正
+  - `render_theme()` ラッパー経由に変更し、コンテキスト統一
+
 ## [0.1.91] - 2026-01-14
 
 ### Fixed

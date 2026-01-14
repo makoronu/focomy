@@ -627,8 +627,10 @@ async def channel_list(
     paginated_posts = channel_posts[offset : offset + per_page]
     entities = [entity_svc.serialize(p) for p in paginated_posts]
 
-    # Get SEO settings
+    # Get menus, widgets, and SEO settings
     site_url = str(request.base_url).rstrip("/")
+    menus_ctx = await get_menus_context(db)
+    widgets_ctx = await get_widgets_context(db)
     seo_data = await get_seo_settings(db, site_url)
 
     # Breadcrumbs
@@ -639,19 +641,23 @@ async def channel_list(
         site_url,
     )
 
-    context = {
-        "request": request,
-        "channel": channel_data,
-        "entities": entities,
-        "page": page,
-        "total_pages": total_pages,
-        "total": total,
-        "channel_slug": channel_slug,
-        **seo_data,
-        **breadcrumb_data,
-    }
-
-    html = await theme_service.render("channel.html", context)
+    html = await render_theme(
+        db,
+        "channel.html",
+        {
+            "channel": channel_data,
+            "entities": entities,
+            "page": page,
+            "total_pages": total_pages,
+            "total": total,
+            "channel_slug": channel_slug,
+            **menus_ctx,
+            **widgets_ctx,
+            **seo_data,
+            **breadcrumb_data,
+        },
+        request=request,
+    )
     return HTMLResponse(content=html)
 
 
@@ -799,8 +805,10 @@ async def channel_post_detail(
     for tag in related_tags:
         tags.append(entity_svc.serialize(tag))
 
-    # SEO settings
+    # Get menus, widgets, and SEO settings
     site_url = str(request.base_url).rstrip("/")
+    menus_ctx = await get_menus_context(db)
+    widgets_ctx = await get_widgets_context(db)
     seo_data = await get_seo_settings(db, site_url)
 
     # Breadcrumbs
@@ -812,20 +820,26 @@ async def channel_post_detail(
         site_url,
     )
 
-    context = {
-        "request": request,
-        "entity": post_data,
-        "channel": channel_data,
-        "author": author_data,
-        "tags": tags,
-        "series": series_data,
-        "series_posts": series_posts,
-        "channel_slug": channel_slug,
-        **seo_data,
-        **breadcrumb_data,
-    }
-
-    html = await theme_service.render("post.html", context)
+    html = await render_theme(
+        db,
+        "post.html",
+        {
+            "entity": post_data,
+            "channel": channel_data,
+            "author": author_data,
+            "tags": tags,
+            "series": series_data,
+            "series_posts": series_posts,
+            "channel_slug": channel_slug,
+            **menus_ctx,
+            **widgets_ctx,
+            **seo_data,
+            **breadcrumb_data,
+        },
+        request=request,
+        entity=post,
+        content_type="post",
+    )
     return HTMLResponse(content=html)
 
 
@@ -874,8 +888,10 @@ async def series_list(
     if related_channels:
         channel_data = entity_svc.serialize(related_channels[0])
 
-    # SEO settings
+    # Get menus, widgets, and SEO settings
     site_url = str(request.base_url).rstrip("/")
+    menus_ctx = await get_menus_context(db)
+    widgets_ctx = await get_widgets_context(db)
     seo_data = await get_seo_settings(db, site_url)
 
     # Breadcrumbs
@@ -885,16 +901,20 @@ async def series_list(
     breadcrumb_items.append({"name": series_data.get("title", series_slug), "url": f"/series/{series_slug}"})
     breadcrumb_data = generate_breadcrumbs(breadcrumb_items, site_url)
 
-    context = {
-        "request": request,
-        "series": series_data,
-        "entities": series_posts,
-        "channel": channel_data,
-        **seo_data,
-        **breadcrumb_data,
-    }
-
-    html = await theme_service.render("series.html", context)
+    html = await render_theme(
+        db,
+        "series.html",
+        {
+            "series": series_data,
+            "entities": series_posts,
+            "channel": channel_data,
+            **menus_ctx,
+            **widgets_ctx,
+            **seo_data,
+            **breadcrumb_data,
+        },
+        request=request,
+    )
     return HTMLResponse(content=html)
 
 
