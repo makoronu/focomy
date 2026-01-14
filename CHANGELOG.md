@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.95] - 2026-01-14
+
+### Fixed
+- メニューLink Typeからpost/category削除（channel/series主体に整理）
+- YAMLメニュー項目のEdit/Deleteボタン非表示化
+  - YAML由来の項目（yaml_*ID）は編集・削除不可
+  - DBインポート後のみ編集可能に
+
 ## [0.1.94] - 2026-01-14
 
 ### Added
