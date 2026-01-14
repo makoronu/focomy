@@ -108,6 +108,72 @@ class CategoriesWidget(BaseWidget):
         """
 
 
+class ChannelListWidget(BaseWidget):
+    """Display channel list."""
+
+    name = "channel_list"
+    label = "Channel List"
+
+    async def render(self, config: dict, context: WidgetContext) -> str:
+        channels = await context.entity_svc.find(
+            "channel",
+            limit=50,
+            order_by="title",
+        )
+
+        items = []
+        for ch in channels:
+            data = context.entity_svc.serialize(ch)
+            title = data.get("title", "")
+            slug = data.get("slug", "")
+            items.append(
+                f"""
+                <li class="widget-channel-item">
+                    <a href="/channel/{slug}">{title}</a>
+                </li>
+            """
+            )
+
+        return f"""
+            <ul class="widget-channels-list">
+                {"".join(items)}
+            </ul>
+        """
+
+
+class SeriesListWidget(BaseWidget):
+    """Display series list."""
+
+    name = "series_list"
+    label = "Series List"
+
+    async def render(self, config: dict, context: WidgetContext) -> str:
+        series_list = await context.entity_svc.find(
+            "series",
+            limit=50,
+            order_by="title",
+        )
+
+        items = []
+        for s in series_list:
+            data = context.entity_svc.serialize(s)
+            title = data.get("title", "")
+            slug = data.get("slug", "")
+            items.append(
+                f"""
+                <li class="widget-series-item">
+                    <a href="/series/{slug}">{title}</a>
+                </li>
+            """
+            )
+
+        return f"""
+            <ul class="widget-series-list">
+                {"".join(items)}
+            </ul>
+        """
+
+
 class SearchWidget(BaseWidget):
     """Display search form."""
 
@@ -197,6 +263,8 @@ class WidgetService:
     WIDGET_TYPES: dict[str, type[BaseWidget]] = {
         "recent_posts": RecentPostsWidget,
         "categories": CategoriesWidget,
+        "channel_list": ChannelListWidget,
+        "series_list": SeriesListWidget,
         "search": SearchWidget,
         "archives": ArchivesWidget,
         "custom_html": CustomHtmlWidget,

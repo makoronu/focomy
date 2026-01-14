@@ -20,6 +20,10 @@ fields:
         label: 最近の投稿
       - value: categories
         label: カテゴリ一覧
+      - value: channel_list
+        label: チャンネル一覧
+      - value: series_list
+        label: シリーズ一覧
       - value: search
         label: 検索
       - value: custom_html
