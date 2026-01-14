@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.97] - 2026-01-14
+
+### Added
+- 手動アップデート後の自動再起動機能
+  - pip upgrade完了後、2秒待機してPM2/systemctlで自動再起動
+  - HTTPレスポンス送信後にバックグラウンドで実行
+
 ## [0.1.96] - 2026-01-14
 
 ### Fixed

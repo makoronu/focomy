@@ -1,5 +1,6 @@
 """Update check service."""
 
+import os
 import subprocess
 import sys
 from datetime import datetime, timedelta
@@ -204,9 +205,12 @@ class UpdateService:
                     output=result.stdout,
                 )
 
+            # Schedule restart after response is sent
+            self._schedule_restart()
+
             return UpdateResult(
                 success=True,
-                message=f"アップデート完了: {old_version} → {new_version}",
+                message=f"アップデート完了: {old_version} → {new_version}（再起動中...）",
                 old_version=old_version,
                 new_version=new_version,
                 output=result.stdout,
@@ -226,6 +230,56 @@ class UpdateService:
                 message=f"アップデートエラー: {str(e)}",
                 old_version=old_version,
             )
+
+    def _schedule_restart(self) -> None:
+        """Schedule a process restart after a short delay.
+
+        Spawns a background process that waits 2 seconds then restarts,
+        allowing the HTTP response to be sent before the restart.
+        """
+        # Try PM2 first (most common for this project)
+        pm2_path = self._find_executable("pm2")
+        if pm2_path:
+            logger.info("scheduling_restart", method="pm2")
+            # Use nohup and & to detach from current process
+            subprocess.Popen(
+                f"sleep 2 && {pm2_path} restart focomy",
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            return
+
+        # Try systemctl
+        if os.path.exists("/usr/bin/systemctl"):
+            logger.info("scheduling_restart", method="systemctl")
+            subprocess.Popen(
+                "sleep 2 && systemctl restart focomy",
+                shell=True,
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+            return
+
+        # Fallback: just log that manual restart is needed
+        logger.warning("restart_manual_required", reason="no_process_manager_found")
+
+    def _find_executable(self, name: str) -> str | None:
+        """Find executable in common paths."""
+        paths = [
+            f"/usr/bin/{name}",
+            f"/usr/local/bin/{name}",
+            f"/root/.local/bin/{name}",
+            f"/home/ubuntu/.local/bin/{name}",
+            f"/root/.nvm/versions/node/v20.18.0/bin/{name}",
+            f"/root/.nvm/versions/node/v18.20.0/bin/{name}",
+        ]
+        for path in paths:
+            if os.path.exists(path):
+                return path
+        return None
 
 
 update_service = UpdateService()
