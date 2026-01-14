@@ -53,6 +53,10 @@ fields:
         label: カテゴリ
       - value: post
         label: 投稿
+      - value: channel
+        label: チャンネル
+      - value: series
+        label: シリーズ
     default: custom
 
   - name: linked_entity_id

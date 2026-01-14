@@ -157,6 +157,10 @@ class MenuService:
             return f"/category/{slug}" if slug else "#"
         elif link_type == "post":
             return f"/post/{slug}" if slug else "#"
+        elif link_type == "channel":
+            return f"/channel/{slug}" if slug else "#"
+        elif link_type == "series":
+            return f"/series/{slug}" if slug else "#"
 
         return url or "#"
 
