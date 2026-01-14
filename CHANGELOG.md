@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.94] - 2026-01-14
+
+### Added
+- メニューにチャンネル/シリーズリンクタイプ追加
+  - menu_item.yaml: `channel`, `series` オプション追加
+  - menu.py: `/channel/{slug}`, `/series/{slug}` URL解決追加
+  - menus.html: UI選択肢追加
+- ウィジェットにチャンネル/シリーズ一覧追加
+  - widget.yaml: `channel_list`, `series_list` オプション追加
+  - widget.py: ChannelListWidget, SeriesListWidget クラス追加
+
 ## [0.1.93] - 2026-01-14
 
 ### Added
