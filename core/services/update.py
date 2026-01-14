@@ -1,10 +1,15 @@
 """Update check service."""
 
+import subprocess
+import sys
 from datetime import datetime, timedelta
 
 import httpx
+import structlog
 
 from core import __version__
+
+logger = structlog.get_logger(__name__)
 
 PYPI_PACKAGE = "focomy"
 GITHUB_REPO = "focomy/focomy"
@@ -28,6 +33,24 @@ class UpdateInfo:
         self.release_url = release_url
         self.release_notes = release_notes
         self.checked_at = checked_at or datetime.now()
+
+
+class UpdateResult:
+    """Update execution result."""
+
+    def __init__(
+        self,
+        success: bool,
+        message: str,
+        old_version: str | None = None,
+        new_version: str | None = None,
+        output: str | None = None,
+    ):
+        self.success = success
+        self.message = message
+        self.old_version = old_version
+        self.new_version = new_version
+        self.output = output
 
 
 class UpdateService:
@@ -117,6 +140,92 @@ class UpdateService:
     def get_current_version(self) -> str:
         """Get current version."""
         return __version__
+
+    async def execute_update(self, target_version: str | None = None) -> UpdateResult:
+        """Execute pip upgrade for focomy.
+
+        Args:
+            target_version: Specific version to install. If None, installs latest.
+
+        Returns:
+            UpdateResult with success status and message.
+        """
+        old_version = __version__
+        package = PYPI_PACKAGE
+        if target_version:
+            package = f"{PYPI_PACKAGE}=={target_version}"
+
+        logger.info(
+            "update_started",
+            old_version=old_version,
+            target_version=target_version or "latest",
+        )
+
+        try:
+            result = subprocess.run(
+                [sys.executable, "-m", "pip", "install", "--upgrade", package],
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+
+            if result.returncode != 0:
+                logger.error(
+                    "update_failed",
+                    returncode=result.returncode,
+                    stderr=result.stderr,
+                )
+                return UpdateResult(
+                    success=False,
+                    message=f"アップデート失敗: {result.stderr}",
+                    old_version=old_version,
+                    output=result.stderr,
+                )
+
+            # Clear cache to force re-check
+            self._cache = None
+
+            # Get new version by re-checking
+            update_info = await self.check_for_updates(force=True)
+            new_version = update_info.current_version
+
+            logger.info(
+                "update_completed",
+                old_version=old_version,
+                new_version=new_version,
+            )
+
+            if old_version == new_version:
+                return UpdateResult(
+                    success=True,
+                    message=f"既に最新バージョン ({new_version}) です",
+                    old_version=old_version,
+                    new_version=new_version,
+                    output=result.stdout,
+                )
+
+            return UpdateResult(
+                success=True,
+                message=f"アップデート完了: {old_version} → {new_version}",
+                old_version=old_version,
+                new_version=new_version,
+                output=result.stdout,
+            )
+
+        except subprocess.TimeoutExpired:
+            logger.error("update_timeout")
+            return UpdateResult(
+                success=False,
+                message="アップデートがタイムアウトしました（120秒）",
+                old_version=old_version,
+            )
+        except Exception as e:
+            logger.error("update_exception", error=str(e))
+            return UpdateResult(
+                success=False,
+                message=f"アップデートエラー: {str(e)}",
+                old_version=old_version,
+            )
 
 
 update_service = UpdateService()

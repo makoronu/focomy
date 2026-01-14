@@ -39,7 +39,7 @@
                 {% endif %}
             </div>
         </div>
-        <div class="mt-3">
+        <div class="mt-3 d-flex gap-2 align-items-center flex-wrap">
             <button class="btn btn-outline-secondary btn-sm"
                     hx-get="/admin/api/update-check?force=true"
                     hx-target="#update-status"
@@ -47,8 +47,17 @@
                 <span id="update-spinner" class="htmx-indicator spinner-border spinner-border-sm me-1"></span>
                 更新をチェック
             </button>
+            <button class="btn btn-primary btn-sm"
+                    hx-post="/admin/api/update-execute"
+                    hx-target="#update-result"
+                    hx-indicator="#execute-spinner"
+                    hx-confirm="アップデートを実行しますか? 完了後、サーバーの再起動が必要です。">
+                <span id="execute-spinner" class="htmx-indicator spinner-border spinner-border-sm me-1"></span>
+                手動アップデート
+            </button>
             <span id="update-status"></span>
         </div>
+        <div id="update-result" class="mt-3"></div>
     </div>
 </div>
 

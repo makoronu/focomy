@@ -1938,17 +1938,44 @@ async def check_for_updates(
     current_user: Entity = Depends(require_admin),
     force: bool = False,
 ):
-    """Check for Focomy updates."""
+    """Check for Focomy updates - returns HTML for HTMX."""
     from ..services.update import update_service
 
     update_info = await update_service.check_for_updates(force=force)
 
-    return {
-        "current_version": update_info.current_version,
-        "latest_version": update_info.latest_version,
-        "has_update": update_info.has_update,
-        "release_url": update_info.release_url,
-    }
+    if update_info.has_update:
+        html = f'''<span class="badge bg-warning text-dark">
+            新バージョン {update_info.latest_version} が利用可能です
+            <a href="{update_info.release_url}" target="_blank" class="ms-1">詳細</a>
+        </span>'''
+    else:
+        ver = update_info.current_version
+        html = f'<span class="badge bg-success">最新バージョン ({ver})</span>'
+
+    return HTMLResponse(content=html)
+
+
+@router.post("/api/update-execute")
+async def execute_update(
+    request: Request,
+    current_user: Entity = Depends(require_admin),
+):
+    """Execute Focomy update via pip - returns HTML for HTMX."""
+    from ..services.update import update_service
+
+    result = await update_service.execute_update()
+
+    if result.success:
+        html = f'''<div class="alert alert-success mb-0">
+            <strong>{result.message}</strong>
+            <p class="mb-0 mt-2 small">サーバーを再起動して反映してください。</p>
+        </div>'''
+    else:
+        html = f'''<div class="alert alert-danger mb-0">
+            <strong>エラー:</strong> {result.message}
+        </div>'''
+
+    return HTMLResponse(content=html)
 
 
 @router.post("/api/preview/render")
