@@ -1358,11 +1358,23 @@ async def menu_item_delete(
     require_feature("menu")
     from ..services.menu import MenuService
 
+    # YAML items cannot be deleted - must import to DB first
+    if item_id.startswith("yaml_"):
+        return HTMLResponse(
+            content="YAML設定のメニューは削除できません。先に「Import from YAML」でDBにインポートしてください。",
+            status_code=400,
+        )
+
     menu_svc = MenuService(db)
     entity_svc = EntityService(db)
     user_data = entity_svc.serialize(current_user)
 
-    await menu_svc.delete_menu_item(item_id, user_id=user_data.get("id"))
+    deleted = await menu_svc.delete_menu_item(item_id, user_id=user_data.get("id"))
+    if not deleted:
+        return HTMLResponse(
+            content="メニュー項目が見つかりません。",
+            status_code=404,
+        )
     return HTMLResponse(content="", status_code=200)
 
 

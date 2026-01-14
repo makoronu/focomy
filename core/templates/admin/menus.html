@@ -14,16 +14,12 @@
             <span class="menu-label">{{ item.label }}</span>
             <span class="menu-url text-muted">{{ item.url }}</span>
             <div class="menu-actions">
-                {% if not item.id.startswith('yaml_') %}
                 <button type="button" class="btn btn-secondary btn-sm" onclick="editItem('{{ item.id }}')">Edit</button>
                 <button type="button" class="btn btn-danger btn-sm"
                         hx-delete="/admin/menus/item/{{ item.id }}"
                         hx-confirm="Delete this menu item?"
                         hx-target="closest li"
                         hx-swap="outerHTML">Delete</button>
-                {% else %}
-                <span class="text-muted text-sm">(YAML)</span>
-                {% endif %}
             </div>
         </div>
         {% if item.children %}

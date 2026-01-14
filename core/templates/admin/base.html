@@ -676,13 +676,22 @@
         }
     });
 
-    // HTMX success handler for toast notifications
+    // HTMX request handler for toast notifications
     document.body.addEventListener('htmx:afterRequest', function(evt) {
-        if (evt.detail.successful && evt.detail.xhr.status === 200) {
-            // Check for delete operations
-            if (evt.detail.requestConfig.verb === 'delete') {
+        const xhr = evt.detail.xhr;
+        const verb = evt.detail.requestConfig.verb;
+
+        if (evt.detail.successful && xhr.status === 200) {
+            // Success - check for delete operations
+            if (verb === 'delete') {
                 Toast.success('Item deleted successfully');
             }
+        } else if (xhr.status >= 400) {
+            // Error - show response text as error message
+            const errorMsg = xhr.responseText || 'An error occurred';
+            Toast.error(errorMsg);
+            // Prevent HTMX from swapping content on error
+            evt.detail.shouldSwap = false;
         }
     });
 
