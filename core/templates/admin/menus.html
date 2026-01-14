@@ -14,12 +14,16 @@
             <span class="menu-label">{{ item.label }}</span>
             <span class="menu-url text-muted">{{ item.url }}</span>
             <div class="menu-actions">
+                {% if not item.id.startswith('yaml_') %}
                 <button type="button" class="btn btn-secondary btn-sm" onclick="editItem('{{ item.id }}')">Edit</button>
                 <button type="button" class="btn btn-danger btn-sm"
                         hx-delete="/admin/menus/item/{{ item.id }}"
                         hx-confirm="Delete this menu item?"
                         hx-target="closest li"
                         hx-swap="outerHTML">Delete</button>
+                {% else %}
+                <span class="text-muted text-sm">(YAML)</span>
+                {% endif %}
             </div>
         </div>
         {% if item.children %}
@@ -96,8 +100,6 @@
                 <select id="link_type" name="link_type" class="form-select" onchange="toggleLinkFields()">
                     <option value="custom">Custom URL</option>
                     <option value="page">Page</option>
-                    <option value="category">Category</option>
-                    <option value="post">Post</option>
                     <option value="channel">Channel</option>
                     <option value="series">Series</option>
                 </select>

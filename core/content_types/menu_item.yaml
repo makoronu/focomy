@@ -49,10 +49,6 @@ fields:
         label: カスタムURL
       - value: page
         label: ページ
-      - value: category
-        label: カテゴリ
-      - value: post
-        label: 投稿
       - value: channel
         label: チャンネル
       - value: series
