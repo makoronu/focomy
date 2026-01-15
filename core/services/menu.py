@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..config import MenuItemConfig, settings
 from ..models import Entity
 from .entity import EntityService
+from .field import field_service
 from .relation import RelationService
 
 
@@ -133,30 +134,67 @@ class MenuService:
         if link_type == "custom":
             return url or "#"
 
-        # For page, category, post - look up the entity's slug
+        # Get linked entity if specified
         linked_id = item_data.get("linked_entity_id")
-        if not linked_id:
-            return url or "#"
 
-        entity = await self.entity_svc.get(linked_id)
-        if not entity:
-            return url or "#"
+        # If linked_entity_id is set, resolve to individual page
+        if linked_id:
+            entity = await self.entity_svc.get(linked_id)
+            if entity:
+                entity_data = self.entity_svc.serialize(entity)
+                slug = entity_data.get("slug", "")
+                if slug:
+                    return self._get_url_for_type(link_type, slug)
 
-        entity_data = self.entity_svc.serialize(entity)
-        slug = entity_data.get("slug", "")
+        # No linked_entity_id: return listing page URL
+        return self._get_listing_url(link_type)
 
-        if link_type == "page":
-            return f"/page/{slug}" if slug else "#"
-        elif link_type == "category":
-            return f"/category/{slug}" if slug else "#"
-        elif link_type == "post":
-            return f"/post/{slug}" if slug else "#"
-        elif link_type == "channel":
-            return f"/channel/{slug}" if slug else "#"
-        elif link_type == "series":
-            return f"/series/{slug}" if slug else "#"
+    def _get_url_for_type(self, link_type: str, slug: str) -> str:
+        """Get individual page URL for a content type."""
+        # Fixed routes
+        fixed_routes = {
+            "page": f"/page/{slug}",
+            "category": f"/category/{slug}",
+            "channel": f"/channel/{slug}",
+            "series": f"/series/{slug}",
+            "form": f"/forms/{slug}",
+        }
 
-        return url or "#"
+        if link_type in fixed_routes:
+            return fixed_routes[link_type]
+
+        # Dynamic routes based on path_prefix
+        ct = field_service.get_content_type(link_type)
+        if ct and ct.path_prefix:
+            prefix = ct.path_prefix.strip("/")
+            return f"/{prefix}/{slug}"
+
+        return f"/{link_type}/{slug}"
+
+    def _get_listing_url(self, link_type: str) -> str:
+        """Get listing page URL for a content type."""
+        # Fixed listing routes
+        fixed_listings = {
+            "page": "/",  # No listing for pages
+            "category": "/",  # No listing for categories
+            "channel": "/",  # Channels don't have a unified listing
+            "series": "/",  # Series don't have a unified listing
+            "form": "/forms",
+            "post": "/post",
+            "news": "/news",
+            "tag": "/tags",
+        }
+
+        if link_type in fixed_listings:
+            return fixed_listings[link_type]
+
+        # Dynamic routes based on path_prefix
+        ct = field_service.get_content_type(link_type)
+        if ct and ct.path_prefix:
+            prefix = ct.path_prefix.strip("/")
+            return f"/{prefix}"
+
+        return f"/{link_type}s"
 
     def _build_tree(self, items: list[dict[str, Any]]) -> list[MenuItem]:
         """Build hierarchical tree from flat list."""

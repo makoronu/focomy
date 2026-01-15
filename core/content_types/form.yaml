@@ -5,6 +5,7 @@ icon: form
 admin_menu: true
 searchable: false
 menu_linkable: true
+path_prefix: /forms
 
 fields:
   - name: title
