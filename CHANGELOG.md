@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.104] - 2026-01-15
+
+### Fixed
+- メニューリンクURL自動生成を修正
+  - linked_entity_idなしの場合は一覧ページURLを返すように変更
+  - form, news, tag等のlink_typeに対応
+  - path_prefixからの動的URL生成をサポート
+  - form.yamlにpath_prefix追加で/forms一覧ページ有効化
+
 ## [0.1.103] - 2026-01-15
 
 ### Fixed
