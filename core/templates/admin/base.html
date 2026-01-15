@@ -511,15 +511,15 @@
                 </a>
 
                 <div class="nav-section">コンテンツ</div>
-                <a href="/admin/page" class="nav-item {% if current_page == 'page' %}active{% endif %}">
-                    固定ページ
+                {# 動的メニュー生成: admin_menu=true のcontent_typesを表示 #}
+                {% set sidebar_exclude = ['channel', 'post', 'comment', 'user', 'media', 'menu_item', 'widget', 'audit_log', 'form_submission', 'site_setting', 'edit_lock', 'redirect', 'scheduled_action', 'workflow_history', 'plugin', 'plugin_developer', 'plugin_review', 'category'] %}
+                {% for name, ct in content_types.items()|sort(attribute='0') %}
+                    {% if ct.admin_menu and name not in sidebar_exclude %}
+                <a href="/admin/{{ name }}" class="nav-item {% if current_page == name %}active{% endif %}">
+                    {{ ct.label_plural or ct.label or name }}
                 </a>
-                <a href="/admin/tag" class="nav-item {% if current_page == 'tag' %}active{% endif %}">
-                    タグ
-                </a>
-                <a href="/admin/series" class="nav-item {% if current_page == 'series' %}active{% endif %}">
-                    シリーズ
-                </a>
+                    {% endif %}
+                {% endfor %}
 
                 {% if channels %}
                 <div class="nav-section">チャンネル</div>
