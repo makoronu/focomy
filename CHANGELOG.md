@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.102] - 2026-01-15
+
+### Fixed
+- メニューリンクタイプを動的生成に変更
+  - ContentTypeにmenu_linkable属性追加
+  - フォーム、ニュース、タグ等全7種がメニューからリンク可能に
+
 ## [0.1.101] - 2026-01-15
 
 ### Fixed
