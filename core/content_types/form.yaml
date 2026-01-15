@@ -28,16 +28,10 @@ fields:
   - name: fields_config
     type: json
     label: フィールド設定
-    hint: |
-      フォームフィールドをJSON配列で定義します。
-      例: [{"name": "email", "type": "email", "label": "メールアドレス", "required": true}]
 
   - name: steps
     type: json
-    label: ステップ設定
-    hint: |
-      ウィザード形式の場合、ステップを定義します。
-      例: [{"title": "基本情報", "fields": ["name", "email"]}, {"title": "詳細", "fields": ["message"]}]
+    label: ステップ設定（ウィザード形式）
 
   - name: submit_label
     type: string

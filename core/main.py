@@ -81,7 +81,7 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
     # CSP for public pages (more restrictive)
     PUBLIC_CSP = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; "
+        "script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com https://unpkg.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
         "img-src 'self' data: https: blob:; "
         "font-src 'self' https://fonts.gstatic.com; "

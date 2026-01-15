@@ -292,6 +292,56 @@
                 </div>
             </div>
         </div>
+        {% elif field.name == 'steps' %}
+        {# === Visual Step Builder for steps === #}
+        <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value='{{ entity.get(field.name, "[]") | tojson if entity and entity.get(field.name) else "[]" }}'>
+
+        <div class="step-builder" id="step-builder">
+            <p class="form-hint" style="margin-bottom: 0.75rem;">
+                複数ステップに分けるとウィザード形式のフォームになります。空の場合は1ページ形式です。
+            </p>
+            <div class="step-builder-toolbar">
+                <button type="button" class="btn btn-primary btn-sm" onclick="StepBuilder.showAddModal()">
+                    + ステップ追加
+                </button>
+            </div>
+            <ul class="step-builder-list" id="step-builder-list">
+                {# Steps rendered by JavaScript #}
+            </ul>
+            <div class="step-builder-empty" id="step-builder-empty" style="display: none;">
+                <p class="text-muted">ステップがありません。1ページ形式で表示されます。</p>
+            </div>
+        </div>
+
+        {# Step Edit Modal #}
+        <div id="step-modal" class="modal" style="display: none;">
+            <div class="modal-overlay" onclick="StepBuilder.hideModal()"></div>
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h3 id="step-modal-title">ステップ追加</h3>
+                    <button type="button" class="modal-close" onclick="StepBuilder.hideModal()">&times;</button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="step-edit-index" value="-1">
+
+                    <div class="form-group">
+                        <label class="form-label" for="step-title">ステップタイトル <span style="color: var(--error);">*</span></label>
+                        <input type="text" id="step-title" class="form-input" placeholder="例: 基本情報">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="form-label">このステップに含めるフィールド</label>
+                        <div id="step-fields-selector" class="step-fields-selector">
+                            <p class="text-muted" id="step-no-fields">先にフィールドを追加してください</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="StepBuilder.hideModal()">キャンセル</button>
+                    <button type="button" class="btn btn-primary" onclick="StepBuilder.saveStep()">保存</button>
+                </div>
+            </div>
+        </div>
         {% else %}
         <textarea
             id="{{ field.name }}"
@@ -940,6 +990,94 @@
     padding: 1rem 1.5rem;
     border-top: 1px solid var(--border);
 }
+
+/* === Step Builder Styles === */
+.step-builder {
+    border: 1px solid var(--border);
+    border-radius: 0.5rem;
+    background: var(--bg);
+}
+.step-builder-toolbar {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--card);
+    border-radius: 0.5rem 0.5rem 0 0;
+}
+.step-builder-list {
+    list-style: none;
+    padding: 0.75rem;
+    margin: 0;
+    min-height: 60px;
+}
+.step-builder-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1rem;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    margin-bottom: 0.5rem;
+}
+.step-builder-item:last-child {
+    margin-bottom: 0;
+}
+.step-builder-item.sortable-ghost {
+    opacity: 0.4;
+}
+.step-builder-item.sortable-chosen {
+    border-color: var(--primary);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+.step-builder-drag {
+    cursor: grab;
+    color: var(--text-muted);
+    font-size: 1rem;
+}
+.step-builder-drag:active {
+    cursor: grabbing;
+}
+.step-builder-info {
+    flex: 1;
+    min-width: 0;
+}
+.step-builder-title {
+    font-weight: 500;
+}
+.step-builder-fields {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+.step-builder-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+.step-builder-empty {
+    padding: 1.5rem;
+    text-align: center;
+}
+.step-fields-selector {
+    max-height: 200px;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 0.375rem;
+    padding: 0.5rem;
+}
+.step-field-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.375rem 0.5rem;
+    border-radius: 0.25rem;
+    cursor: pointer;
+}
+.step-field-option:hover {
+    background: var(--bg);
+}
+.step-field-option input {
+    width: auto;
+}
 </style>
 
 {% set has_blocks = namespace(value=false) %}
@@ -1456,7 +1594,215 @@ const FormBuilder = (function() {
         hideModal,
         toggleOptionsEditor,
         addOption,
-        saveField
+        saveField,
+        getFields: function() { return fields; }
+    };
+})();
+
+// === Step Builder ===
+const StepBuilder = (function() {
+    let steps = [];
+
+    function init() {
+        const input = document.getElementById('steps');
+        if (!input) return;
+
+        // Parse existing data
+        try {
+            const data = JSON.parse(input.value || '[]');
+            steps = Array.isArray(data) ? data : [];
+        } catch (e) {
+            console.error('Failed to parse steps:', e);
+            steps = [];
+        }
+
+        render();
+        initSortable();
+    }
+
+    function initSortable() {
+        const list = document.getElementById('step-builder-list');
+        if (!list || typeof Sortable === 'undefined') return;
+
+        new Sortable(list, {
+            animation: 150,
+            handle: '.step-builder-drag',
+            ghostClass: 'sortable-ghost',
+            chosenClass: 'sortable-chosen',
+            onEnd: function() {
+                const items = list.querySelectorAll('.step-builder-item');
+                const newSteps = [];
+                items.forEach(item => {
+                    const index = parseInt(item.dataset.index);
+                    if (steps[index]) {
+                        newSteps.push(steps[index]);
+                    }
+                });
+                steps = newSteps;
+                save();
+                render();
+            }
+        });
+    }
+
+    function render() {
+        const list = document.getElementById('step-builder-list');
+        const empty = document.getElementById('step-builder-empty');
+        if (!list) return;
+
+        if (steps.length === 0) {
+            list.innerHTML = '';
+            if (empty) empty.style.display = 'block';
+            return;
+        }
+
+        if (empty) empty.style.display = 'none';
+
+        list.innerHTML = steps.map((step, index) => {
+            const fieldLabels = getFieldLabels(step.fields || []);
+            return `
+                <li class="step-builder-item" data-index="${index}">
+                    <span class="step-builder-drag">&#9776;</span>
+                    <div class="step-builder-info">
+                        <div class="step-builder-title">ステップ${index + 1}: ${escapeHtml(step.title)}</div>
+                        <div class="step-builder-fields">フィールド: ${fieldLabels || '(なし)'}</div>
+                    </div>
+                    <div class="step-builder-actions">
+                        <button type="button" class="btn btn-secondary btn-sm" onclick="StepBuilder.editStep(${index})">編集</button>
+                        <button type="button" class="btn btn-danger btn-sm" onclick="StepBuilder.deleteStep(${index})">削除</button>
+                    </div>
+                </li>
+            `;
+        }).join('');
+
+        initSortable();
+    }
+
+    function getFieldLabels(fieldNames) {
+        if (!fieldNames || fieldNames.length === 0) return '';
+        const fields = typeof FormBuilder !== 'undefined' ? FormBuilder.getFields() : [];
+        return fieldNames.map(name => {
+            const field = fields.find(f => f.name === name);
+            return field ? (field.label || field.name) : name;
+        }).join(', ');
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/&/g, '&amp;')
+                  .replace(/</g, '&lt;')
+                  .replace(/>/g, '&gt;')
+                  .replace(/"/g, '&quot;');
+    }
+
+    function save() {
+        const input = document.getElementById('steps');
+        if (input) {
+            input.value = JSON.stringify(steps);
+        }
+    }
+
+    function showAddModal() {
+        document.getElementById('step-modal-title').textContent = 'ステップ追加';
+        document.getElementById('step-edit-index').value = '-1';
+        document.getElementById('step-title').value = '';
+        renderFieldSelector([]);
+        document.getElementById('step-modal').style.display = 'flex';
+    }
+
+    function editStep(index) {
+        const step = steps[index];
+        if (!step) return;
+
+        document.getElementById('step-modal-title').textContent = 'ステップ編集';
+        document.getElementById('step-edit-index').value = index;
+        document.getElementById('step-title').value = step.title || '';
+        renderFieldSelector(step.fields || []);
+        document.getElementById('step-modal').style.display = 'flex';
+    }
+
+    function renderFieldSelector(selectedFields) {
+        const selector = document.getElementById('step-fields-selector');
+        const noFields = document.getElementById('step-no-fields');
+        const fields = typeof FormBuilder !== 'undefined' ? FormBuilder.getFields() : [];
+
+        if (fields.length === 0) {
+            selector.innerHTML = '<p class="text-muted">先にフィールドを追加してください</p>';
+            return;
+        }
+
+        selector.innerHTML = fields.map(field => {
+            const checked = selectedFields.includes(field.name) ? 'checked' : '';
+            return `
+                <label class="step-field-option">
+                    <input type="checkbox" value="${escapeHtml(field.name)}" ${checked}>
+                    <span>${escapeHtml(field.label || field.name)}</span>
+                </label>
+            `;
+        }).join('');
+    }
+
+    function hideModal() {
+        document.getElementById('step-modal').style.display = 'none';
+    }
+
+    function saveStep() {
+        const title = document.getElementById('step-title').value.trim();
+        if (!title) {
+            alert('ステップタイトルは必須です');
+            return;
+        }
+
+        const editIndex = parseInt(document.getElementById('step-edit-index').value);
+
+        // Collect selected fields
+        const selectedFields = [];
+        document.querySelectorAll('#step-fields-selector input[type="checkbox"]:checked').forEach(cb => {
+            selectedFields.push(cb.value);
+        });
+
+        const step = {
+            title: title,
+            fields: selectedFields
+        };
+
+        if (editIndex >= 0) {
+            steps[editIndex] = step;
+        } else {
+            steps.push(step);
+        }
+
+        save();
+        render();
+        hideModal();
+    }
+
+    function deleteStep(index) {
+        if (!confirm('このステップを削除しますか？')) return;
+        steps.splice(index, 1);
+        save();
+        render();
+    }
+
+    // Initialize on DOM ready
+    document.addEventListener('DOMContentLoaded', init);
+
+    // Close modal on escape
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('step-modal');
+            if (modal && modal.style.display === 'flex') {
+                hideModal();
+            }
+        }
+    });
+
+    return {
+        showAddModal,
+        editStep,
+        deleteStep,
+        hideModal,
+        saveStep
     };
 })();
 </script>
