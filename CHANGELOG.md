@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.103] - 2026-01-15
+
+### Fixed
+- menu_item.yamlのlink_typeをstring型に変更
+  - select型の検証によりform等が500エラーになる問題を修正
+  - 任意のmenu_linkableコンテンツタイプをリンク可能に
+
 ## [0.1.102] - 2026-01-15
 
 ### Fixed
