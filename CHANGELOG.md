@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.101] - 2026-01-15
+
+### Fixed
+- サイドバーメニューを動的生成に変更
+  - ハードコードメニュー項目を削除
+  - content_typesメタデータからadmin_menu=trueのエンティティを動的表示
+
 ## [0.1.100] - 2026-01-15
 
 ### Added
