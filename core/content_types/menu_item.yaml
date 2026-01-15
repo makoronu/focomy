@@ -42,18 +42,10 @@ fields:
         label: サイドバー
 
   - name: link_type
-    type: select
+    type: string
     label: リンクタイプ
-    options:
-      - value: custom
-        label: カスタムURL
-      - value: page
-        label: ページ
-      - value: channel
-        label: チャンネル
-      - value: series
-        label: シリーズ
     default: custom
+    hint: custom または menu_linkable なコンテンツタイプ名
 
   - name: linked_entity_id
     type: string
