@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.100] - 2026-01-15
+
+### Added
+- ビジュアルフォームビルダー機能
+  - フォーム編集画面でGUIベースのフィールド編集が可能に
+  - フィールド追加/編集/削除
+  - ドラッグ&ドロップによる並び替え（SortableJS）
+  - 対応フィールドタイプ: text, email, tel, textarea, select, radio, checkbox
+  - select/radio用の選択肢エディタ
+  - 既存のfields_config JSONとの後方互換性維持
+
 ## [0.1.99] - 2026-01-14
 
 ### Fixed
