@@ -88,7 +88,7 @@ features:
 
   # Phase 5: Extended features
   comment: false
-  form: false
+  form: true
   api_auth: false
   oauth: false
   mail: false

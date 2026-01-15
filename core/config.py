@@ -143,7 +143,7 @@ class FeaturesConfig(BaseModel):
 
     # Phase 5: Extended features
     comment: bool = False
-    form: bool = False
+    form: bool = True
     api_auth: bool = False
     oauth: bool = False
     mail: bool = False

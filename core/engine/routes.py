@@ -163,6 +163,13 @@ async def render_theme(
             # Build edit URL if entity provided
             if entity and content_type:
                 context["edit_url"] = f"/admin/{content_type}/{entity.id}/edit"
+            # Add content_types for admin bar dropdown
+            all_ct = field_service.get_all_content_types()
+            context["content_types"] = {
+                name: ct.model_dump()
+                for name, ct in all_ct.items()
+                if ct.admin_menu  # Only show types with admin_menu=true
+            }
         else:
             context["is_admin"] = False
 
