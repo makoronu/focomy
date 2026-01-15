@@ -4,6 +4,7 @@ label_plural: フォーム一覧
 icon: form
 admin_menu: true
 searchable: false
+menu_linkable: true
 
 fields:
   - name: title

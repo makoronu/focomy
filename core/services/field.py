@@ -126,6 +126,8 @@ class ContentType(BaseModel):
     # Listing
     archive_enabled: bool = False  # Enable /archive/{year}/{month}
     feed_enabled: bool = False  # Enable RSS feed
+    # Menu
+    menu_linkable: bool = False  # Can be linked from menu items
     fields: list[FieldDefinition] = Field(default_factory=list)
     relations: list[RelationDefinition] = Field(default_factory=list)
 

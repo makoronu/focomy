@@ -4,6 +4,7 @@ label_plural: 固定ページ一覧
 icon: file
 admin_menu: true
 searchable: true
+menu_linkable: true
 
 fields:
   - name: title

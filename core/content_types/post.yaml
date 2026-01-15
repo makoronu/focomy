@@ -4,6 +4,7 @@ label_plural: 投稿一覧
 icon: document
 admin_menu: false  # チャンネル別管理に変更
 searchable: true
+menu_linkable: true
 path_prefix: /post
 archive_enabled: true
 feed_enabled: true

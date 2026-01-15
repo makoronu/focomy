@@ -95,9 +95,12 @@
                 <label class="form-label" for="link_type">Link Type</label>
                 <select id="link_type" name="link_type" class="form-select" onchange="toggleLinkFields()">
                     <option value="custom">Custom URL</option>
-                    <option value="page">Page</option>
-                    <option value="channel">Channel</option>
-                    <option value="series">Series</option>
+                    {# 動的生成: menu_linkable=true のcontent_typesを表示 #}
+                    {% for name, ct in content_types.items()|sort(attribute='0') %}
+                        {% if ct.menu_linkable %}
+                    <option value="{{ name }}">{{ ct.label or name }}</option>
+                        {% endif %}
+                    {% endfor %}
                 </select>
             </div>
 

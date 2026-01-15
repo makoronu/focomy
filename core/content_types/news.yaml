@@ -4,6 +4,7 @@ label_plural: ニュース一覧
 icon: newspaper
 admin_menu: true
 searchable: true
+menu_linkable: true
 
 # カスタムURL設定
 path_prefix: /news

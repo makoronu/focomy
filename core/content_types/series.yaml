@@ -4,6 +4,7 @@ label_plural: シリーズ一覧
 icon: collection
 admin_menu: true
 searchable: true
+menu_linkable: true
 
 fields:
   - name: title

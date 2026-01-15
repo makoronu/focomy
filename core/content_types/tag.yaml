@@ -3,6 +3,7 @@ label: タグ
 label_plural: タグ一覧
 icon: tag
 admin_menu: true
+menu_linkable: true
 
 fields:
   - name: name
