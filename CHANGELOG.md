@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.105] - 2026-01-15
+
+### Fixed
+- フォーム編集画面のバリデーションエラー修正
+  - slugフィールドのpattern属性をChrome unicodeSets対応に修正
+  - モーダル内フィールドのrequired属性削除でフォーム送信エラー解消
+
 ## [0.1.104] - 2026-01-15
 
 ### Fixed
