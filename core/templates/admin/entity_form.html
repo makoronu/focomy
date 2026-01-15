@@ -50,7 +50,7 @@
             name="{{ field.name }}"
             class="form-input"
             value="{{ entity.get(field.name, '') if entity else '' }}"
-            pattern="[a-z0-9-]+"
+            pattern="[-a-z0-9]+"
             {% if field.required %}required{% endif %}
         >
         <p class="form-hint">URL-friendly identifier (lowercase letters, numbers, hyphens)</p>
@@ -231,7 +231,7 @@
 
                     <div class="form-group">
                         <label class="form-label" for="field-name">フィールド名 <span style="color: var(--error);">*</span></label>
-                        <input type="text" id="field-name" class="form-input" pattern="[a-z0-9_]+" required>
+                        <input type="text" id="field-name" class="form-input" pattern="[a-z0-9_]+">
                         <p class="form-hint">英小文字、数字、アンダースコアのみ</p>
                     </div>
 
