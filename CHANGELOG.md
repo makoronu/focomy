@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.111] - 2026-01-16
+
+### Fixed
+- フォームページで管理バーが表示されない問題を修正
+  - forms.pyでrender_templateを使用するよう変更
+  - admin context（is_admin, admin_user, content_types等）が正しく注入されるように
+
 ## [0.1.110] - 2026-01-16
 
 ### Fixed

@@ -9,10 +9,10 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
+from ..engine.routes import render_template
 from ..rate_limit import limiter
 from ..services.entity import EntityService
 from ..services.mail import mail_service
-from ..services.theme import theme_service
 from ..utils import require_feature_async
 
 router = APIRouter(prefix="/forms", tags=["forms"])
@@ -63,8 +63,9 @@ async def view_form(
         except json.JSONDecodeError:
             steps = []
 
-    # Render form template
-    html = theme_service.render(
+    # Render form template (with admin bar context)
+    html = await render_template(
+        db,
         "form.html",
         {
             "form": form_data,
@@ -72,6 +73,9 @@ async def view_form(
             "steps": steps,
             "csrf_token": getattr(request.state, "csrf_token", ""),
         },
+        request=request,
+        entity=form,
+        content_type="form",
     )
 
     return HTMLResponse(content=html)
@@ -162,13 +166,15 @@ async def submit_form(
     if "application/json" in content_type:
         return {"success": True, "message": success_message}
 
-    # Render success page
-    html = theme_service.render(
+    # Render success page (with admin bar context)
+    html = await render_template(
+        db,
         "form_success.html",
         {
             "form": form_data,
             "message": success_message,
         },
+        request=request,
     )
 
     return HTMLResponse(content=html)
