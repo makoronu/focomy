@@ -1,68 +1,5 @@
 {% extends "base.html" %}
 
-{% block title %}{{ form.title }} - {{ site_name }}{% endblock %}
-
-{% block content %}
-<div class="form-page">
-    <header class="form-header">
-        <h1>{{ form.title }}</h1>
-        {% if form.description %}
-        <p class="form-description">{{ form.description }}</p>
-        {% endif %}
-    </header>
-
-    <form id="dynamic-form" method="POST" action="/forms/{{ form.slug }}" class="dynamic-form">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-
-        {% if steps and steps|length > 1 %}
-        <!-- ウィザード形式 -->
-        <div class="wizard">
-            <div class="wizard-progress">
-                {% for step in steps %}
-                <div class="wizard-step {% if loop.first %}active{% endif %}" data-step="{{ loop.index }}">
-                    <span class="step-number">{{ loop.index }}</span>
-                    <span class="step-title">{{ step.title }}</span>
-                </div>
-                {% endfor %}
-            </div>
-
-            {% for step in steps %}
-            <div class="wizard-panel {% if loop.first %}active{% endif %}" data-step="{{ loop.index }}">
-                <h2 class="step-heading">{{ step.title }}</h2>
-                {% for field in fields %}
-                    {% if field.name in step.fields %}
-                    {{ render_field(field) }}
-                    {% endif %}
-                {% endfor %}
-
-                <div class="wizard-nav">
-                    {% if not loop.first %}
-                    <button type="button" class="btn btn-secondary prev-step">戻る</button>
-                    {% endif %}
-                    {% if loop.last %}
-                    <button type="submit" class="btn btn-primary">{{ form.submit_label or '送信する' }}</button>
-                    {% else %}
-                    <button type="button" class="btn btn-primary next-step">次へ</button>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-        {% else %}
-        <!-- 通常フォーム -->
-        <div class="form-fields">
-            {% for field in fields %}
-            {{ render_field(field) }}
-            {% endfor %}
-        </div>
-
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">{{ form.submit_label or '送信する' }}</button>
-        </div>
-        {% endif %}
-    </form>
-</div>
-
 {% macro render_field(field) %}
 <div class="form-group">
     <label for="{{ field.name }}">
@@ -133,6 +70,69 @@
     {% endif %}
 </div>
 {% endmacro %}
+
+{% block title %}{{ form.title }} - {{ site_name }}{% endblock %}
+
+{% block content %}
+<div class="form-page">
+    <header class="form-header">
+        <h1>{{ form.title }}</h1>
+        {% if form.description %}
+        <p class="form-description">{{ form.description }}</p>
+        {% endif %}
+    </header>
+
+    <form id="dynamic-form" method="POST" action="/forms/{{ form.slug }}" class="dynamic-form">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+
+        {% if steps and steps|length > 1 %}
+        <!-- ウィザード形式 -->
+        <div class="wizard">
+            <div class="wizard-progress">
+                {% for step in steps %}
+                <div class="wizard-step {% if loop.first %}active{% endif %}" data-step="{{ loop.index }}">
+                    <span class="step-number">{{ loop.index }}</span>
+                    <span class="step-title">{{ step.title }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% for step in steps %}
+            <div class="wizard-panel {% if loop.first %}active{% endif %}" data-step="{{ loop.index }}">
+                <h2 class="step-heading">{{ step.title }}</h2>
+                {% for field in fields %}
+                    {% if field.name in step.fields %}
+                    {{ render_field(field) }}
+                    {% endif %}
+                {% endfor %}
+
+                <div class="wizard-nav">
+                    {% if not loop.first %}
+                    <button type="button" class="btn btn-secondary prev-step">戻る</button>
+                    {% endif %}
+                    {% if loop.last %}
+                    <button type="submit" class="btn btn-primary">{{ form.submit_label or '送信する' }}</button>
+                    {% else %}
+                    <button type="button" class="btn btn-primary next-step">次へ</button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <!-- 通常フォーム -->
+        <div class="form-fields">
+            {% for field in fields %}
+            {{ render_field(field) }}
+            {% endfor %}
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ form.submit_label or '送信する' }}</button>
+        </div>
+        {% endif %}
+    </form>
+</div>
 
 <style>
 .form-page {
