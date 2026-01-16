@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.110] - 2026-01-16
+
+### Fixed
+- form.html render_fieldマクロ定義順序修正
+  - Jinja2マクロを使用箇所より前に移動
+  - 重複定義（70行）を削除
+  - /forms/{slug}ページの500エラー解消
+
 ## [0.1.105] - 2026-01-15
 
 ### Fixed
