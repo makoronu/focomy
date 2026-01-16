@@ -43,3 +43,48 @@ def require_feature(feature: str) -> None:
     """
     if not is_feature_enabled(feature):
         raise HTTPException(status_code=404, detail="Not Found")
+
+
+async def is_feature_enabled_async(feature: str, db) -> bool:
+    """Check if a feature is enabled (async version, DB-first).
+
+    Priority: DB settings > config.yaml > False
+
+    Args:
+        feature: Feature name (e.g., 'form', 'comment')
+        db: AsyncSession database session
+
+    Returns:
+        True if feature is enabled, False otherwise
+    """
+    from .services.settings import SettingsService
+
+    settings_svc = SettingsService(db)
+    db_value = await settings_svc.get(f"features.{feature}")
+
+    if db_value is not None:
+        # DB value exists, use it
+        if isinstance(db_value, bool):
+            return db_value
+        if isinstance(db_value, str):
+            return db_value.lower() in ("true", "1", "yes")
+        return bool(db_value)
+
+    # Fallback to config.yaml
+    return is_feature_enabled(feature)
+
+
+async def require_feature_async(feature: str, db) -> None:
+    """Raise 404 if feature is disabled (async version, DB-first).
+
+    Use this at the start of API endpoints for dynamic feature checking.
+
+    Args:
+        feature: Feature name
+        db: AsyncSession database session
+
+    Raises:
+        HTTPException: 404 if feature is disabled
+    """
+    if not await is_feature_enabled_async(feature, db):
+        raise HTTPException(status_code=404, detail="Not Found")

@@ -13,6 +13,7 @@ from ..rate_limit import limiter
 from ..services.entity import EntityService
 from ..services.mail import mail_service
 from ..services.theme import theme_service
+from ..utils import require_feature_async
 
 router = APIRouter(prefix="/forms", tags=["forms"])
 
@@ -30,6 +31,7 @@ async def view_form(
     db: AsyncSession = Depends(get_db),
 ):
     """View a public form."""
+    await require_feature_async("form", db)
     entity_svc = EntityService(db)
 
     # Find form
@@ -83,6 +85,7 @@ async def submit_form(
     db: AsyncSession = Depends(get_db),
 ):
     """Submit a form."""
+    await require_feature_async("form", db)
     entity_svc = EntityService(db)
 
     # Find form

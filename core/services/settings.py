@@ -39,6 +39,14 @@ DEFAULT_SETTINGS = {
         "lockout_duration": 900,
         "password_min_length": 12,
     },
+    "features": {
+        "media": True,
+        "comment": False,
+        "form": True,
+        "wordpress_import": False,
+        "menu": True,
+        "widget": True,
+    },
 }
 
 
@@ -235,6 +243,7 @@ class SettingsService:
             "media": app_settings.media,
             "security": app_settings.security,
             "theme": app_settings.theme,
+            "features": app_settings.features,
         }
 
         config_obj = config_map.get(category)
@@ -253,6 +262,7 @@ class SettingsService:
             "media": app_settings.media,
             "security": app_settings.security,
             "theme": app_settings.theme,
+            "features": app_settings.features,
         }
 
         categories = [category] if category else config_map.keys()

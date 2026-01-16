@@ -452,7 +452,6 @@ async def server_error_handler(request: Request, exc: Exception):
 from .admin import routes as admin
 from .api import auth, comments, entities, forms, media, relations, revisions, schema, search, seo
 from .engine import routes as engine
-from .utils import is_feature_enabled
 
 # Phase 1: Core APIs (always enabled)
 app.include_router(entities.router, prefix="/api")
@@ -462,21 +461,16 @@ app.include_router(auth.router, prefix="/api")
 app.include_router(seo.router)
 app.include_router(admin.router)
 
-# Phase 2: Media
-if is_feature_enabled("media"):
-    app.include_router(media.router, prefix="/api")
+# Phase 2: Media (runtime check in endpoints)
+app.include_router(media.router, prefix="/api")
 
-# Phase 4: Search, Revisions
-if is_feature_enabled("search"):
-    app.include_router(search.router, prefix="/api")
-if is_feature_enabled("revision"):
-    app.include_router(revisions.router, prefix="/api")
+# Phase 4: Search, Revisions (runtime check in endpoints)
+app.include_router(search.router, prefix="/api")
+app.include_router(revisions.router, prefix="/api")
 
-# Phase 5: Comments, Forms
-if is_feature_enabled("comment"):
-    app.include_router(comments.router, prefix="/api")
-if is_feature_enabled("form"):
-    app.include_router(forms.router)
+# Phase 5: Comments, Forms (runtime check in endpoints)
+app.include_router(comments.router, prefix="/api")
+app.include_router(forms.router)
 
 
 @app.get("/api/health")
