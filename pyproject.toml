@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "focomy"
-version = "0.1.107"
+version = "0.1.108"
 description = "The Most Beautiful CMS - A metadata-driven, zero-duplicate-code content management system"
 readme = "README.md"
 license = "MIT"
