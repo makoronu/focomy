@@ -9,7 +9,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..database import get_db
-from ..engine.routes import render_template
+from ..engine.routes import render_theme
 from ..rate_limit import limiter
 from ..services.entity import EntityService
 from ..services.mail import mail_service
@@ -64,7 +64,7 @@ async def view_form(
             steps = []
 
     # Render form template (with admin bar context)
-    html = await render_template(
+    html = await render_theme(
         db,
         "form.html",
         {
@@ -167,7 +167,7 @@ async def submit_form(
         return {"success": True, "message": success_message}
 
     # Render success page (with admin bar context)
-    html = await render_template(
+    html = await render_theme(
         db,
         "form_success.html",
         {
