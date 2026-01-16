@@ -48,7 +48,8 @@ def require_feature(feature: str) -> None:
 async def is_feature_enabled_async(feature: str, db) -> bool:
     """Check if a feature is enabled (async version, DB-first).
 
-    Priority: DB settings > config.yaml > False
+    Priority: DB settings > code default (True)
+    Note: config.yaml is ignored for features to allow DB override without restart.
 
     Args:
         feature: Feature name (e.g., 'form', 'comment')
@@ -57,10 +58,11 @@ async def is_feature_enabled_async(feature: str, db) -> bool:
     Returns:
         True if feature is enabled, False otherwise
     """
-    from .services.settings import SettingsService
+    from .services.settings import SettingsService, DEFAULT_SETTINGS
 
     settings_svc = SettingsService(db)
-    db_value = await settings_svc.get(f"features.{feature}")
+    # Check DB directly (not through get() which includes config.yaml)
+    db_value = await settings_svc._get_db_value(f"features.{feature}")
 
     if db_value is not None:
         # DB value exists, use it
@@ -70,8 +72,8 @@ async def is_feature_enabled_async(feature: str, db) -> bool:
             return db_value.lower() in ("true", "1", "yes")
         return bool(db_value)
 
-    # Fallback to config.yaml
-    return is_feature_enabled(feature)
+    # Fallback to code default (ignore config.yaml)
+    return DEFAULT_SETTINGS.get("features", {}).get(feature, True)
 
 
 async def require_feature_async(feature: str, db) -> None:
