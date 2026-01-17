@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.114] - 2026-01-17
+
+### Added
+- S4-B1: ダッシュボードに更新チェック機能追加
+  - 現バージョン/最新バージョン表示
+  - 新バージョンがある場合: 警告 + pip upgradeコマンド表示
+  - リリースノートへのリンク
+
 ## [0.1.113] - 2026-01-17
 
 ### Added

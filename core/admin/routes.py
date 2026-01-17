@@ -589,11 +589,22 @@ async def dashboard(
             data["channel_title"] = channel_data.get("title")
         recent_posts.append(data)
 
+    # Check for updates
+    from ..services.update import update_service
+
+    update_info = await update_service.check_for_updates()
+
     context = await get_context(request, db, current_user, "dashboard")
     context.update(
         {
             "stats": stats,
             "recent_posts": recent_posts,
+            "update_info": {
+                "current_version": update_info.current_version,
+                "latest_version": update_info.latest_version,
+                "has_update": update_info.has_update,
+                "release_url": update_info.release_url,
+            },
         }
     )
 
