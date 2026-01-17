@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.113] - 2026-01-17
+
+### Added
+- S3-B6: 一覧ページに編集リンク追加
+  - /category/{slug} → カテゴリ編集リンク
+  - /channel/{slug} → チャンネル編集リンク
+  - /series/{slug} → シリーズ編集リンク
+
 ## [0.1.112] - 2026-01-16
 
 ### Fixed

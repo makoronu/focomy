@@ -452,6 +452,8 @@ async def view_category(
             **seo_ctx,
         },
         request=request,
+        entity=category,
+        content_type="category",
     )
 
     return HTMLResponse(content=html)
@@ -664,6 +666,8 @@ async def channel_list(
             **breadcrumb_data,
         },
         request=request,
+        entity=channel,
+        content_type="channel",
     )
     return HTMLResponse(content=html)
 
@@ -921,6 +925,8 @@ async def series_list(
             **breadcrumb_data,
         },
         request=request,
+        entity=series,
+        content_type="series",
     )
     return HTMLResponse(content=html)
 
