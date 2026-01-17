@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.116] - 2026-01-17
+
+### Added
+- S1-B2: 別タブプレビュー機能
+  - POST /api/preview/token: プレビュートークン生成API
+  - GET /preview/{token}: トークンベースプレビュールート
+  - entity_form.html: Previewボタン追加
+  - テーマ適用済みページを新規タブで確認可能
+
 ## [0.1.115] - 2026-01-17
 
 ### Added

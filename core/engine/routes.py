@@ -261,6 +261,59 @@ async def sitemap_xml(
     return Response(content=xml_content, media_type="application/xml")
 
 
+# === Preview Routes ===
+
+
+@router.get("/preview/{token}", response_class=HTMLResponse)
+async def preview_entity(
+    token: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Preview an entity with a valid token (shows draft/unpublished content)."""
+    from ..services.preview import get_preview_service
+
+    preview_svc = get_preview_service(db)
+    entity = await preview_svc.get_preview_entity(token)
+
+    if not entity:
+        raise HTTPException(status_code=404, detail="Preview not found or expired")
+
+    entity_svc = EntityService(db)
+    entity_data = entity_svc.serialize(entity)
+
+    # Get content type info
+    content_type = entity.type
+    ct = field_service.get_content_type(content_type)
+
+    # Get site URL and contexts
+    site_url = str(request.base_url).rstrip("/")
+    menus_ctx = await get_menus_context(db)
+    widgets_ctx = await get_widgets_context(db)
+    seo_ctx = await get_seo_settings(db, site_url)
+
+    # Add preview flag to context
+    context = {
+        "post": entity_data,
+        "entity": entity_data,
+        "content": entity_data,
+        "is_preview": True,
+        "content_type": ct,
+        **menus_ctx,
+        **widgets_ctx,
+        **seo_ctx,
+    }
+
+    # Determine template
+    template = "post.html"
+    if ct and ct.template:
+        template = ct.template
+
+    html = await render_theme(db, template, context, request=request)
+
+    return HTMLResponse(content=html)
+
+
 async def get_menus_context(db: AsyncSession) -> dict:
     """Get menus context for templates."""
     menu_svc = MenuService(db)

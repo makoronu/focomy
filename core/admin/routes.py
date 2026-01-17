@@ -2020,6 +2020,38 @@ async def preview_render(
     return {"html": html}
 
 
+@router.post("/api/preview/token")
+async def create_preview_token(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    current_user: Entity = Depends(require_admin_api),
+):
+    """Create a preview token for an entity."""
+    from ..services.preview import get_preview_service
+
+    try:
+        body = await request.json()
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid JSON")
+
+    entity_id = body.get("entity_id")
+    if not entity_id:
+        raise HTTPException(status_code=400, detail="entity_id required")
+
+    # Verify entity exists
+    entity_svc = EntityService(db)
+    entity = await entity_svc.get(entity_id)
+    if not entity:
+        raise HTTPException(status_code=404, detail="Entity not found")
+
+    # Create preview token
+    preview_svc = get_preview_service(db)
+    token = await preview_svc.create_token(entity_id, current_user.id)
+    preview_url = preview_svc.get_preview_url(token)
+
+    return {"token": token, "url": preview_url}
+
+
 @router.get("/system", response_class=HTMLResponse)
 async def system_info(
     request: Request,

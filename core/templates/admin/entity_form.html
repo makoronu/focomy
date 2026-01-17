@@ -388,6 +388,7 @@
             <a href="{{ cancel_url }}" class="btn btn-secondary">Cancel</a>
             {% if entity %}
             <button type="button" class="btn btn-secondary" onclick="toggleRevisions()">History</button>
+            <button type="button" class="btn btn-secondary" onclick="openPreview()">Preview</button>
             {% endif %}
             <button type="submit" class="btn btn-primary">
                 {% if entity %}Update{% else %}Create{% endif %}
@@ -1236,6 +1237,34 @@ function toggleRevisions() {
         loadRevisions();
     } else {
         panel.style.display = 'none';
+    }
+}
+
+// Preview in new tab
+async function openPreview() {
+    const entityId = '{{ entity.id if entity else "" }}';
+    if (!entityId) {
+        alert('Please save the content first before previewing.');
+        return;
+    }
+
+    try {
+        const response = await fetch('/admin/api/preview/token', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ entity_id: entityId })
+        });
+
+        if (!response.ok) {
+            const error = await response.json();
+            alert('Preview error: ' + (error.detail || 'Unknown error'));
+            return;
+        }
+
+        const data = await response.json();
+        window.open(data.url, '_blank');
+    } catch (e) {
+        alert('Preview error: ' + e.message);
     }
 }
 
