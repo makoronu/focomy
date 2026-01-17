@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.115] - 2026-01-17
+
+### Added
+- S5: チャンネル仕様実装
+  - D1: postsチャンネル削除禁止
+  - D2: 未指定記事→postsチャンネル自動割当
+  - channel.py サービス追加
+
 ## [0.1.114] - 2026-01-17
 
 ### Added

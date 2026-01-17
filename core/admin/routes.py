@@ -4188,6 +4188,16 @@ async def entity_create(
             if rel_ids:
                 await relation_svc.sync(entity.id, rel_ids, rel.type)
 
+        # Auto-assign posts channel for post type if not specified
+        if type_name == "post":
+            rel_channel_values = form_data.getlist("rel_post_channel")
+            channel_ids = [v for v in rel_channel_values if v]
+            if not channel_ids:
+                from ..services.channel import get_or_create_posts_channel
+
+                posts_channel_id = await get_or_create_posts_channel(db)
+                await relation_svc.sync(entity.id, [posts_channel_id], "post_channel")
+
         # Log create action
         audit_svc = AuditService(db)
         await audit_svc.log_create(
@@ -4495,6 +4505,16 @@ async def entity_delete(
     entity_data = entity_svc.serialize(entity)
     user_data = entity_svc.serialize(current_user)
 
+    # Check if channel is protected from deletion
+    if type_name == "channel":
+        from ..services.channel import is_protected_channel
+
+        if is_protected_channel(entity_data.get("slug", "")):
+            raise HTTPException(
+                status_code=400,
+                detail="postsチャンネルは削除できません",
+            )
+
     await entity_svc.delete(entity_id, user_id=user_data.get("id"))
 
     # Log delete action
@@ -4537,6 +4557,16 @@ async def entity_delete_post(
     # Save entity data for audit before deletion
     entity_data = entity_svc.serialize(entity)
     user_data = entity_svc.serialize(current_user)
+
+    # Check if channel is protected from deletion
+    if type_name == "channel":
+        from ..services.channel import is_protected_channel
+
+        if is_protected_channel(entity_data.get("slug", "")):
+            raise HTTPException(
+                status_code=400,
+                detail="postsチャンネルは削除できません",
+            )
 
     await entity_svc.delete(entity_id, user_id=user_data.get("id"))
 
