@@ -10,7 +10,54 @@
 
 | ID | タスク | 開始日 | 状態 |
 |----|--------|--------|------|
-| 128 | UI/UX改善・バグ修正 | 2026-01-03 | S0から |
+| 129 | 外観機能（WordPress風カスタマイザー拡張） | 2026-01-18 | S1から |
+
+---
+
+## 129: 外観機能（WordPress風カスタマイザー拡張）詳細
+
+### 概要
+
+customize.htmlにIMAGE型・CODE型UIを追加し、WordPress「外観」相当の機能を実現
+
+### セグメント構成
+
+```
+[S1: Custom CSS UI追加] ← 開始
+    ↓
+[S2: 画像UI追加（logo/favicon）]
+    ↓
+[S3: ヘッダー/背景画像追加]
+```
+
+### S1: Custom CSS UI追加
+
+**ファイル**: `core/templates/admin/customize.html`
+
+| # | タスク | 状態 |
+|---|--------|------|
+| 1 | custom_cssセクションUI追加（textarea） | 未着手 |
+| 2 | 保存・プレビュー動作確認 | 未着手 |
+
+### S2: 画像UI追加（logo/favicon）
+
+**ファイル**: `core/templates/admin/customize.html`
+
+| # | タスク | 状態 |
+|---|--------|------|
+| 1 | site_identityセクションUI追加 | 未着手 |
+| 2 | 画像アップロード/メディア選択機能 | 未着手 |
+| 3 | プレビュー反映 | 未着手 |
+
+### S3: ヘッダー/背景画像追加
+
+**ファイル**: `core/themes/customizer.py`, `customize.html`, テーマテンプレート
+
+| # | タスク | 状態 |
+|---|--------|------|
+| 1 | header_image/background_image定義追加 | 未着手 |
+| 2 | UI追加（S2パターン再利用） | 未着手 |
+| 3 | テーマテンプレート反映 | 未着手 |
 
 ---
 
