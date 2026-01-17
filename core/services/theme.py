@@ -388,23 +388,29 @@ class ThemeService:
         return css.strip()
 
     def get_css_variables(self, theme_name: str = None, minify: bool = True) -> str:
-        """Generate CSS variables from theme config."""
+        """Generate CSS variables from theme config with customizations applied."""
         theme = self.get_theme(theme_name)
         if not theme:
             return ""
 
+        # Get user customizations
+        customizations = self.get_customizations(theme_name)
+
         lines = [":root {"]
 
-        # Colors
-        for name, value in theme.colors.items():
+        # Colors (with customization override)
+        for name, default_value in theme.colors.items():
+            value = customizations.get(f"color_{name}", default_value)
             lines.append(f"  --color-{name}: {value};")
 
-        # Fonts
-        for name, value in theme.fonts.items():
+        # Fonts (with customization override)
+        for name, default_value in theme.fonts.items():
+            value = customizations.get(f"font_{name}", default_value)
             lines.append(f"  --font-{name}: {value};")
 
-        # Spacing
-        for name, value in theme.spacing.items():
+        # Spacing (with customization override)
+        for name, default_value in theme.spacing.items():
+            value = customizations.get(f"space_{name}", default_value)
             lines.append(f"  --space-{name}: {value};")
 
         lines.append("}")
@@ -645,9 +651,12 @@ body {
 """
         )
 
-        # Add custom CSS
-        if theme.custom_css:
-            lines.append(theme.custom_css)
+        # Add custom CSS (from customizations or theme default)
+        custom_css = customizations.get("custom_css", theme.custom_css or "")
+        if custom_css:
+            lines.append("")
+            lines.append("/* Custom CSS */")
+            lines.append(custom_css)
 
         css = "\n".join(lines)
         return self._minify_css(css) if minify else css
@@ -1273,6 +1282,17 @@ body {
                 "value": customizations.get(f"space_{name}", default_value),
             })
 
+        # Custom CSS
+        settings.append({
+            "id": "custom_css",
+            "type": "code",
+            "label": "カスタムCSS",
+            "category": "custom_css",
+            "default": theme.custom_css or "",
+            "value": customizations.get("custom_css", theme.custom_css or ""),
+            "description": "独自のCSSを追加できます",
+        })
+
         return settings
 
     def generate_preview_css(self, preview_values: dict, theme_name: str = None) -> str:
@@ -1312,6 +1332,13 @@ body {
             lines.append(f"  --space-{name}: {value};")
 
         lines.append("}")
+
+        # Custom CSS
+        custom_css = values.get("custom_css", "")
+        if custom_css:
+            lines.append("")
+            lines.append("/* Custom CSS */")
+            lines.append(custom_css)
 
         return "\n".join(lines)
 

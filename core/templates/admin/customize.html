@@ -82,6 +82,27 @@
             {% endfor %}
         </div>
         {% endif %}
+
+        <!-- Custom CSS -->
+        {% if grouped_settings.custom_css %}
+        <div class="customize-section">
+            <h3>カスタムCSS</h3>
+            {% for setting in grouped_settings.custom_css %}
+            <div class="customize-field">
+                <label for="{{ setting.id }}">{{ setting.label }}</label>
+                {% if setting.description %}
+                <p class="field-description">{{ setting.description }}</p>
+                {% endif %}
+                <textarea id="{{ setting.id }}"
+                          name="{{ setting.id }}"
+                          data-default="{{ setting.default }}"
+                          class="customize-input code-input"
+                          rows="10"
+                          placeholder="/* CSSを入力 */&#10;.my-class {&#10;  color: red;&#10;}">{{ setting.value }}</textarea>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
     </div>
 
     <div class="customize-preview">
@@ -189,6 +210,23 @@
     border-radius: 0.375rem;
     font-size: 0.875rem;
     font-family: monospace;
+}
+
+.field-description {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    margin-bottom: 0.5rem;
+}
+
+.code-input {
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.8125rem;
+    line-height: 1.5;
+    resize: vertical;
+    min-height: 150px;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    padding: 0.75rem;
 }
 
 .customize-preview {
