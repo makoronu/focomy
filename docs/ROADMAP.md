@@ -10,7 +10,7 @@
 
 | ID | タスク | 開始日 | 状態 |
 |----|--------|--------|------|
-| 129 | 外観機能（WordPress風カスタマイザー拡張） | 2026-01-18 | S2完了, S3から |
+| 129 | 外観機能（WordPress風カスタマイザー拡張） | 2026-01-18 | S3完了（全セグメント完了） |
 
 ---
 
@@ -50,15 +50,15 @@ customize.htmlにIMAGE型・CODE型UIを追加し、WordPress「外観」相当�
 | 2 | 画像URL入力 + プレビュー機能 | 完了 |
 | 3 | クリアボタン・リセット対応 | 完了 |
 
-### S3: ヘッダー/背景画像追加
+### S3: ヘッダー/背景画像追加 ✅
 
-**ファイル**: `core/themes/customizer.py`, `customize.html`, テーマテンプレート
+**ファイル**: `core/services/theme.py`, `core/templates/admin/customize.html`
 
 | # | タスク | 状態 |
 |---|--------|------|
-| 1 | header_image/background_image定義追加 | 未着手 |
-| 2 | UI追加（S2パターン再利用） | 未着手 |
-| 3 | テーマテンプレート反映 | 未着手 |
+| 1 | header_image/background_image設定追加 | 完了 |
+| 2 | UI追加（S2パターン再利用） | 完了 |
+| 3 | CSS変数でスタイル反映 | 完了 |
 
 ---
 
