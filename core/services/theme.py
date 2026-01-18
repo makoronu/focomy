@@ -1249,6 +1249,26 @@ body {
         customizations = self.get_customizations(theme_name)
         settings = []
 
+        # Site Identity (logo, favicon)
+        settings.append({
+            "id": "site_logo",
+            "type": "image",
+            "label": "サイトロゴ",
+            "category": "site_identity",
+            "default": "",
+            "value": customizations.get("site_logo", ""),
+            "description": "ヘッダーに表示されるロゴ画像（推奨: 高さ60px以下）",
+        })
+        settings.append({
+            "id": "site_icon",
+            "type": "image",
+            "label": "サイトアイコン",
+            "category": "site_identity",
+            "default": "",
+            "value": customizations.get("site_icon", ""),
+            "description": "ファビコン・アプリアイコン（推奨: 512x512px）",
+        })
+
         # Colors
         for name, default_value in theme.colors.items():
             settings.append({
