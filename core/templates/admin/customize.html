@@ -56,6 +56,40 @@
         </div>
         {% endif %}
 
+        <!-- Header Images -->
+        {% if grouped_settings.header %}
+        <div class="customize-section">
+            <h3>ヘッダー・背景</h3>
+            {% for setting in grouped_settings.header %}
+            <div class="customize-field">
+                <label for="{{ setting.id }}">{{ setting.label }}</label>
+                {% if setting.description %}
+                <p class="field-description">{{ setting.description }}</p>
+                {% endif %}
+                <div class="image-input-wrapper">
+                    <div class="image-preview" id="{{ setting.id }}_preview">
+                        {% if setting.value %}
+                        <img src="{{ setting.value }}" alt="{{ setting.label }}">
+                        {% else %}
+                        <span class="no-image">画像未設定</span>
+                        {% endif %}
+                    </div>
+                    <input type="url"
+                           id="{{ setting.id }}"
+                           name="{{ setting.id }}"
+                           value="{{ setting.value }}"
+                           data-default="{{ setting.default }}"
+                           class="customize-input image-url-input"
+                           placeholder="https://example.com/image.png">
+                    <div class="image-actions">
+                        <button type="button" class="btn btn-sm btn-outline" onclick="clearImageInput('{{ setting.id }}')">クリア</button>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+
         <!-- Colors -->
         {% if grouped_settings.colors %}
         <div class="customize-section">

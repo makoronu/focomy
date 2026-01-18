@@ -413,6 +413,14 @@ class ThemeService:
             value = customizations.get(f"space_{name}", default_value)
             lines.append(f"  --space-{name}: {value};")
 
+        # Header/Background images
+        header_image = customizations.get("header_image", "")
+        background_image = customizations.get("background_image", "")
+        if header_image:
+            lines.append(f"  --header-image: url({header_image});")
+        if background_image:
+            lines.append(f"  --background-image: url({background_image});")
+
         lines.append("}")
 
         # Add base styles
@@ -422,7 +430,10 @@ class ThemeService:
 
 body {
     font-family: var(--font-sans);
-    background: var(--color-background);
+    background: var(--background-image, var(--color-background));
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
     color: var(--color-text);
     line-height: 1.6;
 }
@@ -434,7 +445,9 @@ body {
 }
 
 .site-header {
-    background: var(--color-surface);
+    background: var(--header-image, var(--color-surface));
+    background-size: cover;
+    background-position: center;
     border-bottom: 1px solid var(--color-border);
     padding: var(--space-md) 0;
 }
@@ -1269,6 +1282,26 @@ body {
             "description": "ファビコン・アプリアイコン（推奨: 512x512px）",
         })
 
+        # Header Images
+        settings.append({
+            "id": "header_image",
+            "type": "image",
+            "label": "ヘッダー画像",
+            "category": "header",
+            "default": "",
+            "value": customizations.get("header_image", ""),
+            "description": "ヘッダー背景画像（推奨: 1920x400px）",
+        })
+        settings.append({
+            "id": "background_image",
+            "type": "image",
+            "label": "背景画像",
+            "category": "header",
+            "default": "",
+            "value": customizations.get("background_image", ""),
+            "description": "サイト全体の背景画像",
+        })
+
         # Colors
         for name, default_value in theme.colors.items():
             settings.append({
@@ -1350,6 +1383,14 @@ body {
         for name, default_value in theme.spacing.items():
             value = values.get(f"space_{name}", default_value)
             lines.append(f"  --space-{name}: {value};")
+
+        # Header/Background images
+        header_image = values.get("header_image", "")
+        background_image = values.get("background_image", "")
+        if header_image:
+            lines.append(f"  --header-image: url({header_image});")
+        if background_image:
+            lines.append(f"  --background-image: url({background_image});")
 
         lines.append("}")
 
