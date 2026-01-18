@@ -1,0 +1,22 @@
+{
+  "color_primary": "#2563eb",
+  "color_primary-hover": "#1d4ed8",
+  "color_background": "#ffffff",
+  "color_surface": "#f8fafc",
+  "color_text": "#1e293b",
+  "color_text-muted": "#64748b",
+  "color_border": "#e2e8f0",
+  "color_success": "#22c55e",
+  "color_error": "#ef4444",
+  "color_warning": "#f59e0b",
+  "font_sans": "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+  "font_serif": "Georgia, 'Times New Roman', serif",
+  "font_mono": "ui-monospace, SFMono-Regular, Menlo, monospace",
+  "space_xs": "0.25rem",
+  "space_sm": "0.5rem",
+  "space_md": "1rem",
+  "space_lg": "1.5rem",
+  "space_xl": "2rem",
+  "space_2xl": "3rem",
+  "custom_css": "/* Test CSS */\n.test-class { color: red; }"
+}

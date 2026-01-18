@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.117] - 2026-01-18
+
+### Added
+- Issue #129: 外観機能（WordPress風カスタマイザー拡張）
+  - S1: カスタムCSS UI追加（テキストエリアで直接編集）
+  - S2: 画像UI追加（サイトロゴ/ファビコン URL入力+プレビュー）
+  - S3: ヘッダー/背景画像追加（CSS変数でスタイル反映）
+  - customize.htmlに4セクション追加（サイトID/ヘッダー・背景/カラー/カスタムCSS）
+
 ## [0.1.116] - 2026-01-17
 
 ### Added
