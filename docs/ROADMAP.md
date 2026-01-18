@@ -10,7 +10,7 @@
 
 | ID | タスク | 開始日 | 状態 |
 |----|--------|--------|------|
-| 129 | 外観機能（WordPress風カスタマイザー拡張） | 2026-01-18 | S1完了, S2から |
+| 129 | 外観機能（WordPress風カスタマイザー拡張） | 2026-01-18 | S2完了, S3から |
 
 ---
 
@@ -40,15 +40,15 @@ customize.htmlにIMAGE型・CODE型UIを追加し、WordPress「外観」相当�
 | 2 | get_css_variablesでcustomizations反映 | 完了 |
 | 3 | 保存・プレビュー動作確認 | 完了 |
 
-### S2: 画像UI追加（logo/favicon）
+### S2: 画像UI追加（logo/favicon） ✅
 
-**ファイル**: `core/templates/admin/customize.html`
+**ファイル**: `core/templates/admin/customize.html`, `core/services/theme.py`
 
 | # | タスク | 状態 |
 |---|--------|------|
-| 1 | site_identityセクションUI追加 | 未着手 |
-| 2 | 画像アップロード/メディア選択機能 | 未着手 |
-| 3 | プレビュー反映 | 未着手 |
+| 1 | site_identityセクションUI追加 | 完了 |
+| 2 | 画像URL入力 + プレビュー機能 | 完了 |
+| 3 | クリアボタン・リセット対応 | 完了 |
 
 ### S3: ヘッダー/背景画像追加
 
