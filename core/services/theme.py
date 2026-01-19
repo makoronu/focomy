@@ -1194,6 +1194,7 @@ body {
 
         # Add theme CSS to context
         context["theme_css"] = self.get_css_variables(theme_name)
+        context["customizations"] = self.get_customizations(theme_name)
         context["current_year"] = datetime.now().year
         context.setdefault("site_name", "Focomy")
 

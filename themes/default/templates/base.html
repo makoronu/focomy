@@ -37,9 +37,14 @@
     {% endif %}
 
     <!-- Favicon -->
+    {% if customizations and customizations.site_icon %}
+    <link rel="icon" href="{{ customizations.site_icon }}" type="image/png">
+    <link rel="apple-touch-icon" href="{{ customizations.site_icon }}">
+    {% else %}
     <link rel="icon" href="/static/favicon.ico" sizes="32x32">
     <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
     <link rel="apple-touch-icon" href="/static/apple-touch-icon.png">
+    {% endif %}
     <link rel="manifest" href="/manifest.json">
 
     <!-- Preload critical resources -->
@@ -56,6 +61,12 @@
     <link rel="stylesheet" href="/css/theme.css">
 
     <style>
+        /* Site logo image */
+        .site-logo-img {
+            max-height: 50px;
+            width: auto;
+            vertical-align: middle;
+        }
 
         /* Dropdown menu styles */
         .nav-item { position: relative; display: inline-block; }
@@ -218,7 +229,13 @@
     <header class="site-header">
         {% block header %}
         <div class="container">
-            <a href="/" class="site-logo">{{ site_name }}</a>
+            <a href="/" class="site-logo">
+                {% if customizations and customizations.site_logo %}
+                <img src="{{ customizations.site_logo }}" alt="{{ site_name }}" class="site-logo-img">
+                {% else %}
+                {{ site_name }}
+                {% endif %}
+            </a>
             <nav class="site-nav">
                 {% block nav %}
                 {% if menus and menus.header %}
