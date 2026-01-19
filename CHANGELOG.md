@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.118] - 2026-01-19
+
+### Fixed
+- Issue #129: site_logo/site_iconがテンプレートに反映されない問題を修正
+  - theme.py render()でcustomizationsをcontextに追加
+  - base.htmlでsite_logo条件分岐（画像/テキスト切替）
+  - base.htmlでsite_icon条件分岐（カスタムfavicon対応）
+
 ## [0.1.117] - 2026-01-18
 
 ### Added
