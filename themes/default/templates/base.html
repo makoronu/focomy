@@ -146,7 +146,7 @@
                 {% endif %}
             </div>
         </div>
-        <a href="/admin/themes/{{ active_theme }}/customize">カスタマイズ</a>
+        <button type="button" id="customize-toggle" class="admin-bar-btn">カスタマイズ</button>
         {% if edit_url %}
         <a href="{{ edit_url }}">編集</a>
         {% endif %}
@@ -224,8 +224,403 @@
         .admin-bar-dropdown:hover .admin-bar-dropdown-menu {
             display: block;
         }
+        .admin-bar-btn {
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            font-size: inherit;
+            padding: 0;
+        }
+        .admin-bar-btn:hover {
+            text-decoration: underline;
+        }
         body { padding-top: 32px; }
+
+        /* Customize Panel */
+        #customize-panel {
+            display: none;
+            position: fixed;
+            top: 32px;
+            left: 0;
+            width: 320px;
+            height: calc(100vh - 32px);
+            background: #1e293b;
+            color: white;
+            z-index: 9998;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.3);
+            overflow-y: auto;
+        }
+        #customize-panel.open {
+            display: block;
+        }
+        #customize-panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 1rem;
+            border-bottom: 1px solid #374151;
+        }
+        #customize-panel-header h2 {
+            margin: 0;
+            font-size: 1rem;
+            font-weight: 600;
+        }
+        #customize-panel-close {
+            background: transparent;
+            border: none;
+            color: #94a3b8;
+            cursor: pointer;
+            font-size: 1.25rem;
+            padding: 0;
+        }
+        #customize-panel-close:hover {
+            color: white;
+        }
+        .customize-section {
+            padding: 1rem;
+            border-bottom: 1px solid #374151;
+        }
+        .customize-section h3 {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            color: #94a3b8;
+            margin: 0 0 0.75rem 0;
+        }
+        .customize-field {
+            margin-bottom: 0.75rem;
+        }
+        .customize-field label {
+            display: block;
+            font-size: 0.8125rem;
+            margin-bottom: 0.25rem;
+        }
+        .customize-field input[type="color"] {
+            width: 40px;
+            height: 28px;
+            padding: 0;
+            border: 1px solid #374151;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .customize-field input[type="text"] {
+            width: 100%;
+            padding: 0.5rem;
+            background: #0f172a;
+            border: 1px solid #374151;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.8125rem;
+        }
+        .customize-field textarea {
+            width: 100%;
+            min-height: 120px;
+            padding: 0.5rem;
+            background: #0f172a;
+            border: 1px solid #374151;
+            border-radius: 4px;
+            color: #d4d4d4;
+            font-family: monospace;
+            font-size: 0.75rem;
+            resize: vertical;
+        }
+        .color-row {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .color-row input[type="text"] {
+            flex: 1;
+            font-family: monospace;
+        }
+        #customize-panel-footer {
+            padding: 1rem;
+            display: flex;
+            gap: 0.5rem;
+            justify-content: flex-end;
+        }
+        #customize-panel-footer button {
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+            font-size: 0.8125rem;
+            cursor: pointer;
+        }
+        #customize-reset {
+            background: transparent;
+            border: 1px solid #374151;
+            color: #94a3b8;
+        }
+        #customize-reset:hover {
+            background: #374151;
+            color: white;
+        }
+        #customize-save {
+            background: #2563eb;
+            border: none;
+            color: white;
+        }
+        #customize-save:hover {
+            background: #1d4ed8;
+        }
+        #customize-save:disabled {
+            background: #374151;
+            cursor: not-allowed;
+        }
+        .customize-message {
+            padding: 0.5rem 1rem;
+            margin: 0 1rem;
+            border-radius: 4px;
+            font-size: 0.8125rem;
+        }
+        .customize-message.success {
+            background: #22c55e20;
+            color: #22c55e;
+        }
+        .customize-message.error {
+            background: #ef444420;
+            color: #ef4444;
+        }
     </style>
+
+    <!-- Customize Panel -->
+    <div id="customize-panel">
+        <div id="customize-panel-header">
+            <h2>カスタマイズ</h2>
+            <button type="button" id="customize-panel-close">&times;</button>
+        </div>
+        <div id="customize-panel-content">
+            <div class="customize-section">
+                <h3>カラー</h3>
+                <div class="customize-field">
+                    <label>メインカラー</label>
+                    <div class="color-row">
+                        <input type="color" id="color_primary" value="#2563eb">
+                        <input type="text" id="color_primary_text" value="#2563eb" pattern="^#[0-9A-Fa-f]{6}$">
+                    </div>
+                </div>
+                <div class="customize-field">
+                    <label>背景色</label>
+                    <div class="color-row">
+                        <input type="color" id="color_background" value="#ffffff">
+                        <input type="text" id="color_background_text" value="#ffffff" pattern="^#[0-9A-Fa-f]{6}$">
+                    </div>
+                </div>
+                <div class="customize-field">
+                    <label>文字色</label>
+                    <div class="color-row">
+                        <input type="color" id="color_text" value="#1e293b">
+                        <input type="text" id="color_text_text" value="#1e293b" pattern="^#[0-9A-Fa-f]{6}$">
+                    </div>
+                </div>
+            </div>
+            <div class="customize-section">
+                <h3>カスタムCSS</h3>
+                <div class="customize-field">
+                    <textarea id="custom_css" placeholder="/* CSSを入力 */"></textarea>
+                </div>
+            </div>
+        </div>
+        <div id="customize-panel-footer">
+            <button type="button" id="customize-reset">リセット</button>
+            <button type="button" id="customize-save">保存</button>
+        </div>
+    </div>
+
+    <script>
+    (function() {
+        const panel = document.getElementById('customize-panel');
+        const toggleBtn = document.getElementById('customize-toggle');
+        const closeBtn = document.getElementById('customize-panel-close');
+        const saveBtn = document.getElementById('customize-save');
+        const resetBtn = document.getElementById('customize-reset');
+        const csrfToken = '{{ csrf_token }}';
+        const themeName = '{{ active_theme }}';
+
+        let originalValues = {};
+        let currentValues = {};
+
+        // Toggle panel
+        toggleBtn.addEventListener('click', function() {
+            panel.classList.toggle('open');
+            if (panel.classList.contains('open')) {
+                loadSettings();
+            }
+        });
+
+        closeBtn.addEventListener('click', function() {
+            panel.classList.remove('open');
+        });
+
+        // Color input sync
+        document.querySelectorAll('#customize-panel input[type="color"]').forEach(colorInput => {
+            const textInput = document.getElementById(colorInput.id + '_text');
+            if (textInput) {
+                colorInput.addEventListener('input', () => {
+                    textInput.value = colorInput.value;
+                    updatePreview();
+                });
+                textInput.addEventListener('input', () => {
+                    if (/^#[0-9A-Fa-f]{6}$/.test(textInput.value)) {
+                        colorInput.value = textInput.value;
+                        updatePreview();
+                    }
+                });
+            }
+        });
+
+        // Custom CSS change
+        document.getElementById('custom_css').addEventListener('input', debounce(updatePreview, 300));
+
+        // Load settings from API
+        async function loadSettings() {
+            try {
+                const response = await fetch('/admin/api/theme/settings?theme_name=' + themeName, {
+                    credentials: 'include'
+                });
+                if (!response.ok) throw new Error('Failed to load settings');
+                const data = await response.json();
+
+                // Populate form
+                data.settings.forEach(setting => {
+                    if (setting.id.startsWith('color_')) {
+                        const colorInput = document.getElementById(setting.id);
+                        const textInput = document.getElementById(setting.id + '_text');
+                        if (colorInput && textInput) {
+                            colorInput.value = setting.value || setting.default;
+                            textInput.value = setting.value || setting.default;
+                        }
+                    } else if (setting.id === 'custom_css') {
+                        document.getElementById('custom_css').value = setting.value || '';
+                    }
+                });
+
+                originalValues = getFormValues();
+                currentValues = {...originalValues};
+            } catch (error) {
+                console.error('Load settings error:', error);
+                showMessage('設定の読み込みに失敗しました', 'error');
+            }
+        }
+
+        // Get current form values
+        function getFormValues() {
+            return {
+                color_primary: document.getElementById('color_primary').value,
+                color_background: document.getElementById('color_background').value,
+                color_text: document.getElementById('color_text').value,
+                custom_css: document.getElementById('custom_css').value,
+            };
+        }
+
+        // Update preview
+        async function updatePreview() {
+            currentValues = getFormValues();
+            try {
+                const response = await fetch('/admin/api/theme/preview-css', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        theme_name: themeName,
+                        values: currentValues
+                    })
+                });
+                if (!response.ok) throw new Error('Preview failed');
+                const css = await response.text();
+                applyPreviewCSS(css);
+            } catch (error) {
+                console.error('Preview error:', error);
+            }
+        }
+
+        // Apply preview CSS
+        function applyPreviewCSS(css) {
+            let styleEl = document.getElementById('customize-preview-style');
+            if (!styleEl) {
+                styleEl = document.createElement('style');
+                styleEl.id = 'customize-preview-style';
+                document.head.appendChild(styleEl);
+            }
+            styleEl.textContent = css;
+        }
+
+        // Save settings
+        saveBtn.addEventListener('click', async function() {
+            saveBtn.disabled = true;
+            saveBtn.textContent = '保存中...';
+
+            try {
+                const response = await fetch('/admin/api/theme/settings', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRF-Token': csrfToken
+                    },
+                    credentials: 'include',
+                    body: JSON.stringify({
+                        theme_name: themeName,
+                        values: currentValues
+                    })
+                });
+
+                const result = await response.json();
+                if (result.success) {
+                    originalValues = {...currentValues};
+                    showMessage('保存しました', 'success');
+                } else {
+                    throw new Error(result.detail || 'Save failed');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                showMessage('保存に失敗しました', 'error');
+            } finally {
+                saveBtn.disabled = false;
+                saveBtn.textContent = '保存';
+            }
+        });
+
+        // Reset
+        resetBtn.addEventListener('click', function() {
+            if (!confirm('変更をリセットしますか？')) return;
+
+            document.getElementById('color_primary').value = originalValues.color_primary || '#2563eb';
+            document.getElementById('color_primary_text').value = originalValues.color_primary || '#2563eb';
+            document.getElementById('color_background').value = originalValues.color_background || '#ffffff';
+            document.getElementById('color_background_text').value = originalValues.color_background || '#ffffff';
+            document.getElementById('color_text').value = originalValues.color_text || '#1e293b';
+            document.getElementById('color_text_text').value = originalValues.color_text || '#1e293b';
+            document.getElementById('custom_css').value = originalValues.custom_css || '';
+
+            updatePreview();
+        });
+
+        // Show message
+        function showMessage(text, type) {
+            const existing = document.querySelector('.customize-message');
+            if (existing) existing.remove();
+
+            const msg = document.createElement('div');
+            msg.className = 'customize-message ' + type;
+            msg.textContent = text;
+            document.getElementById('customize-panel-content').prepend(msg);
+
+            setTimeout(() => msg.remove(), 3000);
+        }
+
+        // Debounce helper
+        function debounce(fn, delay) {
+            let timer;
+            return function(...args) {
+                clearTimeout(timer);
+                timer = setTimeout(() => fn.apply(this, args), delay);
+            };
+        }
+    })();
+    </script>
     {% endif %}
     <header class="site-header">
         {% block header %}

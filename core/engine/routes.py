@@ -161,6 +161,7 @@ async def render_theme(
             context["is_admin"] = True
             context["admin_user"] = admin_info["user_data"]
             context["active_theme"] = active_theme  # For customize link
+            context["csrf_token"] = getattr(request.state, "csrf_token", "")  # For API calls
             # Build edit URL if entity provided
             if entity and content_type:
                 context["edit_url"] = f"/admin/{content_type}/{entity.id}/edit"
