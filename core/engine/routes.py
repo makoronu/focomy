@@ -160,6 +160,7 @@ async def render_theme(
         if admin_info:
             context["is_admin"] = True
             context["admin_user"] = admin_info["user_data"]
+            context["active_theme"] = active_theme  # For customize link
             # Build edit URL if entity provided
             if entity and content_type:
                 context["edit_url"] = f"/admin/{content_type}/{entity.id}/edit"

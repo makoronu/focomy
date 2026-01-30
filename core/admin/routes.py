@@ -198,6 +198,12 @@ async def get_context(
     except Exception:
         pass  # Post content type may not exist
 
+    # Get active theme for customize link
+    from ..services.settings import SettingsService
+    settings_svc = SettingsService(db)
+    theme_settings = await settings_svc.get_by_category("theme")
+    active_theme = theme_settings.get("active", "default")
+
     return {
         "request": request,
         "content_types": content_types,
@@ -208,6 +214,7 @@ async def get_context(
         "user_role": user_role,
         "channels": channels,
         "orphan_post_count": orphan_post_count,
+        "active_theme": active_theme,
     }
 
 
