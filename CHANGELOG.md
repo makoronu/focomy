@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.120] - 2026-01-30
+
+### Added
+- WordPress風フロントエンドカスタマイザー実装
+  - 管理バー「カスタマイズ」クリックで左側にパネル表示
+  - カラー（メイン/背景/文字）のリアルタイムプレビュー
+  - カスタムCSS編集機能
+  - フロントエンドを見ながら直接編集・保存可能に
+
 ## [0.1.119] - 2026-01-30
 
 ### Added
