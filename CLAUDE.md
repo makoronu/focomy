@@ -90,9 +90,9 @@
 | 項目 | 内容 |
 |------|------|
 | 作業中 | なし |
-| 完了 | 001-092, Issue #128 全完了, Issue #129 全完了, v0.1.120 フロントエンドカスタマイザー |
+| 完了 | 001-092, Issue #128 全完了, Issue #129 全完了, v0.1.121 カスタマイザー画像設定追加 |
 | 残り | なし |
-| 更新 | 2026-01-30 |
+| 更新 | 2026-02-05 |
 
 ---
 
@@ -157,6 +157,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.91 | 2026-01-14 | [PyPI](https://pypi.org/project/focomy/0.1.91/) / [Fly.io](https://focomy-cms.fly.dev) / [GitHub](https://github.com/makoronu/focomy) - **/admin/menus 500修正（Jinja2マクロ順序）** |
 | v0.1.119 | 2026-01-30 | [PyPI](https://pypi.org/project/focomy/0.1.119/) / [GitHub](https://github.com/makoronu/focomy) - **カスタマイズ画面への直接導線追加** |
 | v0.1.120 | 2026-01-30 | [PyPI](https://pypi.org/project/focomy/0.1.120/) / [GitHub](https://github.com/makoronu/focomy) - **WordPress風フロントエンドカスタマイザー** |
+| v0.1.121 | 2026-02-05 | [PyPI](https://pypi.org/project/focomy/0.1.121/) / [GitHub](https://github.com/makoronu/focomy) - **カスタマイザー画像設定機能追加** |
 
 ---
 
