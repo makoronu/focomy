@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.121] - 2026-02-05
+
+### Added
+- フロントエンドカスタマイザーに画像設定機能追加
+  - サイトロゴ（site_logo）
+  - サイトアイコン（site_icon）
+  - ヘッダー画像（header_image）
+  - 背景画像（background_image）
+  - 画像URLプレビュー・クリア機能
+  - リアルタイムプレビュー対応
+
 ## [0.1.120] - 2026-01-30
 
 ### Added

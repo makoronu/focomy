@@ -334,6 +334,57 @@
             flex: 1;
             font-family: monospace;
         }
+        .image-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+        .image-field input[type="url"] {
+            width: 100%;
+            padding: 0.5rem;
+            background: #0f172a;
+            border: 1px solid #374151;
+            border-radius: 4px;
+            color: white;
+            font-size: 0.75rem;
+        }
+        .image-preview {
+            width: 100%;
+            height: 60px;
+            border: 1px dashed #374151;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            overflow: hidden;
+        }
+        .image-preview img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+        .image-preview .no-image {
+            color: #64748b;
+            font-size: 0.75rem;
+        }
+        .image-field-actions {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .image-field-actions button {
+            padding: 0.25rem 0.5rem;
+            font-size: 0.6875rem;
+            background: transparent;
+            border: 1px solid #374151;
+            color: #94a3b8;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .image-field-actions button:hover {
+            background: #374151;
+            color: white;
+        }
         #customize-panel-footer {
             padding: 1rem;
             display: flex;
@@ -390,6 +441,60 @@
             <button type="button" id="customize-panel-close">&times;</button>
         </div>
         <div id="customize-panel-content">
+            <div class="customize-section">
+                <h3>サイトID</h3>
+                <div class="customize-field">
+                    <label>サイトロゴ</label>
+                    <div class="image-field">
+                        <input type="url" id="site_logo" placeholder="https://example.com/logo.png">
+                        <div class="image-preview" id="site_logo_preview">
+                            <span class="no-image">画像未設定</span>
+                        </div>
+                        <div class="image-field-actions">
+                            <button type="button" onclick="clearImageField('site_logo')">クリア</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="customize-field">
+                    <label>サイトアイコン</label>
+                    <div class="image-field">
+                        <input type="url" id="site_icon" placeholder="https://example.com/icon.png">
+                        <div class="image-preview" id="site_icon_preview">
+                            <span class="no-image">画像未設定</span>
+                        </div>
+                        <div class="image-field-actions">
+                            <button type="button" onclick="clearImageField('site_icon')">クリア</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="customize-section">
+                <h3>ヘッダー・背景</h3>
+                <div class="customize-field">
+                    <label>ヘッダー画像</label>
+                    <div class="image-field">
+                        <input type="url" id="header_image" placeholder="https://example.com/header.jpg">
+                        <div class="image-preview" id="header_image_preview">
+                            <span class="no-image">画像未設定</span>
+                        </div>
+                        <div class="image-field-actions">
+                            <button type="button" onclick="clearImageField('header_image')">クリア</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="customize-field">
+                    <label>背景画像</label>
+                    <div class="image-field">
+                        <input type="url" id="background_image" placeholder="https://example.com/bg.jpg">
+                        <div class="image-preview" id="background_image_preview">
+                            <span class="no-image">画像未設定</span>
+                        </div>
+                        <div class="image-field-actions">
+                            <button type="button" onclick="clearImageField('background_image')">クリア</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
             <div class="customize-section">
                 <h3>カラー</h3>
                 <div class="customize-field">
@@ -492,6 +597,12 @@
                         }
                     } else if (setting.id === 'custom_css') {
                         document.getElementById('custom_css').value = setting.value || '';
+                    } else if (['site_logo', 'site_icon', 'header_image', 'background_image'].includes(setting.id)) {
+                        const input = document.getElementById(setting.id);
+                        if (input) {
+                            input.value = setting.value || '';
+                            updateImagePreview(setting.id, setting.value || '');
+                        }
                     }
                 });
 
@@ -506,6 +617,10 @@
         // Get current form values
         function getFormValues() {
             return {
+                site_logo: document.getElementById('site_logo').value,
+                site_icon: document.getElementById('site_icon').value,
+                header_image: document.getElementById('header_image').value,
+                background_image: document.getElementById('background_image').value,
                 color_primary: document.getElementById('color_primary').value,
                 color_background: document.getElementById('color_background').value,
                 color_text: document.getElementById('color_text').value,
@@ -587,6 +702,17 @@
         resetBtn.addEventListener('click', function() {
             if (!confirm('変更をリセットしますか？')) return;
 
+            // Image fields
+            document.getElementById('site_logo').value = originalValues.site_logo || '';
+            updateImagePreview('site_logo', originalValues.site_logo || '');
+            document.getElementById('site_icon').value = originalValues.site_icon || '';
+            updateImagePreview('site_icon', originalValues.site_icon || '');
+            document.getElementById('header_image').value = originalValues.header_image || '';
+            updateImagePreview('header_image', originalValues.header_image || '');
+            document.getElementById('background_image').value = originalValues.background_image || '';
+            updateImagePreview('background_image', originalValues.background_image || '');
+
+            // Color fields
             document.getElementById('color_primary').value = originalValues.color_primary || '#2563eb';
             document.getElementById('color_primary_text').value = originalValues.color_primary || '#2563eb';
             document.getElementById('color_background').value = originalValues.color_background || '#ffffff';
@@ -619,6 +745,39 @@
                 timer = setTimeout(() => fn.apply(this, args), delay);
             };
         }
+
+        // Update image preview
+        function updateImagePreview(fieldId, url) {
+            const previewEl = document.getElementById(fieldId + '_preview');
+            if (!previewEl) return;
+
+            if (url && url.trim()) {
+                previewEl.innerHTML = '<img src="' + url + '" alt="プレビュー" onerror="this.parentElement.innerHTML=\'<span class=no-image>読み込み失敗</span>\'">';
+            } else {
+                previewEl.innerHTML = '<span class="no-image">画像未設定</span>';
+            }
+        }
+
+        // Clear image field (global for onclick)
+        window.clearImageField = function(fieldId) {
+            const input = document.getElementById(fieldId);
+            if (input) {
+                input.value = '';
+                updateImagePreview(fieldId, '');
+                updatePreview();
+            }
+        };
+
+        // Image URL input listeners
+        ['site_logo', 'site_icon', 'header_image', 'background_image'].forEach(function(fieldId) {
+            const input = document.getElementById(fieldId);
+            if (input) {
+                input.addEventListener('input', debounce(function() {
+                    updateImagePreview(fieldId, input.value);
+                    updatePreview();
+                }, 300));
+            }
+        });
     })();
     </script>
     {% endif %}
