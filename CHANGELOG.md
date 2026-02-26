@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.1.122] - 2026-02-26
+
+### Changed
+- 500行超過ファイル7件を責務分割（全ファイル500行以下に）
+  - admin/routes.py: 4689行→48行コーディネーター + 17サブルーター
+  - cli.py: 1087行→306行 + cli_db/cli_ops/cli_import
+  - engine/routes.py: 1013行→485行 + helpers/routes_feeds/routes_channels/routes_dynamic
+  - services/theme.py: 1458行→353行 + theme_blocks/theme_css/theme_defaults
+  - services/auth.py: 616行→425行 + auth_totp
+  - wordpress_import/acf.py: 706行→14行 + acf_parser/acf_converter
+  - wordpress_import/import_service.py: 2290行→490行 + 6 mixins
+- 87ルート維持、動作変更なし
+
 ## [0.1.121] - 2026-02-05
 
 ### Added
