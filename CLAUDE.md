@@ -90,9 +90,9 @@
 | 項目 | 内容 |
 |------|------|
 | 作業中 | なし |
-| 完了 | 001-092, Issue #128 全完了, Issue #129 全完了, v0.1.121 カスタマイザー画像設定追加 |
+| 完了 | 001-092, Issue #128 全完了, Issue #129 全完了, v0.1.121 カスタマイザー画像設定追加, v0.1.122 500行超過ファイル責務分割 |
 | 残り | なし |
-| 更新 | 2026-02-05 |
+| 更新 | 2026-02-26 |
 
 ---
 
@@ -158,6 +158,7 @@ cd ~/my_programing/focomy/core && uvicorn main:app --reload --port 8000
 | v0.1.119 | 2026-01-30 | [PyPI](https://pypi.org/project/focomy/0.1.119/) / [GitHub](https://github.com/makoronu/focomy) - **カスタマイズ画面への直接導線追加** |
 | v0.1.120 | 2026-01-30 | [PyPI](https://pypi.org/project/focomy/0.1.120/) / [GitHub](https://github.com/makoronu/focomy) - **WordPress風フロントエンドカスタマイザー** |
 | v0.1.121 | 2026-02-05 | [PyPI](https://pypi.org/project/focomy/0.1.121/) / [GitHub](https://github.com/makoronu/focomy) - **カスタマイザー画像設定機能追加** |
+| v0.1.122 | 2026-02-26 | [PyPI](https://pypi.org/project/focomy/0.1.122/) / [GitHub](https://github.com/makoronu/focomy) - **500行超過ファイル7件を責務分割** |
 
 ---
 
